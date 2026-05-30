@@ -1,0 +1,39 @@
+package com.keepfit.core.database
+
+import androidx.room.Database
+import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import com.keepfit.core.database.profile.BodyProfileDao
+import com.keepfit.core.database.profile.BodyProfileEntity
+import com.keepfit.core.database.workout.ExerciseEntity
+import com.keepfit.core.database.workout.ExerciseLogEntity
+import com.keepfit.core.database.workout.ExerciseMediaEntity
+import com.keepfit.core.database.workout.PlannedWorkoutEntity
+import com.keepfit.core.database.workout.SetLogEntity
+import com.keepfit.core.database.workout.WeeklyPlanEntity
+import com.keepfit.core.database.workout.WorkoutDao
+import com.keepfit.core.database.workout.WorkoutSessionEntity
+import com.keepfit.core.database.workout.WorkoutTemplateEntity
+import com.keepfit.core.database.workout.WorkoutTemplateExerciseEntity
+
+@Database(
+    entities = [
+        BodyProfileEntity::class,
+        ExerciseEntity::class,
+        ExerciseMediaEntity::class,
+        WorkoutTemplateEntity::class,
+        WorkoutTemplateExerciseEntity::class,
+        WeeklyPlanEntity::class,
+        PlannedWorkoutEntity::class,
+        WorkoutSessionEntity::class,
+        ExerciseLogEntity::class,
+        SetLogEntity::class,
+    ],
+    version = 2,
+    exportSchema = true,
+)
+@TypeConverters(KeepfitTypeConverters::class)
+abstract class KeepfitDatabase : RoomDatabase() {
+    abstract fun bodyProfileDao(): BodyProfileDao
+    abstract fun workoutDao(): WorkoutDao
+}

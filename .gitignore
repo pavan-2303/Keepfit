@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+**/build/
+
+# Android local configuration
+local.properties
+
+# Android Studio and IntelliJ
+.idea/
+*.iml
+
+# Signing and secrets
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+
+# Local app data
+backups/
+media/
+
+# Operating system
+.DS_Store
+Thumbs.db
+

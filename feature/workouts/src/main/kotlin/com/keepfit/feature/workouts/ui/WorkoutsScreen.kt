@@ -1,0 +1,498 @@
+package com.keepfit.feature.workouts.ui
+
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.keepfit.feature.workouts.WorkoutViewModel
+import com.keepfit.feature.workouts.data.Exercise
+import com.keepfit.feature.workouts.data.PlannedWorkout
+import com.keepfit.feature.workouts.data.WorkoutTemplate
+import java.time.DayOfWeek
+import java.time.format.TextStyle
+
+@Composable
+fun WorkoutsScreen(
+    modifier: Modifier = Modifier,
+    viewModel: WorkoutViewModel = hiltViewModel(),
+) {
+    val exercises by viewModel.exercises.collectAsStateWithLifecycle()
+    val templates by viewModel.templates.collectAsStateWithLifecycle()
+    val schedule by viewModel.schedule.collectAsStateWithLifecycle()
+    val activeWorkout by viewModel.activeWorkout.collectAsStateWithLifecycle()
+    val history by viewModel.history.collectAsStateWithLifecycle()
+    val records by viewModel.records.collectAsStateWithLifecycle()
+    val message by viewModel.message.collectAsStateWithLifecycle()
+    val timerSeconds by viewModel.timerSeconds.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(message) {
+        message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.dismissMessage()
+        }
+    }
+
+    if (activeWorkout != null) {
+        ActiveWorkoutScreen(
+            workout = requireNotNull(activeWorkout),
+            timerSeconds = timerSeconds,
+            snackbarHostState = snackbarHostState,
+            onAddSet = viewModel::addSet,
+            onSaveNotes = viewModel::updateExerciseNotes,
+            onStartTimer = viewModel::startRestTimer,
+            onComplete = { viewModel.completeWorkout() },
+            modifier = modifier,
+        )
+        return
+    }
+
+    var selectedTab by rememberSaveable { mutableStateOf(WorkoutTab.EXERCISES) }
+    var showExerciseEditor by remember { mutableStateOf(false) }
+    Scaffold(
+        modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            if (selectedTab == WorkoutTab.EXERCISES) {
+                FloatingActionButton(onClick = { showExerciseEditor = true }) {
+                    Icon(Icons.Outlined.Add, contentDescription = "Add exercise")
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+                Text(
+                    text = "TRAINING",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(text = "Workouts", style = MaterialTheme.typography.headlineSmall)
+            }
+            PrimaryTabRow(selectedTabIndex = selectedTab.ordinal) {
+                WorkoutTab.entries.forEach { tab ->
+                    Tab(
+                        selected = selectedTab == tab,
+                        onClick = { selectedTab = tab },
+                        text = { Text(tab.label) },
+                    )
+                }
+            }
+            when (selectedTab) {
+                WorkoutTab.EXERCISES -> ExerciseLibrary(
+                    exercises = exercises,
+                    onSearch = viewModel::search,
+                    onSave = viewModel::saveExercise,
+                    onArchive = viewModel::archiveExercise,
+                )
+                WorkoutTab.TEMPLATES -> TemplateLibrary(
+                    exercises = exercises,
+                    templates = templates,
+                    onCreate = viewModel::createTemplate,
+                )
+                WorkoutTab.PLAN -> WeeklyPlan(
+                    templates = templates,
+                    schedule = schedule,
+                    onAssign = viewModel::assignTemplate,
+                )
+                WorkoutTab.HISTORY -> WorkoutHistory(
+                    history = history,
+                    records = records,
+                )
+            }
+        }
+    }
+
+    if (showExerciseEditor) {
+        ExerciseEditor(
+            exercise = null,
+            onDismiss = { showExerciseEditor = false },
+            onSave = { id, name, muscleGroup, instructions, notes, bodyweight, media ->
+                viewModel.saveExercise(id, name, muscleGroup, instructions, notes, bodyweight, media)
+                showExerciseEditor = false
+            },
+        )
+    }
+}
+
+@Composable
+fun TodayWorkoutSection(
+    onOpenWorkout: () -> Unit,
+    viewModel: WorkoutViewModel = hiltViewModel(),
+) {
+    val todayPlan by viewModel.todayPlan.collectAsStateWithLifecycle()
+    val activeWorkout by viewModel.activeWorkout.collectAsStateWithLifecycle()
+    val plannedWorkout = todayPlan.firstOrNull()
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.FitnessCenter, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(10.dp))
+                Text("NEXT WORKOUT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            when {
+                activeWorkout != null -> {
+                    Text("Workout in progress", style = MaterialTheme.typography.titleLarge)
+                    Text(requireNotNull(activeWorkout).templateName, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = onOpenWorkout) { Text("Resume workout") }
+                }
+                plannedWorkout != null -> {
+                    Text(plannedWorkout.templateName, style = MaterialTheme.typography.titleLarge)
+                    Text("Planned for today", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = { viewModel.startWorkout(plannedWorkout, onOpenWorkout) }) {
+                        Icon(Icons.Outlined.PlayArrow, contentDescription = null)
+                        Text("Start workout")
+                    }
+                }
+                else -> {
+                    Text("No workout planned", style = MaterialTheme.typography.titleLarge)
+                    Text("Assign a template in your weekly plan.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExerciseLibrary(
+    exercises: List<Exercise>,
+    onSearch: (String) -> Unit,
+    onSave: (String?, String, String, String, String, Boolean, Uri?) -> Unit,
+    onArchive: (String) -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    var editingExercise by remember { mutableStateOf<Exercise?>(null) }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = {
+                query = it
+                onSearch(it)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Search exercises") },
+            singleLine = true,
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        if (exercises.isEmpty()) {
+            EmptyMessage("No exercises yet", "Add your first exercise with the + button.")
+        }
+        exercises.forEach { exercise ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(exercise.name, style = MaterialTheme.typography.titleMedium)
+                        Text(exercise.muscleGroup, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    IconButton(onClick = { editingExercise = exercise }) {
+                        Icon(Icons.Outlined.Edit, contentDescription = "Edit ${exercise.name}")
+                    }
+                    IconButton(onClick = { onArchive(exercise.id) }) {
+                        Icon(Icons.Outlined.Archive, contentDescription = "Archive ${exercise.name}")
+                    }
+                }
+            }
+        }
+    }
+    editingExercise?.let { exercise ->
+        ExerciseEditor(
+            exercise = exercise,
+            onDismiss = { editingExercise = null },
+            onSave = { id, name, group, instructions, notes, bodyweight, media ->
+                onSave(id, name, group, instructions, notes, bodyweight, media)
+                editingExercise = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun ExerciseEditor(
+    exercise: Exercise?,
+    onDismiss: () -> Unit,
+    onSave: (String?, String, String, String, String, Boolean, Uri?) -> Unit,
+) {
+    var name by remember { mutableStateOf(exercise?.name.orEmpty()) }
+    var group by remember { mutableStateOf(exercise?.muscleGroup.orEmpty()) }
+    var instructions by remember { mutableStateOf(exercise?.instructions.orEmpty()) }
+    var notes by remember { mutableStateOf(exercise?.notes.orEmpty()) }
+    var bodyweight by remember { mutableStateOf(exercise?.isBodyweight == true) }
+    var mediaUri by remember { mutableStateOf<Uri?>(null) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
+        mediaUri = it
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (exercise == null) "Add exercise" else "Edit exercise") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(name, { name = it }, label = { Text("Exercise name") }, singleLine = true)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(group, { group = it }, label = { Text("Muscle group") }, singleLine = true)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(instructions, { instructions = it }, label = { Text("Instructions") })
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(notes, { notes = it }, label = { Text("Notes") })
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = bodyweight, onCheckedChange = { bodyweight = it })
+                    Text("Bodyweight exercise")
+                }
+                OutlinedButton(onClick = { launcher.launch(arrayOf("video/mp4", "video/webm", "image/gif")) }) {
+                    Icon(Icons.Outlined.AttachFile, contentDescription = null)
+                    Text(if (mediaUri == null) "Attach demo" else "Demo selected")
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave(exercise?.id, name, group, instructions, notes, bodyweight, mediaUri) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = { OutlinedButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun TemplateLibrary(
+    exercises: List<Exercise>,
+    templates: List<WorkoutTemplate>,
+    onCreate: (String, List<String>) -> Unit,
+) {
+    var showEditor by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Button(onClick = { showEditor = true }, enabled = exercises.isNotEmpty()) {
+            Icon(Icons.Outlined.Add, contentDescription = null)
+            Text("New template")
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        if (templates.isEmpty()) EmptyMessage("No templates yet", "Create a reusable workout from your exercise library.")
+        templates.forEach { template ->
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(template.name, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        template.exercises.joinToString { "${it.exerciseName} ${it.targetSets}x${it.targetReps}" },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+    if (showEditor) {
+        TemplateEditor(exercises, { showEditor = false }) { name, ids ->
+            onCreate(name, ids)
+            showEditor = false
+        }
+    }
+}
+
+@Composable
+private fun TemplateEditor(
+    exercises: List<Exercise>,
+    onDismiss: () -> Unit,
+    onSave: (String, List<String>) -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    val selectedIds = remember { mutableStateListOf<String>() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New workout template") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(name, { name = it }, label = { Text("Template name") }, singleLine = true)
+                Spacer(modifier = Modifier.height(10.dp))
+                exercises.forEach { exercise ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = exercise.id in selectedIds,
+                            onCheckedChange = { checked ->
+                                if (checked) selectedIds += exercise.id else selectedIds -= exercise.id
+                            },
+                        )
+                        Text(exercise.name)
+                    }
+                }
+                Text("Selected exercises start at 3 sets of 8-10 reps.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = { Button(onClick = { onSave(name, selectedIds.toList()) }) { Text("Save") } },
+        dismissButton = { OutlinedButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun WeeklyPlan(
+    templates: List<WorkoutTemplate>,
+    schedule: List<PlannedWorkout>,
+    onAssign: (DayOfWeek, String) -> Unit,
+) {
+    val locale = LocalConfiguration.current.locales[0]
+    var selectedDay by remember { mutableStateOf<DayOfWeek?>(null) }
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        if (templates.isEmpty()) EmptyMessage("Create a template first", "Weekly planning uses your saved workout templates.")
+        DayOfWeek.entries.forEach { day ->
+            val planned = schedule.firstOrNull { it.dayOfWeek == day }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(day.getDisplayName(TextStyle.FULL, locale), style = MaterialTheme.typography.titleMedium)
+                    Text(planned?.templateName ?: "Rest day", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                OutlinedButton(onClick = { selectedDay = day }, enabled = templates.isNotEmpty()) {
+                    Text(if (planned == null) "Assign" else "Change")
+                }
+            }
+            HorizontalDivider()
+        }
+    }
+    selectedDay?.let { day ->
+        AlertDialog(
+            onDismissRequest = { selectedDay = null },
+            title = { Text("Assign ${day.getDisplayName(TextStyle.FULL, locale)}") },
+            text = {
+                Column {
+                    templates.forEach { template ->
+                        FilledTonalButton(
+                            onClick = {
+                                onAssign(day, template.id)
+                                selectedDay = null
+                            },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        ) {
+                            Text(template.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { OutlinedButton(onClick = { selectedDay = null }) { Text("Cancel") } },
+        )
+    }
+}
+
+@Composable
+private fun WorkoutHistory(
+    history: List<com.keepfit.feature.workouts.data.WorkoutHistory>,
+    records: List<com.keepfit.feature.workouts.data.PersonalRecord>,
+) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("PERSONAL RECORDS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(8.dp))
+        if (records.isEmpty()) Text("Complete a workout to establish records.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        records.forEach { record ->
+            Text("${record.exerciseName}: ${record.highestWeightKg} kg / ${record.highestRepetitions} reps")
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Text("COMPLETED SESSIONS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(8.dp))
+        if (history.isEmpty()) EmptyMessage("No completed sessions", "Finished workouts will appear as calendar markers here.")
+        history.forEach { session ->
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(session.workoutDate.toString(), style = MaterialTheme.typography.titleMedium)
+                    Text(session.exerciseNames.joinToString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyMessage(title: String, description: String) {
+    Text(title, style = MaterialTheme.typography.titleLarge)
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+private enum class WorkoutTab(val label: String) {
+    EXERCISES("Exercises"),
+    TEMPLATES("Templates"),
+    PLAN("Plan"),
+    HISTORY("History"),
+}

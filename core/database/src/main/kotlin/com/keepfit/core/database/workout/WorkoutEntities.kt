@@ -1,0 +1,249 @@
+package com.keepfit.core.database.workout
+
+import androidx.room.Embedded
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import androidx.room.Relation
+import java.time.DayOfWeek
+import java.time.LocalDate
+
+@Entity(tableName = "exercises")
+data class ExerciseEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val muscleGroup: String,
+    val instructions: String?,
+    val notes: String?,
+    val isBodyweight: Boolean,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val archivedAt: Long?,
+)
+
+@Entity(
+    tableName = "exercise_media",
+    foreignKeys = [
+        ForeignKey(
+            entity = ExerciseEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["exerciseId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["exerciseId"], unique = true)],
+)
+data class ExerciseMediaEntity(
+    @PrimaryKey val id: String,
+    val exerciseId: String,
+    val mediaType: String,
+    val relativePath: String,
+    val mimeType: String,
+    val sizeBytes: Long,
+    val createdAt: Long,
+)
+
+@Entity(tableName = "workout_templates")
+data class WorkoutTemplateEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val notes: String?,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val archivedAt: Long?,
+)
+
+@Entity(
+    tableName = "workout_template_exercises",
+    foreignKeys = [
+        ForeignKey(
+            entity = WorkoutTemplateEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["workoutTemplateId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = ExerciseEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["exerciseId"],
+        ),
+    ],
+    indices = [Index("workoutTemplateId"), Index("exerciseId")],
+)
+data class WorkoutTemplateExerciseEntity(
+    @PrimaryKey val id: String,
+    val workoutTemplateId: String,
+    val exerciseId: String,
+    val position: Int,
+    val targetSets: Int,
+    val targetReps: String?,
+    val notes: String?,
+)
+
+@Entity(tableName = "weekly_plans")
+data class WeeklyPlanEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val startsOn: LocalDate,
+    val isActive: Boolean,
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
+@Entity(
+    tableName = "planned_workouts",
+    foreignKeys = [
+        ForeignKey(
+            entity = WeeklyPlanEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["weeklyPlanId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = WorkoutTemplateEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["workoutTemplateId"],
+        ),
+    ],
+    indices = [Index("weeklyPlanId"), Index("workoutTemplateId")],
+)
+data class PlannedWorkoutEntity(
+    @PrimaryKey val id: String,
+    val weeklyPlanId: String,
+    val workoutTemplateId: String,
+    val dayOfWeek: DayOfWeek,
+    val position: Int,
+)
+
+@Entity(
+    tableName = "workout_sessions",
+    foreignKeys = [
+        ForeignKey(
+            entity = WorkoutTemplateEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["workoutTemplateId"],
+        ),
+        ForeignKey(
+            entity = PlannedWorkoutEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["plannedWorkoutId"],
+        ),
+    ],
+    indices = [Index("workoutTemplateId"), Index("plannedWorkoutId")],
+)
+data class WorkoutSessionEntity(
+    @PrimaryKey val id: String,
+    val workoutTemplateId: String?,
+    val plannedWorkoutId: String?,
+    val workoutDate: LocalDate,
+    val startedAt: Long,
+    val completedAt: Long?,
+    val notes: String?,
+)
+
+@Entity(
+    tableName = "exercise_logs",
+    foreignKeys = [
+        ForeignKey(
+            entity = WorkoutSessionEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["workoutSessionId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = ExerciseEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["exerciseId"],
+        ),
+    ],
+    indices = [Index("workoutSessionId"), Index("exerciseId")],
+)
+data class ExerciseLogEntity(
+    @PrimaryKey val id: String,
+    val workoutSessionId: String,
+    val exerciseId: String,
+    val position: Int,
+    val notes: String?,
+)
+
+@Entity(
+    tableName = "set_logs",
+    foreignKeys = [
+        ForeignKey(
+            entity = ExerciseLogEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["exerciseLogId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("exerciseLogId")],
+)
+data class SetLogEntity(
+    @PrimaryKey val id: String,
+    val exerciseLogId: String,
+    val position: Int,
+    val repetitions: Int,
+    val weightKg: Double,
+    val isCompleted: Boolean,
+)
+
+data class TemplateExerciseWithExercise(
+    @Embedded val templateExercise: WorkoutTemplateExerciseEntity,
+    @Relation(parentColumn = "exerciseId", entityColumn = "id")
+    val exercise: ExerciseEntity,
+) {
+    val exerciseName: String get() = exercise.name
+}
+
+data class WorkoutTemplateDetails(
+    @Embedded val template: WorkoutTemplateEntity,
+    @Relation(
+        entity = WorkoutTemplateExerciseEntity::class,
+        parentColumn = "id",
+        entityColumn = "workoutTemplateId",
+    )
+    val exercises: List<TemplateExerciseWithExercise>,
+)
+
+data class ExerciseLogWithSets(
+    @Embedded val exerciseLog: ExerciseLogEntity,
+    @Relation(parentColumn = "exerciseId", entityColumn = "id")
+    val exercise: ExerciseEntity,
+    @Relation(parentColumn = "id", entityColumn = "exerciseLogId")
+    val sets: List<SetLogEntity>,
+) {
+    val exerciseName: String get() = exercise.name
+}
+
+data class WorkoutSessionDetails(
+    @Embedded val session: WorkoutSessionEntity,
+    @Relation(
+        entity = ExerciseLogEntity::class,
+        parentColumn = "id",
+        entityColumn = "workoutSessionId",
+    )
+    val exercises: List<ExerciseLogWithSets>,
+)
+
+data class PlannedWorkoutRow(
+    val id: String,
+    val weeklyPlanId: String,
+    val workoutTemplateId: String,
+    val dayOfWeek: DayOfWeek,
+    val position: Int,
+    val templateName: String,
+)
+
+data class PersonalRecordRow(
+    val exerciseId: String,
+    val exerciseName: String,
+    val highestWeightKg: Double,
+    val highestRepetitions: Int,
+)
+
+data class PreviousSetRow(
+    val repetitions: Int,
+    val weightKg: Double,
+)
+

@@ -10,6 +10,8 @@ testable improvement. Avoid placeholder screens for later features.
 
 ## 2. Phase 0: Android Foundation
 
+Status: implemented and emulator-verified.
+
 ### Goal
 
 Create the Android project and prove the local-first architecture.
@@ -33,6 +35,8 @@ Create the Android project and prove the local-first architecture.
 - Unit and instrumentation test suites run in CI or from Gradle locally.
 
 ## 3. Phase 1A: Workout Tracker
+
+Status: implemented and emulator-verified.
 
 ### Goal
 
