@@ -66,6 +66,8 @@ Replace a basic gym notebook with a fast offline workout workflow.
 
 ## 4. Phase 1B: Nutrition Diary
 
+Status: implemented and emulator-verified.
+
 ### Goal
 
 Track daily intake without depending on a remote food catalog.
@@ -73,12 +75,13 @@ Track daily intake without depending on a remote food catalog.
 ### Deliverables
 
 - Personal food library with serving label, calories, protein, carbohydrates,
-  and fat.
+  fat, favorites, recents, and archive.
 - Daily diary sections for breakfast, lunch, dinner, and snacks.
 - Add-food flow with favorites and recent foods.
 - Reusable saved meals that expand into diary entries.
 - Duplicate-yesterday action for quick repeated logging.
 - Daily calorie and macro totals compared with user goals.
+- Today dashboard nutrition summary backed by the same diary totals.
 
 ### Exit criteria
 

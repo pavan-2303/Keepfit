@@ -45,6 +45,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.keepfit.core.model.BodyProfile
+import com.keepfit.feature.nutrition.ui.NutritionScreen
+import com.keepfit.feature.nutrition.ui.TodayNutritionSection
 import com.keepfit.feature.workouts.ui.TodayWorkoutSection
 import com.keepfit.feature.workouts.ui.WorkoutsScreen
 import java.time.LocalDate
@@ -105,13 +107,7 @@ fun HomeShell(profile: BodyProfile) {
                 WorkoutsScreen(modifier = Modifier.padding(padding))
             }
             composable(HomeDestination.NUTRITION.route) {
-                EmptyDestinationScreen(
-                    padding = padding,
-                    eyebrow = "NUTRITION",
-                    title = "Food diary",
-                    description = "Your personal foods, saved meals, and daily nutrition totals will live here.",
-                    icon = Icons.Outlined.RestaurantMenu,
-                )
+                NutritionScreen(modifier = Modifier.padding(padding))
             }
             composable(HomeDestination.PROGRESS.route) {
                 EmptyDestinationScreen(
@@ -161,12 +157,7 @@ private fun TodayScreen(
         Spacer(modifier = Modifier.height(24.dp))
         TodayWorkoutSection(onOpenWorkout = onOpenWorkout)
         Spacer(modifier = Modifier.height(12.dp))
-        SummaryCard(
-            icon = Icons.Outlined.RestaurantMenu,
-            label = "TODAY'S NUTRITION",
-            title = "No meals logged",
-            description = "Daily calories and macros will appear here.",
-        )
+        TodayNutritionSection()
         Spacer(modifier = Modifier.height(12.dp))
         SummaryCard(
             icon = Icons.Outlined.Insights,

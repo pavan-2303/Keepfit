@@ -5,9 +5,12 @@ import com.keepfit.app.profile.ProfileRepository
 import com.keepfit.app.profile.RoomProfileRepository
 import com.keepfit.core.database.KeepfitDatabase
 import com.keepfit.core.database.KeepfitDatabaseFactory
+import com.keepfit.core.database.nutrition.NutritionDao
 import com.keepfit.core.database.profile.BodyProfileDao
 import com.keepfit.core.database.workout.WorkoutDao
 import com.keepfit.core.media.ExerciseMediaStore
+import com.keepfit.feature.nutrition.data.NutritionRepository
+import com.keepfit.feature.nutrition.data.RoomNutritionRepository
 import com.keepfit.feature.workouts.data.RoomWorkoutRepository
 import com.keepfit.feature.workouts.data.WorkoutRepository
 import dagger.Module
@@ -33,6 +36,17 @@ object AppModule {
     @Singleton
     fun provideProfileRepository(dao: BodyProfileDao): ProfileRepository =
         RoomProfileRepository(dao)
+
+    @Provides
+    fun provideNutritionDao(database: KeepfitDatabase): NutritionDao =
+        database.nutritionDao()
+
+    @Provides
+    @Singleton
+    fun provideNutritionRepository(
+        dao: NutritionDao,
+        bodyProfileDao: BodyProfileDao,
+    ): NutritionRepository = RoomNutritionRepository(dao, bodyProfileDao)
 
     @Provides
     fun provideWorkoutDao(database: KeepfitDatabase): WorkoutDao =

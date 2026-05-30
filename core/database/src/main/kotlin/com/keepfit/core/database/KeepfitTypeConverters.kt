@@ -1,6 +1,7 @@
 package com.keepfit.core.database
 
 import androidx.room.TypeConverter
+import com.keepfit.core.database.nutrition.MealType
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -16,4 +17,10 @@ class KeepfitTypeConverters {
 
     @TypeConverter
     fun toDayOfWeek(value: String?): DayOfWeek? = value?.let(DayOfWeek::valueOf)
+
+    @TypeConverter
+    fun fromMealType(value: MealType?): String? = value?.name
+
+    @TypeConverter
+    fun toMealType(value: String?): MealType? = value?.let(MealType::valueOf)
 }

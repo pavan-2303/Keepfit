@@ -163,6 +163,7 @@ an exercise.
 | `proteinGrams` | Decimal | Per serving, non-negative |
 | `carbohydrateGrams` | Decimal | Per serving, non-negative |
 | `fatGrams` | Decimal | Per serving, non-negative |
+| `isFavorite` | Boolean | Quick-entry marker for diary flows |
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last edit timestamp |
 | `archivedAt` | Instant? | Soft-delete marker |
@@ -215,6 +216,10 @@ changes do not affect transformation history.
 | `displayName` | String | Required |
 | `heightCm` | Decimal? | Optional BMI input |
 | `birthDate` | LocalDate? | Optional context for future suggestions |
+| `dailyCalorieGoal` | Decimal? | Optional daily calorie target |
+| `dailyProteinGoalGrams` | Decimal? | Optional daily protein target |
+| `dailyCarbohydrateGoalGrams` | Decimal? | Optional daily carbohydrate target |
+| `dailyFatGoalGrams` | Decimal? | Optional daily fat target |
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last edit timestamp |
 
@@ -267,6 +272,9 @@ copy-before-update rule as exercise media.
 ## 6. Settings and Goals
 
 ### `UserGoal`
+
+Deferred. The current implementation stores nutrition-goal values on the
+single `BodyProfile` row until the settings feature needs a broader goal model.
 
 | Field | Type | Notes |
 | --- | --- | --- |

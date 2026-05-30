@@ -7,7 +7,10 @@ data class BodyProfile(
     val displayName: String,
     val heightCm: Double?,
     val birthDate: LocalDate?,
+    val dailyCalorieGoal: Double? = null,
+    val dailyProteinGoalGrams: Double? = null,
+    val dailyCarbohydrateGoalGrams: Double? = null,
+    val dailyFatGoalGrams: Double? = null,
     val createdAt: Long,
     val updatedAt: Long,
 )
-

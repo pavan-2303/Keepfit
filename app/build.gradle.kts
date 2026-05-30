@@ -38,6 +38,7 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:media"))
+    implementation(project(":feature:nutrition"))
     implementation(project(":feature:workouts"))
 
     implementation(libs.androidx.activity.compose)

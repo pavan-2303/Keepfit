@@ -159,5 +159,82 @@ object KeepfitMigrations {
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_set_logs_exerciseLogId` ON `set_logs` (`exerciseLogId`)")
         }
     }
-}
 
+    val TWO_TO_THREE = object : Migration(2, 3) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE body_profiles ADD COLUMN `dailyCalorieGoal` REAL")
+            database.execSQL("ALTER TABLE body_profiles ADD COLUMN `dailyProteinGoalGrams` REAL")
+            database.execSQL("ALTER TABLE body_profiles ADD COLUMN `dailyCarbohydrateGoalGrams` REAL")
+            database.execSQL("ALTER TABLE body_profiles ADD COLUMN `dailyFatGoalGrams` REAL")
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `foods` (
+                    `id` TEXT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `servingLabel` TEXT NOT NULL,
+                    `servingAmount` REAL NOT NULL,
+                    `calories` REAL NOT NULL,
+                    `proteinGrams` REAL NOT NULL,
+                    `carbohydrateGrams` REAL NOT NULL,
+                    `fatGrams` REAL NOT NULL,
+                    `isFavorite` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    `archivedAt` INTEGER,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `saved_meals` (
+                    `id` TEXT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `saved_meal_items` (
+                    `id` TEXT NOT NULL,
+                    `savedMealId` TEXT NOT NULL,
+                    `foodId` TEXT NOT NULL,
+                    `servings` REAL NOT NULL,
+                    `position` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`savedMealId`) REFERENCES `saved_meals`(`id`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE,
+                    FOREIGN KEY(`foodId`) REFERENCES `foods`(`id`)
+                        ON UPDATE NO ACTION ON DELETE NO ACTION
+                )
+                """.trimIndent(),
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_saved_meal_items_savedMealId` ON `saved_meal_items` (`savedMealId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_saved_meal_items_foodId` ON `saved_meal_items` (`foodId`)")
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `food_diary_entries` (
+                    `id` TEXT NOT NULL,
+                    `diaryDate` TEXT NOT NULL,
+                    `mealType` TEXT NOT NULL,
+                    `foodId` TEXT NOT NULL,
+                    `savedMealId` TEXT,
+                    `servings` REAL NOT NULL,
+                    `loggedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`foodId`) REFERENCES `foods`(`id`)
+                        ON UPDATE NO ACTION ON DELETE NO ACTION,
+                    FOREIGN KEY(`savedMealId`) REFERENCES `saved_meals`(`id`)
+                        ON UPDATE NO ACTION ON DELETE NO ACTION
+                )
+                """.trimIndent(),
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_food_diary_entries_diaryDate` ON `food_diary_entries` (`diaryDate`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_food_diary_entries_foodId` ON `food_diary_entries` (`foodId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_food_diary_entries_savedMealId` ON `food_diary_entries` (`savedMealId`)")
+        }
+    }
+}

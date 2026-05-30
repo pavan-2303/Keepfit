@@ -18,8 +18,8 @@ complexity.
 
 ## Project Status
 
-Phase 0 and Phase 1A are implemented. The project now includes a runnable
-Android application with:
+Phase 0, Phase 1A, and Phase 1B are implemented. The project now includes a
+runnable Android application with:
 
 - a first-run local profile form persisted with Room;
 - a five-destination Compose Navigation shell;
@@ -30,12 +30,19 @@ Android application with:
 - active workout logging with sets, repetitions, kilograms, exercise notes,
   previous values, and a 90-second vibration timer;
 - completed workout history and derived personal records;
+- a personal food library with favorites, recents, archive, and reusable saved
+  meals;
+- a selected-date nutrition diary with breakfast, lunch, dinner, and snack
+  sections;
+- duplicate-yesterday nutrition logging and derived calorie and macro totals;
+- a Today nutrition summary backed by the same diary data;
 - Hilt dependency injection;
-- Room schema export with an explicit version `1` to `2` migration;
-- unit tests and Room DAO and migration instrumentation tests.
+- Room schema export with explicit version `1` to `2` and `2` to `3`
+  migrations;
+- unit tests plus Room DAO and migration instrumentation tests.
 
-The next implementation target is Phase 1B nutrition tracking. Health Connect
-and Ollama integration remain optional phase-2 additions.
+The next implementation target is Phase 1C transformation tracking. Health
+Connect and Ollama integration remain optional phase-2 additions.
 
 ## Architecture
 
@@ -56,7 +63,7 @@ Read these references before implementation:
 | --- | --- |
 | Phase 0 | Android foundation, navigation, Room setup, and local profile |
 | Phase 1A | Exercise library, workout plans, logging, history, and records |
-| Phase 1B | Personal foods, reusable meals, and nutrition diary |
+| Phase 1B | Personal foods, reusable meals, nutrition diary, and today summary |
 | Phase 1C | Measurements, weekly transformation photos, and comparison |
 | Phase 1D | Encrypted backup, restore, reminders, and complete offline MVP |
 | Phase 2A | Optional read-only Health Connect steps |
@@ -85,6 +92,7 @@ Read these references before implementation:
 |   |-- media/
 |   `-- model/
 |-- feature/
+|   |-- nutrition/
 |   `-- workouts/
 |-- docs/
 |   |-- architecture/
@@ -124,6 +132,7 @@ Use the Gradle wrapper from PowerShell:
 ```powershell
 .\gradlew.bat projects
 .\gradlew.bat testDebugUnitTest
+.\gradlew.bat :feature:nutrition:testDebugUnitTest
 .\gradlew.bat :core:database:compileDebugAndroidTestKotlin
 .\gradlew.bat lintDebug
 .\gradlew.bat assembleDebug

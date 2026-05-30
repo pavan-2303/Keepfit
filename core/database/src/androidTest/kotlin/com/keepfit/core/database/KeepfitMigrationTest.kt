@@ -20,8 +20,8 @@ class KeepfitMigrationTest {
     )
 
     @Test
-    fun migrateOneToTwoPreservesLocalProfile() {
-        helper.createDatabase(TEST_DATABASE, 1).use { database ->
+    fun migrateTwoToThreePreservesLocalProfileAndAddsNutritionGoals() {
+        helper.createDatabase(TEST_DATABASE, 2).use { database ->
             database.execSQL(
                 """
                 INSERT INTO body_profiles (
@@ -35,13 +35,26 @@ class KeepfitMigrationTest {
 
         helper.runMigrationsAndValidate(
             TEST_DATABASE,
-            2,
+            3,
             true,
-            KeepfitMigrations.ONE_TO_TWO,
+            KeepfitMigrations.TWO_TO_THREE,
         ).use { database ->
-            database.query("SELECT displayName FROM body_profiles").use { cursor ->
+            database.query(
+                """
+                SELECT displayName, dailyCalorieGoal, dailyProteinGoalGrams,
+                    dailyCarbohydrateGoalGrams, dailyFatGoalGrams
+                FROM body_profiles
+                """.trimIndent(),
+            ).use { cursor ->
                 assertEquals(true, cursor.moveToFirst())
                 assertEquals("Pavan", cursor.getString(0))
+                assertEquals(true, cursor.isNull(1))
+                assertEquals(true, cursor.isNull(2))
+                assertEquals(true, cursor.isNull(3))
+                assertEquals(true, cursor.isNull(4))
+            }
+            database.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'foods'").use { cursor ->
+                assertEquals(true, cursor.moveToFirst())
             }
         }
     }
@@ -50,4 +63,3 @@ class KeepfitMigrationTest {
         const val TEST_DATABASE = "keepfit-migration-test"
     }
 }
-
