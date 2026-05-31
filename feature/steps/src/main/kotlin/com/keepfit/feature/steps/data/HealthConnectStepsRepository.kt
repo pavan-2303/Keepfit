@@ -19,7 +19,7 @@ class HealthConnectStepsRepository @Inject constructor(
         setOf(HealthPermission.getReadPermission(StepsRecord::class))
 
     override suspend fun loadSnapshot(): StepsSnapshot {
-        return when (HealthConnectClient.getSdkStatus(context, PROVIDER_PACKAGE_NAME)) {
+        return when (HealthConnectClient.getSdkStatus(context)) {
             HealthConnectClient.SDK_UNAVAILABLE -> StepsSnapshot.Unavailable
             HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> StepsSnapshot.UpdateRequired
             HealthConnectClient.SDK_AVAILABLE -> {
@@ -63,7 +63,6 @@ class HealthConnectStepsRepository @Inject constructor(
     }
 
     private companion object {
-        const val PROVIDER_PACKAGE_NAME = "com.google.android.apps.healthdata"
         val zoneId: ZoneId = ZoneId.systemDefault()
     }
 }

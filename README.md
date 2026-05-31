@@ -161,10 +161,32 @@ Use the Gradle wrapper from PowerShell:
 .\gradlew.bat assembleDebug
 ```
 
+For a locally signed release build, create an ignored `keystore.properties`
+file in the repo root and point it at an ignored `.jks` file:
+
+```properties
+storeFile=keepfit-release.jks
+storePassword=your-password
+keyAlias=keepfit
+keyPassword=your-password
+```
+
+Then build:
+
+```powershell
+.\gradlew.bat :app:assembleRelease
+```
+
 The debug APK is written to:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
+```
+
+The signed release APK is written to:
+
+```text
+app/build/outputs/apk/release/app-release.apk
 ```
 
 Run Room instrumentation tests on a connected Android emulator or device:

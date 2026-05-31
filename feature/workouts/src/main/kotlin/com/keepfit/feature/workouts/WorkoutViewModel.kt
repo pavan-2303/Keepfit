@@ -93,14 +93,27 @@ class WorkoutViewModel @Inject constructor(
         repository.archiveExercise(id)
     }
 
+    fun deleteExercise(id: String) = launchWrite("Exercise deleted.") {
+        repository.deleteExercise(id)
+    }
+
     fun createTemplate(name: String, exerciseIds: List<String>) =
         launchWrite("Workout template saved.") {
             repository.createTemplate(name, exerciseIds)
         }
 
+    fun deleteTemplate(id: String) = launchWrite("Workout template deleted.") {
+        repository.deleteTemplate(id)
+    }
+
     fun assignTemplate(dayOfWeek: DayOfWeek, templateId: String) =
         launchWrite("Weekly plan updated.") {
             repository.assignTemplate(dayOfWeek, templateId)
+        }
+
+    fun clearPlannedWorkout(dayOfWeek: DayOfWeek) =
+        launchWrite("Planned workout cleared.") {
+            repository.clearPlannedWorkout(dayOfWeek)
         }
 
     fun startWorkout(plannedWorkout: PlannedWorkout, onStarted: () -> Unit = {}) =

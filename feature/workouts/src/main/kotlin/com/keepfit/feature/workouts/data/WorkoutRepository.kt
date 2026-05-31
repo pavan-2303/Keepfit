@@ -18,8 +18,11 @@ interface WorkoutRepository {
 
     suspend fun saveExercise(id: String?, input: ExerciseInput, mediaUri: Uri?)
     suspend fun archiveExercise(id: String)
+    suspend fun deleteExercise(id: String)
     suspend fun createTemplate(name: String, exerciseIds: List<String>)
+    suspend fun deleteTemplate(id: String)
     suspend fun assignTemplate(dayOfWeek: DayOfWeek, templateId: String)
+    suspend fun clearPlannedWorkout(dayOfWeek: DayOfWeek)
     suspend fun startOrResume(plannedWorkout: PlannedWorkout): String
     suspend fun addSet(exerciseLogId: String, input: CompletedSetInput)
     suspend fun updateExerciseNotes(exerciseLogId: String, notes: String)
