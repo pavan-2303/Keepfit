@@ -5,6 +5,8 @@ compose-compiler = "2.3.21"
 datastore = "1.2.1"
 hilt = "2.59.2"
 hilt-navigation-compose = "1.3.0"
+gson = "2.13.1"
+health-connect = "1.1.0"
 junit = "4.13.2"
 ksp = "2.3.9"
 lifecycle = "2.10.0"
@@ -27,6 +29,7 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 androidx-core-ktx = { module = "androidx.core:core-ktx", version = "1.17.0" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-hilt-lifecycle-viewmodel-compose = { module = "androidx.hilt:hilt-lifecycle-viewmodel-compose", version.ref = "hilt-navigation-compose" }
+androidx-health-connect-client = { module = "androidx.health.connect:connect-client", version.ref = "health-connect" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
@@ -40,6 +43,7 @@ androidx-test-runner = { module = "androidx.test:runner", version.ref = "test-ru
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]

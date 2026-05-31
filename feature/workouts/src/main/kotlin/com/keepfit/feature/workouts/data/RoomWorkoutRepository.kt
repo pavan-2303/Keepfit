@@ -12,6 +12,7 @@ import com.keepfit.core.database.workout.WorkoutSessionEntity
 import com.keepfit.core.database.workout.WorkoutTemplateEntity
 import com.keepfit.core.database.workout.WorkoutTemplateExerciseEntity
 import com.keepfit.core.media.ExerciseMediaStore
+import com.keepfit.core.preferences.AppSettingsRepository
 import com.keepfit.feature.workouts.CompletedSetInput
 import com.keepfit.feature.workouts.ExerciseInput
 import java.time.DayOfWeek
@@ -26,10 +27,14 @@ import kotlinx.coroutines.flow.mapLatest
 class RoomWorkoutRepository(
     private val dao: WorkoutDao,
     private val mediaStore: ExerciseMediaStore,
+    private val settingsRepository: AppSettingsRepository,
     private val idFactory: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Long = System::currentTimeMillis,
     private val today: () -> LocalDate = LocalDate::now,
 ) : WorkoutRepository {
+    override fun observeRestTimerSeconds(): Flow<Int> =
+        settingsRepository.observeSettings().map { it.restTimerSeconds }
+
     override fun observeExercises(query: String): Flow<List<Exercise>> =
         dao.observeExercises(query).map { entities -> entities.map(ExerciseEntity::toModel) }
 
@@ -151,6 +156,14 @@ class RoomWorkoutRepository(
 
     override suspend fun archiveExercise(id: String) = dao.archiveExercise(id, clock())
 
+    override suspend fun deleteExercise(id: String) {
+        require(dao.countExerciseTemplateUsage(id) == 0 && dao.countExerciseLogUsage(id) == 0) {
+            "This exercise is already used in templates or workout history. Archive it instead."
+        }
+        dao.findExerciseMedia(id)?.let { mediaStore.delete(it.relativePath) }
+        dao.deleteExercise(id)
+    }
+
     override suspend fun createTemplate(name: String, exerciseIds: List<String>) {
         require(name.isNotBlank()) { "Enter a template name." }
         require(exerciseIds.isNotEmpty()) { "Choose at least one exercise." }
@@ -175,6 +188,14 @@ class RoomWorkoutRepository(
         )
     }
 
+    override suspend fun deleteTemplate(id: String) {
+        require(dao.countTemplateSessionUsage(id) == 0) {
+            "This template is already referenced by workout history and cannot be deleted."
+        }
+        dao.deletePlannedWorkoutsForTemplate(id)
+        dao.deleteTemplate(id)
+    }
+
     override suspend fun assignTemplate(dayOfWeek: DayOfWeek, templateId: String) {
         val now = clock()
         val planId = "default-weekly-plan"
@@ -192,6 +213,11 @@ class RoomWorkoutRepository(
         dao.replacePlannedWorkout(
             PlannedWorkoutEntity(idFactory(), planId, templateId, dayOfWeek, 0),
         )
+    }
+
+    override suspend fun clearPlannedWorkout(dayOfWeek: DayOfWeek) {
+        val planId = "default-weekly-plan"
+        dao.deletePlannedWorkouts(planId, dayOfWeek)
     }
 
     override suspend fun startOrResume(plannedWorkout: PlannedWorkout): String {

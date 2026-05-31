@@ -11,16 +11,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -50,6 +57,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -117,12 +126,11 @@ fun WorkoutsScreen(
                 .padding(padding),
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
-                Text(
-                    text = "TRAINING",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                SectionHero(
+                    label = "TRAINING",
+                    title = "Workouts",
+                    description = "Build your exercise library, reusable templates, and a weekly rhythm that is easy to maintain.",
                 )
-                Text(text = "Workouts", style = MaterialTheme.typography.headlineSmall)
             }
             PrimaryTabRow(selectedTabIndex = selectedTab.ordinal) {
                 WorkoutTab.entries.forEach { tab ->
@@ -139,16 +147,19 @@ fun WorkoutsScreen(
                     onSearch = viewModel::search,
                     onSave = viewModel::saveExercise,
                     onArchive = viewModel::archiveExercise,
+                    onDelete = viewModel::deleteExercise,
                 )
                 WorkoutTab.TEMPLATES -> TemplateLibrary(
                     exercises = exercises,
                     templates = templates,
                     onCreate = viewModel::createTemplate,
+                    onDelete = viewModel::deleteTemplate,
                 )
                 WorkoutTab.PLAN -> WeeklyPlan(
                     templates = templates,
                     schedule = schedule,
                     onAssign = viewModel::assignTemplate,
+                    onClear = viewModel::clearPlannedWorkout,
                 )
                 WorkoutTab.HISTORY -> WorkoutHistory(
                     history = history,
@@ -221,9 +232,11 @@ private fun ExerciseLibrary(
     onSearch: (String) -> Unit,
     onSave: (String?, String, String, String, String, Boolean, Uri?) -> Unit,
     onArchive: (String) -> Unit,
+    onDelete: (String) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     var editingExercise by remember { mutableStateOf<Exercise?>(null) }
+    var deletingExercise by remember { mutableStateOf<Exercise?>(null) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -248,7 +261,8 @@ private fun ExerciseLibrary(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp),
+                    .padding(bottom = 10.dp)
+                    .animateContentSize(),
                 color = MaterialTheme.colorScheme.surface,
                 shape = MaterialTheme.shapes.medium,
             ) {
@@ -262,6 +276,9 @@ private fun ExerciseLibrary(
                     }
                     IconButton(onClick = { editingExercise = exercise }) {
                         Icon(Icons.Outlined.Edit, contentDescription = "Edit ${exercise.name}")
+                    }
+                    IconButton(onClick = { deletingExercise = exercise }) {
+                        Icon(Icons.Outlined.DeleteOutline, contentDescription = "Delete ${exercise.name}")
                     }
                     IconButton(onClick = { onArchive(exercise.id) }) {
                         Icon(Icons.Outlined.Archive, contentDescription = "Archive ${exercise.name}")
@@ -277,6 +294,17 @@ private fun ExerciseLibrary(
             onSave = { id, name, group, instructions, notes, bodyweight, media ->
                 onSave(id, name, group, instructions, notes, bodyweight, media)
                 editingExercise = null
+            },
+        )
+    }
+    deletingExercise?.let { exercise ->
+        ConfirmDeleteDialog(
+            title = "Delete ${exercise.name}?",
+            description = "This only works when the exercise is not already used in templates or workout history.",
+            onDismiss = { deletingExercise = null },
+            onConfirm = {
+                onDelete(exercise.id)
+                deletingExercise = null
             },
         )
     }
@@ -333,8 +361,10 @@ private fun TemplateLibrary(
     exercises: List<Exercise>,
     templates: List<WorkoutTemplate>,
     onCreate: (String, List<String>) -> Unit,
+    onDelete: (String) -> Unit,
 ) {
     var showEditor by remember { mutableStateOf(false) }
+    var deletingTemplate by remember { mutableStateOf<WorkoutTemplate?>(null) }
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Button(onClick = { showEditor = true }, enabled = exercises.isNotEmpty()) {
             Icon(Icons.Outlined.Add, contentDescription = null)
@@ -344,16 +374,24 @@ private fun TemplateLibrary(
         if (templates.isEmpty()) EmptyMessage("No templates yet", "Create a reusable workout from your exercise library.")
         templates.forEach { template ->
             Surface(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp).animateContentSize(),
                 color = MaterialTheme.colorScheme.surface,
                 shape = MaterialTheme.shapes.medium,
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text(template.name, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        template.exercises.joinToString { "${it.exerciseName} ${it.targetSets}x${it.targetReps}" },
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(template.name, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            template.exercises.joinToString { "${it.exerciseName} ${it.targetSets}x${it.targetReps}" },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = { deletingTemplate = template }) {
+                        Icon(Icons.Outlined.DeleteOutline, contentDescription = "Delete ${template.name}")
+                    }
                 }
             }
         }
@@ -363,6 +401,17 @@ private fun TemplateLibrary(
             onCreate(name, ids)
             showEditor = false
         }
+    }
+    deletingTemplate?.let { template ->
+        ConfirmDeleteDialog(
+            title = "Delete ${template.name}?",
+            description = "This removes it from future weekly plans. Templates that already exist in workout history stay protected.",
+            onDismiss = { deletingTemplate = null },
+            onConfirm = {
+                onDelete(template.id)
+                deletingTemplate = null
+            },
+        )
     }
 }
 
@@ -405,9 +454,11 @@ private fun WeeklyPlan(
     templates: List<WorkoutTemplate>,
     schedule: List<PlannedWorkout>,
     onAssign: (DayOfWeek, String) -> Unit,
+    onClear: (DayOfWeek) -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     var selectedDay by remember { mutableStateOf<DayOfWeek?>(null) }
+    var clearingDay by remember { mutableStateOf<DayOfWeek?>(null) }
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         if (templates.isEmpty()) EmptyMessage("Create a template first", "Weekly planning uses your saved workout templates.")
         DayOfWeek.entries.forEach { day ->
@@ -419,6 +470,11 @@ private fun WeeklyPlan(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(day.getDisplayName(TextStyle.FULL, locale), style = MaterialTheme.typography.titleMedium)
                     Text(planned?.templateName ?: "Rest day", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (planned != null) {
+                    IconButton(onClick = { clearingDay = day }) {
+                        Icon(Icons.Outlined.DeleteOutline, contentDescription = "Clear ${day.name}")
+                    }
                 }
                 OutlinedButton(onClick = { selectedDay = day }, enabled = templates.isNotEmpty()) {
                     Text(if (planned == null) "Assign" else "Change")
@@ -448,6 +504,17 @@ private fun WeeklyPlan(
             },
             confirmButton = {},
             dismissButton = { OutlinedButton(onClick = { selectedDay = null }) { Text("Cancel") } },
+        )
+    }
+    clearingDay?.let { day ->
+        ConfirmDeleteDialog(
+            title = "Clear ${day.getDisplayName(TextStyle.FULL, locale)}?",
+            description = "This removes the planned workout for that day and leaves it as a rest day.",
+            onDismiss = { clearingDay = null },
+            onConfirm = {
+                onClear(day)
+                clearingDay = null
+            },
         )
     }
 }
@@ -488,6 +555,83 @@ private fun EmptyMessage(title: String, description: String) {
     Text(title, style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(4.dp))
     Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun ConfirmDeleteDialog(
+    title: String,
+    description: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(description) },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
+}
+
+@Composable
+private fun SectionHero(
+    label: String,
+    title: String,
+    description: String,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.secondaryContainer,
+                            ),
+                        ),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.FitnessCenter,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                AssistChip(onClick = {}, label = { Text(label) })
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = title, style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }
 
 private enum class WorkoutTab(val label: String) {

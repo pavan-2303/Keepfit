@@ -14,12 +14,14 @@ complexity.
 - Record weight, BMI inputs, optional measurements, and weekly progress photos.
 - Compare transformation photos between selected weeks.
 - Export and restore an encrypted local backup.
-- Optionally add Health Connect step tracking and an Ollama assistant later.
+- Optional Health Connect step tracking and an Ollama assistant.
 
 ## Project Status
 
-Phase 0, Phase 1A, and Phase 1B are implemented. The project now includes a
-runnable Android application with:
+Phase 0, Phase 1A, Phase 1B, and Phase 1C are implemented on the active
+development branch. Phase 1D implementation is complete, with final device
+backup roundtrip verification still pending. Phase 2A is in progress. The
+project now includes a runnable Android application with:
 
 - a first-run local profile form persisted with Room;
 - a five-destination Compose Navigation shell;
@@ -36,13 +38,30 @@ runnable Android application with:
   sections;
 - duplicate-yesterday nutrition logging and derived calorie and macro totals;
 - a Today nutrition summary backed by the same diary data;
+- dated body measurement logging with BMI derived from profile height and the
+  latest weight;
+- weekly transformation weeks with private photo imports for front, left,
+  right, back, and legs angles;
+- two-week angle comparison with empty states when a photo is missing;
+- weekly progress summaries with workout counts, nutrition averages, and weight
+  change;
+- a real Settings screen for calorie and macro goals, units, workout reminder
+  time, weekly progress reminder time, and configurable rest timer duration;
+- DataStore-backed settings persistence and WorkManager-based local reminder
+  scheduling;
+- encrypted backup export plus restore preview, checksum validation, and
+  replace-data restore flow;
+- launcher branding from the repository logo asset plus an in-app Today header
+  brand mark;
+- an optional Today steps card backed by Health Connect availability checks,
+  permission request flow, and daily plus seven-day step aggregates;
 - Hilt dependency injection;
-- Room schema export with explicit version `1` to `2` and `2` to `3`
-  migrations;
+- Room schema export with explicit version `1` to `2`, `2` to `3`, and `3` to
+  `4` migrations;
 - unit tests plus Room DAO and migration instrumentation tests.
 
-The next implementation target is Phase 1C transformation tracking. Health
-Connect and Ollama integration remain optional phase-2 additions.
+The current implementation target is supported-device verification for the
+Health Connect steps flow and the later optional Ollama assistant phase.
 
 ## Architecture
 
@@ -64,7 +83,7 @@ Read these references before implementation:
 | Phase 0 | Android foundation, navigation, Room setup, and local profile |
 | Phase 1A | Exercise library, workout plans, logging, history, and records |
 | Phase 1B | Personal foods, reusable meals, nutrition diary, and today summary |
-| Phase 1C | Measurements, weekly transformation photos, and comparison |
+| Phase 1C | Measurements, BMI, weekly transformation photos, comparison, and summaries |
 | Phase 1D | Encrypted backup, restore, reminders, and complete offline MVP |
 | Phase 2A | Optional read-only Health Connect steps |
 | Phase 2B | Optional Ollama assistant with reviewable plan suggestions |
@@ -90,9 +109,13 @@ Read these references before implementation:
 |   |-- database/
 |   |-- designsystem/
 |   |-- media/
+|   |-- preferences/
 |   `-- model/
 |-- feature/
 |   |-- nutrition/
+|   |-- settings/
+|   |-- steps/
+|   |-- transformation/
 |   `-- workouts/
 |-- docs/
 |   |-- architecture/
@@ -138,10 +161,32 @@ Use the Gradle wrapper from PowerShell:
 .\gradlew.bat assembleDebug
 ```
 
+For a locally signed release build, create an ignored `keystore.properties`
+file in the repo root and point it at an ignored `.jks` file:
+
+```properties
+storeFile=keepfit-release.jks
+storePassword=your-password
+keyAlias=keepfit
+keyPassword=your-password
+```
+
+Then build:
+
+```powershell
+.\gradlew.bat :app:assembleRelease
+```
+
 The debug APK is written to:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
+```
+
+The signed release APK is written to:
+
+```text
+app/build/outputs/apk/release/app-release.apk
 ```
 
 Run Room instrumentation tests on a connected Android emulator or device:

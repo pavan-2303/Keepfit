@@ -25,11 +25,20 @@ interface WorkoutDao {
     @Query("UPDATE exercises SET archivedAt = :archivedAt, updatedAt = :archivedAt WHERE id = :id")
     suspend fun archiveExercise(id: String, archivedAt: Long)
 
+    @Query("DELETE FROM exercises WHERE id = :id")
+    suspend fun deleteExercise(id: String)
+
     @Upsert
     suspend fun upsertExerciseMedia(media: ExerciseMediaEntity)
 
     @Query("SELECT * FROM exercise_media WHERE exerciseId = :exerciseId LIMIT 1")
     suspend fun findExerciseMedia(exerciseId: String): ExerciseMediaEntity?
+
+    @Query("SELECT COUNT(*) FROM workout_template_exercises WHERE exerciseId = :exerciseId")
+    suspend fun countExerciseTemplateUsage(exerciseId: String): Int
+
+    @Query("SELECT COUNT(*) FROM exercise_logs WHERE exerciseId = :exerciseId")
+    suspend fun countExerciseLogUsage(exerciseId: String): Int
 
     @Upsert
     suspend fun upsertTemplate(template: WorkoutTemplateEntity)
@@ -43,6 +52,15 @@ interface WorkoutDao {
 
     @Query("DELETE FROM workout_template_exercises WHERE workoutTemplateId = :templateId")
     suspend fun deleteTemplateExercises(templateId: String)
+
+    @Query("DELETE FROM workout_templates WHERE id = :templateId")
+    suspend fun deleteTemplate(templateId: String)
+
+    @Query("SELECT COUNT(*) FROM workout_sessions WHERE workoutTemplateId = :templateId")
+    suspend fun countTemplateSessionUsage(templateId: String): Int
+
+    @Query("DELETE FROM planned_workouts WHERE workoutTemplateId = :templateId")
+    suspend fun deletePlannedWorkoutsForTemplate(templateId: String)
 
     @Insert
     suspend fun insertTemplateExercises(exercises: List<WorkoutTemplateExerciseEntity>)
@@ -130,6 +148,17 @@ interface WorkoutDao {
     @Transaction
     @Query("SELECT * FROM workout_sessions WHERE completedAt IS NOT NULL ORDER BY completedAt DESC")
     fun observeSessionHistory(): Flow<List<WorkoutSessionDetails>>
+
+    @Query(
+        """
+        SELECT workoutDate, COUNT(*) AS completedCount
+        FROM workout_sessions
+        WHERE completedAt IS NOT NULL
+        GROUP BY workoutDate
+        ORDER BY workoutDate DESC
+        """,
+    )
+    fun observeCompletedWorkoutDays(): Flow<List<CompletedWorkoutDayRow>>
 
     @Query(
         """

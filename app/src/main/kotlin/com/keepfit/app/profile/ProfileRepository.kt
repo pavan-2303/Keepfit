@@ -8,4 +8,3 @@ interface ProfileRepository {
 
     suspend fun saveProfile(input: ProfileInput)
 }
-

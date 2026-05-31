@@ -7,10 +7,24 @@ import com.keepfit.core.database.KeepfitDatabase
 import com.keepfit.core.database.KeepfitDatabaseFactory
 import com.keepfit.core.database.nutrition.NutritionDao
 import com.keepfit.core.database.profile.BodyProfileDao
+import com.keepfit.core.database.transformation.TransformationDao
 import com.keepfit.core.database.workout.WorkoutDao
 import com.keepfit.core.media.ExerciseMediaStore
+import com.keepfit.core.media.TransformationPhotoStore
+import com.keepfit.core.preferences.AppSettingsRepository
+import com.keepfit.core.preferences.DataStoreAppSettingsRepository
+import com.keepfit.core.preferences.ReminderScheduler
+import com.keepfit.core.preferences.WorkManagerReminderScheduler
+import com.keepfit.feature.settings.data.BackupRepository
+import com.keepfit.feature.settings.data.DeviceBackupRepository
+import com.keepfit.feature.settings.data.RoomSettingsGoalsRepository
+import com.keepfit.feature.settings.data.SettingsGoalsRepository
+import com.keepfit.feature.steps.data.HealthConnectStepsRepository
+import com.keepfit.feature.steps.data.StepsRepository
 import com.keepfit.feature.nutrition.data.NutritionRepository
 import com.keepfit.feature.nutrition.data.RoomNutritionRepository
+import com.keepfit.feature.transformation.data.RoomTransformationRepository
+import com.keepfit.feature.transformation.data.TransformationRepository
 import com.keepfit.feature.workouts.data.RoomWorkoutRepository
 import com.keepfit.feature.workouts.data.WorkoutRepository
 import dagger.Module
@@ -38,6 +52,37 @@ object AppModule {
         RoomProfileRepository(dao)
 
     @Provides
+    @Singleton
+    fun provideReminderScheduler(@ApplicationContext context: Context): ReminderScheduler =
+        WorkManagerReminderScheduler(context)
+
+    @Provides
+    @Singleton
+    fun provideAppSettingsRepository(
+        @ApplicationContext context: Context,
+        scheduler: ReminderScheduler,
+    ): AppSettingsRepository = DataStoreAppSettingsRepository(context, scheduler)
+
+    @Provides
+    @Singleton
+    fun provideSettingsGoalsRepository(dao: BodyProfileDao): SettingsGoalsRepository =
+        RoomSettingsGoalsRepository(dao)
+
+    @Provides
+    @Singleton
+    fun provideBackupRepository(
+        @ApplicationContext context: Context,
+        database: KeepfitDatabase,
+        settingsRepository: AppSettingsRepository,
+    ): BackupRepository = DeviceBackupRepository(context, database, settingsRepository)
+
+    @Provides
+    @Singleton
+    fun provideStepsRepository(
+        @ApplicationContext context: Context,
+    ): StepsRepository = HealthConnectStepsRepository(context)
+
+    @Provides
     fun provideNutritionDao(database: KeepfitDatabase): NutritionDao =
         database.nutritionDao()
 
@@ -47,6 +92,10 @@ object AppModule {
         dao: NutritionDao,
         bodyProfileDao: BodyProfileDao,
     ): NutritionRepository = RoomNutritionRepository(dao, bodyProfileDao)
+
+    @Provides
+    fun provideTransformationDao(database: KeepfitDatabase): TransformationDao =
+        database.transformationDao()
 
     @Provides
     fun provideWorkoutDao(database: KeepfitDatabase): WorkoutDao =
@@ -59,8 +108,30 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideTransformationPhotoStore(@ApplicationContext context: Context): TransformationPhotoStore =
+        TransformationPhotoStore(context)
+
+    @Provides
+    @Singleton
     fun provideWorkoutRepository(
         dao: WorkoutDao,
         mediaStore: ExerciseMediaStore,
-    ): WorkoutRepository = RoomWorkoutRepository(dao, mediaStore)
+        settingsRepository: AppSettingsRepository,
+    ): WorkoutRepository = RoomWorkoutRepository(dao, mediaStore, settingsRepository = settingsRepository)
+
+    @Provides
+    @Singleton
+    fun provideTransformationRepository(
+        dao: TransformationDao,
+        bodyProfileDao: BodyProfileDao,
+        nutritionDao: NutritionDao,
+        workoutDao: WorkoutDao,
+        photoStore: TransformationPhotoStore,
+    ): TransformationRepository = RoomTransformationRepository(
+        transformationDao = dao,
+        bodyProfileDao = bodyProfileDao,
+        nutritionDao = nutritionDao,
+        workoutDao = workoutDao,
+        photoStore = photoStore,
+    )
 }

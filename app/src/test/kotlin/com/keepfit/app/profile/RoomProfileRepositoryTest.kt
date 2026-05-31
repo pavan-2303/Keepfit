@@ -41,5 +41,15 @@ private class FakeBodyProfileDao : BodyProfileDao {
     }
 
     override fun observeLocalProfile(): Flow<BodyProfileEntity?> = profile
-}
 
+    override suspend fun findLocalProfile(): BodyProfileEntity? = profile.value
+
+    override suspend fun updateNutritionGoals(
+        profileId: String,
+        dailyCalorieGoal: Double?,
+        dailyProteinGoalGrams: Double?,
+        dailyCarbohydrateGoalGrams: Double?,
+        dailyFatGoalGrams: Double?,
+        updatedAt: Long,
+    ) = Unit
+}

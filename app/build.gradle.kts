@@ -5,6 +5,16 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+import java.util.Properties
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+val hasReleaseSigning = keystorePropertiesFile.exists()
+
+if (hasReleaseSigning) {
+    keystorePropertiesFile.inputStream().use(keystoreProperties::load)
+}
+
 android {
     namespace = "com.keepfit.app"
     compileSdk = 36
@@ -28,6 +38,34 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(requireNotNull(keystoreProperties.getProperty("storeFile")) {
+                    "keystore.properties is missing storeFile."
+                })
+                storePassword = requireNotNull(keystoreProperties.getProperty("storePassword")) {
+                    "keystore.properties is missing storePassword."
+                }
+                keyAlias = requireNotNull(keystoreProperties.getProperty("keyAlias")) {
+                    "keystore.properties is missing keyAlias."
+                }
+                keyPassword = requireNotNull(keystoreProperties.getProperty("keyPassword")) {
+                    "keystore.properties is missing keyPassword."
+                }
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
@@ -38,7 +76,11 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:media"))
+    implementation(project(":core:preferences"))
     implementation(project(":feature:nutrition"))
+    implementation(project(":feature:settings"))
+    implementation(project(":feature:steps"))
+    implementation(project(":feature:transformation"))
     implementation(project(":feature:workouts"))
 
     implementation(libs.androidx.activity.compose)

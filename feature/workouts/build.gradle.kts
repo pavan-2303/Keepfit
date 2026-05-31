@@ -28,6 +28,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:media"))
     implementation(project(":core:model"))
+    implementation(project(":core:preferences"))
 
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

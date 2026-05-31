@@ -93,6 +93,8 @@ Track daily intake without depending on a remote food catalog.
 
 ## 5. Phase 1C: Transformation Tracking
 
+Status: implemented on `develop` and emulator-verified.
+
 ### Goal
 
 Make weekly physical changes easy to record and compare privately.
@@ -102,7 +104,7 @@ Make weekly physical changes easy to record and compare privately.
 - Weight entry and optional body measurements.
 - Derived BMI when height and weight exist.
 - Weekly transformation entries with notes.
-- Import or capture front, left, right, back, and legs photos.
+- Import front, left, right, back, and legs photos into app-private storage.
 - Compare two selected weeks side by side for a selected angle.
 - Empty state when an angle is missing from either week.
 - Weekly summary with workouts completed, average logged calories, macro
@@ -118,6 +120,10 @@ Make weekly physical changes easy to record and compare privately.
 5. Confirm all photos remain private to the application sandbox.
 
 ## 6. Phase 1D: Backup, Restore, and Reminders
+
+Status: in progress on `develop`; settings, reminders, and backup/restore
+implementation are complete, with final device-level backup roundtrip
+verification still pending.
 
 ### Goal
 
@@ -146,6 +152,10 @@ Protect local data and finish the dependable personal-use MVP.
 At this point Keepfit is a complete offline MVP.
 
 ## 7. Phase 2A: Health Connect Steps
+
+Status: in progress on `develop`; Today dashboard steps card, availability
+checks, permission request, and seven-day aggregates are implemented and
+emulator-verified for the update-required state.
 
 ### Goal
 
