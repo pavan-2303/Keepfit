@@ -1,5 +1,6 @@
 # Gradle
 .gradle/
+.kotlin/
 **/build/
 
 # Android local configuration
@@ -22,4 +23,3 @@ media/
 # Operating system
 .DS_Store
 Thumbs.db
-

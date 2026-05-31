@@ -3,9 +3,10 @@ package com.keepfit.feature.steps
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.keepfit.feature.steps.data.StepsRepository
-import com.keepfit.feature.steps.data.StepsSnapshot
 import com.keepfit.feature.steps.data.StepsStatus
 import com.keepfit.feature.steps.data.StepsUiState
+import com.keepfit.feature.steps.data.stepsUiStateForError
+import com.keepfit.feature.steps.data.stepsUiStateForSnapshot
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,23 +32,8 @@ class StepsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(status = StepsStatus.LOADING, message = null)
             runCatching { repository.loadSnapshot() }
-                .onSuccess { snapshot ->
-                    _uiState.value = when (snapshot) {
-                        StepsSnapshot.PermissionRequired -> StepsUiState(status = StepsStatus.PERMISSION_REQUIRED)
-                        StepsSnapshot.Unavailable -> StepsUiState(status = StepsStatus.UNAVAILABLE)
-                        StepsSnapshot.UpdateRequired -> StepsUiState(status = StepsStatus.UPDATE_REQUIRED)
-                        is StepsSnapshot.Connected -> StepsUiState(
-                            status = StepsStatus.CONNECTED,
-                            summary = snapshot.summary,
-                        )
-                    }
-                }
-                .onFailure {
-                    _uiState.value = StepsUiState(
-                        status = StepsStatus.ERROR,
-                        message = it.message ?: "Health Connect steps could not be loaded.",
-                    )
-                }
+                .onSuccess { snapshot -> _uiState.value = stepsUiStateForSnapshot(snapshot) }
+                .onFailure { _uiState.value = stepsUiStateForError(it) }
         }
     }
 
