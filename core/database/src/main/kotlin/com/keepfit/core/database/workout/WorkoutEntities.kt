@@ -247,3 +247,7 @@ data class PreviousSetRow(
     val weightKg: Double,
 )
 
+data class CompletedWorkoutDayRow(
+    val workoutDate: LocalDate,
+    val completedCount: Int,
+)

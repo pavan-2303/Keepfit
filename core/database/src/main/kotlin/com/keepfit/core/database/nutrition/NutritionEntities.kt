@@ -125,6 +125,14 @@ data class DailyNutritionTotalsRow(
     val fatGrams: Double,
 )
 
+data class DailyNutritionTotalsByDateRow(
+    val diaryDate: LocalDate,
+    val calories: Double,
+    val proteinGrams: Double,
+    val carbohydrateGrams: Double,
+    val fatGrams: Double,
+)
+
 data class RecentFoodRow(
     @Embedded val food: FoodEntity,
     val lastUsedAt: Long,

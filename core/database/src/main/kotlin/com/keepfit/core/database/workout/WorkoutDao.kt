@@ -133,6 +133,17 @@ interface WorkoutDao {
 
     @Query(
         """
+        SELECT workoutDate, COUNT(*) AS completedCount
+        FROM workout_sessions
+        WHERE completedAt IS NOT NULL
+        GROUP BY workoutDate
+        ORDER BY workoutDate DESC
+        """,
+    )
+    fun observeCompletedWorkoutDays(): Flow<List<CompletedWorkoutDayRow>>
+
+    @Query(
+        """
         SELECT exercise_logs.exerciseId,
                exercises.name AS exerciseName,
                MAX(set_logs.weightKg) AS highestWeightKg,

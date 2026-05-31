@@ -250,7 +250,7 @@ as a general reference value, not a diagnosis.
 | --- | --- | --- |
 | `id` | UUID | Primary key |
 | `bodyProfileId` | UUID | Foreign key to `BodyProfile` |
-| `weekStartDate` | LocalDate | Unique per profile |
+| `weekStartDate` | LocalDate | Monday-normalized and unique per profile |
 | `notes` | String? | Optional weekly note |
 | `createdAt` | Instant | Creation timestamp |
 
@@ -267,7 +267,8 @@ as a general reference value, not a diagnosis.
 | `createdAt` | Instant | Import timestamp |
 
 Allow at most one photo for each week and angle. Replacement follows the same
-copy-before-update rule as exercise media.
+copy-before-update rule as exercise media. Phase 1C supports private JPEG, PNG,
+and WebP imports.
 
 ## 6. Settings and Goals
 

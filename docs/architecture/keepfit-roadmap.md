@@ -93,6 +93,8 @@ Track daily intake without depending on a remote food catalog.
 
 ## 5. Phase 1C: Transformation Tracking
 
+Status: implemented on `develop` and emulator-verified.
+
 ### Goal
 
 Make weekly physical changes easy to record and compare privately.
@@ -102,7 +104,7 @@ Make weekly physical changes easy to record and compare privately.
 - Weight entry and optional body measurements.
 - Derived BMI when height and weight exist.
 - Weekly transformation entries with notes.
-- Import or capture front, left, right, back, and legs photos.
+- Import front, left, right, back, and legs photos into app-private storage.
 - Compare two selected weeks side by side for a selected angle.
 - Empty state when an angle is missing from either week.
 - Weekly summary with workouts completed, average logged calories, macro

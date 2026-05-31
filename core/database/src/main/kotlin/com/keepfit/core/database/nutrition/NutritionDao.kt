@@ -112,6 +112,22 @@ interface NutritionDao {
 
     @Query(
         """
+        SELECT
+            food_diary_entries.diaryDate AS diaryDate,
+            COALESCE(SUM(foods.calories * food_diary_entries.servings), 0.0) AS calories,
+            COALESCE(SUM(foods.proteinGrams * food_diary_entries.servings), 0.0) AS proteinGrams,
+            COALESCE(SUM(foods.carbohydrateGrams * food_diary_entries.servings), 0.0) AS carbohydrateGrams,
+            COALESCE(SUM(foods.fatGrams * food_diary_entries.servings), 0.0) AS fatGrams
+        FROM food_diary_entries
+        JOIN foods ON foods.id = food_diary_entries.foodId
+        GROUP BY food_diary_entries.diaryDate
+        ORDER BY food_diary_entries.diaryDate DESC
+        """,
+    )
+    fun observeAllDailyTotals(): Flow<List<DailyNutritionTotalsByDateRow>>
+
+    @Query(
+        """
         SELECT foods.*, MAX(food_diary_entries.loggedAt) AS lastUsedAt
         FROM food_diary_entries
         JOIN foods ON foods.id = food_diary_entries.foodId

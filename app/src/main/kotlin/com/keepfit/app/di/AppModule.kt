@@ -7,10 +7,14 @@ import com.keepfit.core.database.KeepfitDatabase
 import com.keepfit.core.database.KeepfitDatabaseFactory
 import com.keepfit.core.database.nutrition.NutritionDao
 import com.keepfit.core.database.profile.BodyProfileDao
+import com.keepfit.core.database.transformation.TransformationDao
 import com.keepfit.core.database.workout.WorkoutDao
 import com.keepfit.core.media.ExerciseMediaStore
+import com.keepfit.core.media.TransformationPhotoStore
 import com.keepfit.feature.nutrition.data.NutritionRepository
 import com.keepfit.feature.nutrition.data.RoomNutritionRepository
+import com.keepfit.feature.transformation.data.RoomTransformationRepository
+import com.keepfit.feature.transformation.data.TransformationRepository
 import com.keepfit.feature.workouts.data.RoomWorkoutRepository
 import com.keepfit.feature.workouts.data.WorkoutRepository
 import dagger.Module
@@ -49,6 +53,10 @@ object AppModule {
     ): NutritionRepository = RoomNutritionRepository(dao, bodyProfileDao)
 
     @Provides
+    fun provideTransformationDao(database: KeepfitDatabase): TransformationDao =
+        database.transformationDao()
+
+    @Provides
     fun provideWorkoutDao(database: KeepfitDatabase): WorkoutDao =
         database.workoutDao()
 
@@ -59,8 +67,29 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideTransformationPhotoStore(@ApplicationContext context: Context): TransformationPhotoStore =
+        TransformationPhotoStore(context)
+
+    @Provides
+    @Singleton
     fun provideWorkoutRepository(
         dao: WorkoutDao,
         mediaStore: ExerciseMediaStore,
     ): WorkoutRepository = RoomWorkoutRepository(dao, mediaStore)
+
+    @Provides
+    @Singleton
+    fun provideTransformationRepository(
+        dao: TransformationDao,
+        bodyProfileDao: BodyProfileDao,
+        nutritionDao: NutritionDao,
+        workoutDao: WorkoutDao,
+        photoStore: TransformationPhotoStore,
+    ): TransformationRepository = RoomTransformationRepository(
+        transformationDao = dao,
+        bodyProfileDao = bodyProfileDao,
+        nutritionDao = nutritionDao,
+        workoutDao = workoutDao,
+        photoStore = photoStore,
+    )
 }

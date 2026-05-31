@@ -47,6 +47,8 @@ import androidx.navigation.compose.rememberNavController
 import com.keepfit.core.model.BodyProfile
 import com.keepfit.feature.nutrition.ui.NutritionScreen
 import com.keepfit.feature.nutrition.ui.TodayNutritionSection
+import com.keepfit.feature.transformation.ui.ProgressScreen
+import com.keepfit.feature.transformation.ui.TodayProgressSection
 import com.keepfit.feature.workouts.ui.TodayWorkoutSection
 import com.keepfit.feature.workouts.ui.WorkoutsScreen
 import java.time.LocalDate
@@ -110,13 +112,7 @@ fun HomeShell(profile: BodyProfile) {
                 NutritionScreen(modifier = Modifier.padding(padding))
             }
             composable(HomeDestination.PROGRESS.route) {
-                EmptyDestinationScreen(
-                    padding = padding,
-                    eyebrow = "PROGRESS",
-                    title = "Transformation",
-                    description = "Your weekly measurements and private photo comparisons will live here.",
-                    icon = Icons.Outlined.MonitorWeight,
-                )
+                ProgressScreen(modifier = Modifier.padding(padding))
             }
             composable(HomeDestination.SETTINGS.route) {
                 EmptyDestinationScreen(
@@ -159,12 +155,7 @@ private fun TodayScreen(
         Spacer(modifier = Modifier.height(12.dp))
         TodayNutritionSection()
         Spacer(modifier = Modifier.height(12.dp))
-        SummaryCard(
-            icon = Icons.Outlined.Insights,
-            label = "PROGRESS",
-            title = "Starting line",
-            description = "Weekly progress summaries will appear here.",
-        )
+        TodayProgressSection()
     }
 }
 

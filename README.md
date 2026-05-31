@@ -18,8 +18,9 @@ complexity.
 
 ## Project Status
 
-Phase 0, Phase 1A, and Phase 1B are implemented. The project now includes a
-runnable Android application with:
+Phase 0, Phase 1A, Phase 1B, and Phase 1C are implemented on the active
+development branch. The project now includes a runnable Android application
+with:
 
 - a first-run local profile form persisted with Room;
 - a five-destination Compose Navigation shell;
@@ -36,13 +37,21 @@ runnable Android application with:
   sections;
 - duplicate-yesterday nutrition logging and derived calorie and macro totals;
 - a Today nutrition summary backed by the same diary data;
+- dated body measurement logging with BMI derived from profile height and the
+  latest weight;
+- weekly transformation weeks with private photo imports for front, left,
+  right, back, and legs angles;
+- two-week angle comparison with empty states when a photo is missing;
+- weekly progress summaries with workout counts, nutrition averages, and weight
+  change;
 - Hilt dependency injection;
-- Room schema export with explicit version `1` to `2` and `2` to `3`
-  migrations;
+- Room schema export with explicit version `1` to `2`, `2` to `3`, and `3` to
+  `4` migrations;
 - unit tests plus Room DAO and migration instrumentation tests.
 
-The next implementation target is Phase 1C transformation tracking. Health
-Connect and Ollama integration remain optional phase-2 additions.
+The next implementation target is Phase 1D backup, restore, reminders, and
+settings completion. Health Connect and Ollama integration remain optional
+phase-2 additions.
 
 ## Architecture
 
@@ -64,7 +73,7 @@ Read these references before implementation:
 | Phase 0 | Android foundation, navigation, Room setup, and local profile |
 | Phase 1A | Exercise library, workout plans, logging, history, and records |
 | Phase 1B | Personal foods, reusable meals, nutrition diary, and today summary |
-| Phase 1C | Measurements, weekly transformation photos, and comparison |
+| Phase 1C | Measurements, BMI, weekly transformation photos, comparison, and summaries |
 | Phase 1D | Encrypted backup, restore, reminders, and complete offline MVP |
 | Phase 2A | Optional read-only Health Connect steps |
 | Phase 2B | Optional Ollama assistant with reviewable plan suggestions |
@@ -93,6 +102,7 @@ Read these references before implementation:
 |   `-- model/
 |-- feature/
 |   |-- nutrition/
+|   |-- transformation/
 |   `-- workouts/
 |-- docs/
 |   |-- architecture/

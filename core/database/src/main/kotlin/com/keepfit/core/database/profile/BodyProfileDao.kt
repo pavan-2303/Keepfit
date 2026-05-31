@@ -12,5 +12,7 @@ interface BodyProfileDao {
 
     @Query("SELECT * FROM body_profiles LIMIT 1")
     fun observeLocalProfile(): Flow<BodyProfileEntity?>
-}
 
+    @Query("SELECT * FROM body_profiles LIMIT 1")
+    suspend fun findLocalProfile(): BodyProfileEntity?
+}

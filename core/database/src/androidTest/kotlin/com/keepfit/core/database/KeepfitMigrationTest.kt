@@ -59,6 +59,47 @@ class KeepfitMigrationTest {
         }
     }
 
+    @Test
+    fun migrateThreeToFourPreservesProfileAndAddsTransformationTables() {
+        helper.createDatabase(TEST_DATABASE, 3).use { database ->
+            database.execSQL(
+                """
+                INSERT INTO body_profiles (
+                    id, displayName, heightCm, birthDate, dailyCalorieGoal,
+                    dailyProteinGoalGrams, dailyCarbohydrateGoalGrams, dailyFatGoalGrams,
+                    createdAt, updatedAt
+                ) VALUES (
+                    'profile-id', 'Pavan', 178.0, NULL, 2400.0,
+                    150.0, 250.0, 70.0, 100, 100
+                )
+                """.trimIndent(),
+            )
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DATABASE,
+            4,
+            true,
+            KeepfitMigrations.THREE_TO_FOUR,
+        ).use { database ->
+            database.query(
+                """
+                SELECT displayName, dailyCalorieGoal
+                FROM body_profiles
+                """.trimIndent(),
+            ).use { cursor ->
+                assertEquals(true, cursor.moveToFirst())
+                assertEquals("Pavan", cursor.getString(0))
+                assertEquals(2400.0, cursor.getDouble(1), 0.0)
+            }
+            database.query(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'transformation_weeks'",
+            ).use { cursor ->
+                assertEquals(true, cursor.moveToFirst())
+            }
+        }
+    }
+
     private companion object {
         const val TEST_DATABASE = "keepfit-migration-test"
     }

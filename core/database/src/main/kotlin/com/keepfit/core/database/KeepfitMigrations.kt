@@ -237,4 +237,71 @@ object KeepfitMigrations {
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_food_diary_entries_savedMealId` ON `food_diary_entries` (`savedMealId`)")
         }
     }
+
+    val THREE_TO_FOUR = object : Migration(3, 4) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `body_measurements` (
+                    `id` TEXT NOT NULL,
+                    `bodyProfileId` TEXT NOT NULL,
+                    `measurementDate` TEXT NOT NULL,
+                    `weightKg` REAL,
+                    `waistCm` REAL,
+                    `chestCm` REAL,
+                    `hipsCm` REAL,
+                    `leftArmCm` REAL,
+                    `rightArmCm` REAL,
+                    `leftThighCm` REAL,
+                    `rightThighCm` REAL,
+                    `notes` TEXT,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_body_measurements_bodyProfileId` ON `body_measurements` (`bodyProfileId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_body_measurements_measurementDate` ON `body_measurements` (`measurementDate`)")
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `transformation_weeks` (
+                    `id` TEXT NOT NULL,
+                    `bodyProfileId` TEXT NOT NULL,
+                    `weekStartDate` TEXT NOT NULL,
+                    `notes` TEXT,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_transformation_weeks_bodyProfileId` ON `transformation_weeks` (`bodyProfileId`)")
+            database.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_transformation_weeks_bodyProfileId_weekStartDate` ON `transformation_weeks` (`bodyProfileId`, `weekStartDate`)",
+            )
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `transformation_photos` (
+                    `id` TEXT NOT NULL,
+                    `transformationWeekId` TEXT NOT NULL,
+                    `angle` TEXT NOT NULL,
+                    `relativePath` TEXT NOT NULL,
+                    `mimeType` TEXT NOT NULL,
+                    `sizeBytes` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`transformationWeekId`) REFERENCES `transformation_weeks`(`id`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_transformation_photos_transformationWeekId` ON `transformation_photos` (`transformationWeekId`)")
+            database.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_transformation_photos_transformationWeekId_angle` ON `transformation_photos` (`transformationWeekId`, `angle`)",
+            )
+        }
+    }
 }

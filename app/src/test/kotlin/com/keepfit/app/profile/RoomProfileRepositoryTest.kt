@@ -41,5 +41,6 @@ private class FakeBodyProfileDao : BodyProfileDao {
     }
 
     override fun observeLocalProfile(): Flow<BodyProfileEntity?> = profile
-}
 
+    override suspend fun findLocalProfile(): BodyProfileEntity? = profile.value
+}
