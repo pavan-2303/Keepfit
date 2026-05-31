@@ -19,7 +19,8 @@ complexity.
 ## Project Status
 
 Phase 0, Phase 1A, Phase 1B, and Phase 1C are implemented on the active
-development branch. The project now includes a runnable Android application
+development branch. Phase 1D is in progress, with the settings and reminders
+slice implemented. The project now includes a runnable Android application
 with:
 
 - a first-run local profile form persisted with Room;
@@ -44,6 +45,10 @@ with:
 - two-week angle comparison with empty states when a photo is missing;
 - weekly progress summaries with workout counts, nutrition averages, and weight
   change;
+- a real Settings screen for calorie and macro goals, units, workout reminder
+  time, weekly progress reminder time, and configurable rest timer duration;
+- DataStore-backed settings persistence and WorkManager-based local reminder
+  scheduling;
 - Hilt dependency injection;
 - Room schema export with explicit version `1` to `2`, `2` to `3`, and `3` to
   `4` migrations;
@@ -99,9 +104,11 @@ Read these references before implementation:
 |   |-- database/
 |   |-- designsystem/
 |   |-- media/
+|   |-- preferences/
 |   `-- model/
 |-- feature/
 |   |-- nutrition/
+|   |-- settings/
 |   |-- transformation/
 |   `-- workouts/
 |-- docs/

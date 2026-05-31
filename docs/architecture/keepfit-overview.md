@@ -57,6 +57,7 @@ isolated from the offline core.
 | `core:model` | Shared domain models and value types |
 | `core:database` | Room database, entities, DAOs, migrations, and repository implementations |
 | `core:media` | Import, validate, store, retrieve, export, and restore private media |
+| `core:preferences` | DataStore-backed app settings and reminder scheduling |
 | `core:designsystem` | Theme, reusable Compose components, and application icons |
 | `feature:workouts` | Exercise library, templates, plans, workout sessions, history, records, timer |
 | `feature:nutrition` | Personal foods, saved meals, diary entries, and daily totals |

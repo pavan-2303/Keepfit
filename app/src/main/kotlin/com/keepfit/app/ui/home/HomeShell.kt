@@ -47,6 +47,7 @@ import androidx.navigation.compose.rememberNavController
 import com.keepfit.core.model.BodyProfile
 import com.keepfit.feature.nutrition.ui.NutritionScreen
 import com.keepfit.feature.nutrition.ui.TodayNutritionSection
+import com.keepfit.feature.settings.ui.SettingsScreen
 import com.keepfit.feature.transformation.ui.ProgressScreen
 import com.keepfit.feature.transformation.ui.TodayProgressSection
 import com.keepfit.feature.workouts.ui.TodayWorkoutSection
@@ -115,13 +116,7 @@ fun HomeShell(profile: BodyProfile) {
                 ProgressScreen(modifier = Modifier.padding(padding))
             }
             composable(HomeDestination.SETTINGS.route) {
-                EmptyDestinationScreen(
-                    padding = padding,
-                    eyebrow = "PREFERENCES",
-                    title = "Settings",
-                    description = "Your goals, reminders, backup, and optional integrations will live here.",
-                    icon = Icons.Outlined.Tune,
-                )
+                SettingsScreen(modifier = Modifier.padding(padding))
             }
         }
     }

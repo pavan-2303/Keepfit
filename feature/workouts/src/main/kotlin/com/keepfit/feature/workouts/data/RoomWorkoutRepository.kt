@@ -12,6 +12,7 @@ import com.keepfit.core.database.workout.WorkoutSessionEntity
 import com.keepfit.core.database.workout.WorkoutTemplateEntity
 import com.keepfit.core.database.workout.WorkoutTemplateExerciseEntity
 import com.keepfit.core.media.ExerciseMediaStore
+import com.keepfit.core.preferences.AppSettingsRepository
 import com.keepfit.feature.workouts.CompletedSetInput
 import com.keepfit.feature.workouts.ExerciseInput
 import java.time.DayOfWeek
@@ -26,10 +27,14 @@ import kotlinx.coroutines.flow.mapLatest
 class RoomWorkoutRepository(
     private val dao: WorkoutDao,
     private val mediaStore: ExerciseMediaStore,
+    private val settingsRepository: AppSettingsRepository,
     private val idFactory: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Long = System::currentTimeMillis,
     private val today: () -> LocalDate = LocalDate::now,
 ) : WorkoutRepository {
+    override fun observeRestTimerSeconds(): Flow<Int> =
+        settingsRepository.observeSettings().map { it.restTimerSeconds }
+
     override fun observeExercises(query: String): Flow<List<Exercise>> =
         dao.observeExercises(query).map { entities -> entities.map(ExerciseEntity::toModel) }
 

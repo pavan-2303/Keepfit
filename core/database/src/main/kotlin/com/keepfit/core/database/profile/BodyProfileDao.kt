@@ -15,4 +15,24 @@ interface BodyProfileDao {
 
     @Query("SELECT * FROM body_profiles LIMIT 1")
     suspend fun findLocalProfile(): BodyProfileEntity?
+
+    @Query(
+        """
+        UPDATE body_profiles
+        SET dailyCalorieGoal = :dailyCalorieGoal,
+            dailyProteinGoalGrams = :dailyProteinGoalGrams,
+            dailyCarbohydrateGoalGrams = :dailyCarbohydrateGoalGrams,
+            dailyFatGoalGrams = :dailyFatGoalGrams,
+            updatedAt = :updatedAt
+        WHERE id = :profileId
+        """,
+    )
+    suspend fun updateNutritionGoals(
+        profileId: String,
+        dailyCalorieGoal: Double?,
+        dailyProteinGoalGrams: Double?,
+        dailyCarbohydrateGoalGrams: Double?,
+        dailyFatGoalGrams: Double?,
+        updatedAt: Long,
+    )
 }

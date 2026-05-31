@@ -7,6 +7,7 @@ import java.time.DayOfWeek
 import kotlinx.coroutines.flow.Flow
 
 interface WorkoutRepository {
+    fun observeRestTimerSeconds(): Flow<Int>
     fun observeExercises(query: String): Flow<List<Exercise>>
     fun observeTemplates(): Flow<List<WorkoutTemplate>>
     fun observeWeeklySchedule(): Flow<List<PlannedWorkout>>
@@ -24,4 +25,3 @@ interface WorkoutRepository {
     suspend fun updateExerciseNotes(exerciseLogId: String, notes: String)
     suspend fun completeActiveWorkout()
 }
-

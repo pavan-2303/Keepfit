@@ -121,6 +121,9 @@ Make weekly physical changes easy to record and compare privately.
 
 ## 6. Phase 1D: Backup, Restore, and Reminders
 
+Status: in progress on `develop`; settings and reminders slice implemented and
+emulator-verified.
+
 ### Goal
 
 Protect local data and finish the dependable personal-use MVP.

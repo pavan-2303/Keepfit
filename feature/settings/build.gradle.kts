@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.keepfit.feature.workouts"
+    namespace = "com.keepfit.feature.settings"
     compileSdk = 36
 
     defaultConfig {
@@ -25,10 +25,9 @@ android {
 
 dependencies {
     implementation(project(":core:database"))
-    implementation(project(":core:designsystem"))
-    implementation(project(":core:media"))
     implementation(project(":core:model"))
     implementation(project(":core:preferences"))
+    implementation(project(":core:designsystem"))
 
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

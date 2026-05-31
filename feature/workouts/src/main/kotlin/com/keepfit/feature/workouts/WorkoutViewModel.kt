@@ -50,6 +50,8 @@ class WorkoutViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val records: StateFlow<List<PersonalRecord>> = repository.observeRecords()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val restTimerDurationSeconds: StateFlow<Int> = repository.observeRestTimerSeconds()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 90)
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
@@ -131,9 +133,10 @@ class WorkoutViewModel @Inject constructor(
         }
 
     fun startRestTimer() {
+        val durationSeconds = restTimerDurationSeconds.value
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
-            for (seconds in 90 downTo 0) {
+            for (seconds in durationSeconds downTo 0) {
                 _timerSeconds.value = seconds
                 delay(1_000)
             }
@@ -156,4 +159,3 @@ class WorkoutViewModel @Inject constructor(
         }
     }
 }
-

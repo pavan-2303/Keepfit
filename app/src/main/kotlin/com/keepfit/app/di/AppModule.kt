@@ -11,6 +11,12 @@ import com.keepfit.core.database.transformation.TransformationDao
 import com.keepfit.core.database.workout.WorkoutDao
 import com.keepfit.core.media.ExerciseMediaStore
 import com.keepfit.core.media.TransformationPhotoStore
+import com.keepfit.core.preferences.AppSettingsRepository
+import com.keepfit.core.preferences.DataStoreAppSettingsRepository
+import com.keepfit.core.preferences.ReminderScheduler
+import com.keepfit.core.preferences.WorkManagerReminderScheduler
+import com.keepfit.feature.settings.data.RoomSettingsGoalsRepository
+import com.keepfit.feature.settings.data.SettingsGoalsRepository
 import com.keepfit.feature.nutrition.data.NutritionRepository
 import com.keepfit.feature.nutrition.data.RoomNutritionRepository
 import com.keepfit.feature.transformation.data.RoomTransformationRepository
@@ -40,6 +46,23 @@ object AppModule {
     @Singleton
     fun provideProfileRepository(dao: BodyProfileDao): ProfileRepository =
         RoomProfileRepository(dao)
+
+    @Provides
+    @Singleton
+    fun provideReminderScheduler(@ApplicationContext context: Context): ReminderScheduler =
+        WorkManagerReminderScheduler(context)
+
+    @Provides
+    @Singleton
+    fun provideAppSettingsRepository(
+        @ApplicationContext context: Context,
+        scheduler: ReminderScheduler,
+    ): AppSettingsRepository = DataStoreAppSettingsRepository(context, scheduler)
+
+    @Provides
+    @Singleton
+    fun provideSettingsGoalsRepository(dao: BodyProfileDao): SettingsGoalsRepository =
+        RoomSettingsGoalsRepository(dao)
 
     @Provides
     fun provideNutritionDao(database: KeepfitDatabase): NutritionDao =
@@ -75,7 +98,8 @@ object AppModule {
     fun provideWorkoutRepository(
         dao: WorkoutDao,
         mediaStore: ExerciseMediaStore,
-    ): WorkoutRepository = RoomWorkoutRepository(dao, mediaStore)
+        settingsRepository: AppSettingsRepository,
+    ): WorkoutRepository = RoomWorkoutRepository(dao, mediaStore, settingsRepository = settingsRepository)
 
     @Provides
     @Singleton
