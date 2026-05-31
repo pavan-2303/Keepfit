@@ -14,14 +14,14 @@ complexity.
 - Record weight, BMI inputs, optional measurements, and weekly progress photos.
 - Compare transformation photos between selected weeks.
 - Export and restore an encrypted local backup.
-- Optionally add Health Connect step tracking and an Ollama assistant later.
+- Optional Health Connect step tracking and an Ollama assistant.
 
 ## Project Status
 
 Phase 0, Phase 1A, Phase 1B, and Phase 1C are implemented on the active
-development branch. Phase 1D is in progress, with the settings and reminders
-slice implemented. The project now includes a runnable Android application
-with:
+development branch. Phase 1D implementation is complete, with final device
+backup roundtrip verification still pending. Phase 2A is in progress. The
+project now includes a runnable Android application with:
 
 - a first-run local profile form persisted with Room;
 - a five-destination Compose Navigation shell;
@@ -51,14 +51,17 @@ with:
   scheduling;
 - encrypted backup export plus restore preview, checksum validation, and
   replace-data restore flow;
+- launcher branding from the repository logo asset plus an in-app Today header
+  brand mark;
+- an optional Today steps card backed by Health Connect availability checks,
+  permission request flow, and daily plus seven-day step aggregates;
 - Hilt dependency injection;
 - Room schema export with explicit version `1` to `2`, `2` to `3`, and `3` to
   `4` migrations;
 - unit tests plus Room DAO and migration instrumentation tests.
 
-The next implementation target is Phase 1D backup, restore, reminders, and
-settings completion. Health Connect and Ollama integration remain optional
-phase-2 additions.
+The current implementation target is supported-device verification for the
+Health Connect steps flow and the later optional Ollama assistant phase.
 
 ## Architecture
 
@@ -111,6 +114,7 @@ Read these references before implementation:
 |-- feature/
 |   |-- nutrition/
 |   |-- settings/
+|   |-- steps/
 |   |-- transformation/
 |   `-- workouts/
 |-- docs/

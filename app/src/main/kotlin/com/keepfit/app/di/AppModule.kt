@@ -19,6 +19,8 @@ import com.keepfit.feature.settings.data.BackupRepository
 import com.keepfit.feature.settings.data.DeviceBackupRepository
 import com.keepfit.feature.settings.data.RoomSettingsGoalsRepository
 import com.keepfit.feature.settings.data.SettingsGoalsRepository
+import com.keepfit.feature.steps.data.HealthConnectStepsRepository
+import com.keepfit.feature.steps.data.StepsRepository
 import com.keepfit.feature.nutrition.data.NutritionRepository
 import com.keepfit.feature.nutrition.data.RoomNutritionRepository
 import com.keepfit.feature.transformation.data.RoomTransformationRepository
@@ -73,6 +75,12 @@ object AppModule {
         database: KeepfitDatabase,
         settingsRepository: AppSettingsRepository,
     ): BackupRepository = DeviceBackupRepository(context, database, settingsRepository)
+
+    @Provides
+    @Singleton
+    fun provideStepsRepository(
+        @ApplicationContext context: Context,
+    ): StepsRepository = HealthConnectStepsRepository(context)
 
     @Provides
     fun provideNutritionDao(database: KeepfitDatabase): NutritionDao =

@@ -63,7 +63,7 @@ isolated from the offline core.
 | `feature:nutrition` | Personal foods, saved meals, diary entries, and daily totals |
 | `feature:transformation` | Measurements, weekly photo capture/import, and comparison |
 | `feature:settings` | User goals, reminder preferences, backup export, and restore |
-| `feature:steps` | Phase-2 Health Connect availability, permission, and daily step reads |
+| `feature:steps` | Phase-2 Health Connect availability, permission, and daily plus seven-day step summaries |
 | `feature:assistant` | Phase-2 optional Ollama settings, chat, summaries, and draft plan proposals |
 
 For the first implementation increment, modules may be introduced as features
@@ -158,7 +158,8 @@ stored by the app.
 
 - detect whether Health Connect is available on the device;
 - request read permission for step data only;
-- read daily totals and expose an unavailable state when unsupported or denied;
+- read daily totals and seven-day aggregates and expose an unavailable state
+  when unsupported or denied;
 - keep the dashboard functional when the integration is disabled.
 
 Steps are a supplementary dashboard metric. They are not required for workout

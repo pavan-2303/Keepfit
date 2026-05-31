@@ -41,6 +41,7 @@ dependencies {
     implementation(project(":core:preferences"))
     implementation(project(":feature:nutrition"))
     implementation(project(":feature:settings"))
+    implementation(project(":feature:steps"))
     implementation(project(":feature:transformation"))
     implementation(project(":feature:workouts"))
 

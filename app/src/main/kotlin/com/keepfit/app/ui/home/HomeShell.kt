@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.FitnessCenter
@@ -36,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -48,6 +50,7 @@ import com.keepfit.core.model.BodyProfile
 import com.keepfit.feature.nutrition.ui.NutritionScreen
 import com.keepfit.feature.nutrition.ui.TodayNutritionSection
 import com.keepfit.feature.settings.ui.SettingsScreen
+import com.keepfit.feature.steps.ui.TodayStepsSection
 import com.keepfit.feature.transformation.ui.ProgressScreen
 import com.keepfit.feature.transformation.ui.TodayProgressSection
 import com.keepfit.feature.workouts.ui.TodayWorkoutSection
@@ -135,12 +138,30 @@ private fun TodayScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 20.dp),
     ) {
-        Text(
-            text = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM d")),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painter = painterResource(id = com.keepfit.app.R.drawable.keepfit_brand_mark),
+                contentDescription = null,
+                modifier = Modifier.size(46.dp),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM d")),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Keepfit",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = "Good to see you, ${profile.displayName}.",
             style = MaterialTheme.typography.headlineSmall,
@@ -151,6 +172,8 @@ private fun TodayScreen(
         TodayNutritionSection()
         Spacer(modifier = Modifier.height(12.dp))
         TodayProgressSection()
+        Spacer(modifier = Modifier.height(12.dp))
+        TodayStepsSection()
     }
 }
 

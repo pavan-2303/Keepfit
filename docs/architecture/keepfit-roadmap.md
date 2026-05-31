@@ -153,6 +153,10 @@ At this point Keepfit is a complete offline MVP.
 
 ## 7. Phase 2A: Health Connect Steps
 
+Status: in progress on `develop`; Today dashboard steps card, availability
+checks, permission request, and seven-day aggregates are implemented and
+emulator-verified for the update-required state.
+
 ### Goal
 
 Add optional daily steps without turning device integration into a core
