@@ -97,24 +97,25 @@ Status: implemented on `develop` and emulator-verified.
 
 ### Goal
 
-Make weekly physical changes easy to record and compare privately.
+Make physical changes easy to record and compare privately over a
+transformation cycle.
 
 ### Deliverables
 
 - Weight entry and optional body measurements.
 - Derived BMI when height and weight exist.
-- Weekly transformation entries with notes.
-- Import front, left, right, back, and legs photos into app-private storage.
-- Compare two selected weeks side by side for a selected angle.
-- Empty state when an angle is missing from either week.
-- Weekly summary with workouts completed, average logged calories, macro
+- Transformation cycles with notes.
+- Import front, left, right, and back photos into app-private storage.
+- Compare cycle day 0 with later uploaded days for a selected angle.
+- Empty state when an angle is missing from either compared day.
+- Cycle summary with workouts completed, average logged calories, macro
   averages, and weight change.
 
 ### Exit criteria
 
 1. Add height, weight, and body measurements and confirm BMI is calculated.
-2. Add all five photo angles for one week and a subset for a later week.
-3. Compare the two weeks and switch between angles.
+2. Add multiple photo angles on day 0 and a subset on a later cycle day.
+3. Compare day 0 with the later day and switch between angles.
 4. Confirm a missing photo displays an empty state without blocking other
    angles.
 5. Confirm all photos remain private to the application sandbox.
@@ -184,7 +185,9 @@ Add private, reviewable AI assistance after reliable tracking data exists.
 
 ### Deliverables
 
-- Optional Ollama settings: endpoint, model, secure token, enable toggle.
+- Optional Ollama Cloud assistant enable toggle.
+- Build-time Ollama Cloud configuration: API URL, general chat model,
+  reasoning model, and API key.
 - Connection test with a clear failure message.
 - Chat interface backed by Ollama's chat API.
 - Data summaries assembled locally before an explicit assistant request.
@@ -197,7 +200,7 @@ Add private, reviewable AI assistance after reliable tracking data exists.
 ### Exit criteria
 
 1. Disable AI and confirm every core workflow remains unchanged.
-2. Configure a reachable Ollama endpoint and complete a chat request.
+2. Build the app with a reachable Ollama Cloud endpoint and valid API key, then complete a chat request.
 3. Handle an unreachable endpoint without losing user-entered text.
 4. Generate a progress summary from selected local data.
 5. Generate a draft plan and confirm no weekly plan changes before approval.

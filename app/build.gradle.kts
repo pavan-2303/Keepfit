@@ -10,10 +10,21 @@ import java.util.Properties
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 val hasReleaseSigning = keystorePropertiesFile.exists()
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
 
 if (hasReleaseSigning) {
     keystorePropertiesFile.inputStream().use(keystoreProperties::load)
 }
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use(localProperties::load)
+}
+
+fun buildConfigString(value: String): String =
+    "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
+fun localProperty(name: String, defaultValue: String): String =
+    localProperties.getProperty(name, defaultValue)
 
 android {
     namespace = "com.keepfit.app"
@@ -27,10 +38,32 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "OLLAMA_BASE_URL",
+            buildConfigString(localProperty("keepfit.ollama.baseUrl", "https://ollama.com/api")),
+        )
+        buildConfigField(
+            "String",
+            "OLLAMA_API_KEY",
+            buildConfigString(localProperty("keepfit.ollama.apiKey", "")),
+        )
+        buildConfigField(
+            "String",
+            "OLLAMA_GENERAL_CHAT_MODEL",
+            buildConfigString(localProperty("keepfit.ollama.generalModel", "mistral-large-3:675b")),
+        )
+        buildConfigField(
+            "String",
+            "OLLAMA_REASONING_MODEL",
+            buildConfigString(localProperty("keepfit.ollama.reasoningModel", "qwen3.5:397b")),
+        )
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -77,6 +110,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:media"))
     implementation(project(":core:preferences"))
+    implementation(project(":feature:assistant"))
     implementation(project(":feature:nutrition"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:steps"))
@@ -102,6 +136,7 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

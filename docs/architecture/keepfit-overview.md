@@ -9,8 +9,8 @@ complex subscription applications with a focused offline experience:
 - assemble workout templates and weekly plans;
 - log sets, repetitions, weight, notes, and personal progress;
 - track meals, calories, and macronutrients;
-- record weekly measurements and transformation photos;
-- compare transformation photos between selected weeks;
+- record measurements and transformation-cycle photos;
+- compare transformation photos between selected cycle days;
 - export and restore a private backup.
 
 The first release must work without an account, backend, or internet connection.
@@ -61,7 +61,7 @@ isolated from the offline core.
 | `core:designsystem` | Theme, reusable Compose components, and application icons |
 | `feature:workouts` | Exercise library, templates, plans, workout sessions, history, records, timer |
 | `feature:nutrition` | Personal foods, saved meals, diary entries, and daily totals |
-| `feature:transformation` | Measurements, weekly photo capture/import, and comparison |
+| `feature:transformation` | Measurements, transformation cycle photo capture/import, and comparison |
 | `feature:settings` | User goals, reminder preferences, backup export, and restore |
 | `feature:steps` | Phase-2 Health Connect availability, permission, and daily plus seven-day step summaries |
 | `feature:assistant` | Phase-2 optional Ollama settings, chat, summaries, and draft plan proposals |
@@ -107,10 +107,13 @@ smaller and more efficient to play. Video playback should use Android Media3.
 
 ### Transformation photos
 
-Transformation photos are imported or captured for a week and a fixed angle:
-front, left, right, back, or legs. Files live in app-private storage. The
-comparison view loads the same angle from two selected weeks side by side.
-Missing angles show an empty state instead of blocking comparison.
+Transformation photos are imported or captured for a transformation cycle and a
+fixed angle: front, left, right, or back. The first imported batch starts a
+cycle. Later uploads can happen on any date in that cycle, and uploading the
+same angle again on the same day replaces the earlier photo. Files live in
+app-private storage. The comparison view loads the same angle from two selected
+cycle days side by side. Missing angles show an empty state instead of blocking
+comparison.
 
 ### Private file layout
 
@@ -118,7 +121,7 @@ Missing angles show an empty state instead of blocking comparison.
 files/
   media/
     exercises/<exercise-media-id>.<extension>
-    transformation/<week-id>/<angle>.<extension>
+    transformation/<cycle-id>/<photo-id>.<extension>
   backups/
     staging/
 ```
@@ -167,9 +170,10 @@ or nutrition tracking.
 
 ### Ollama assistant
 
-`feature:assistant` is a phase-2 adapter over Ollama's chat API. It supports a
-user-configured endpoint, model name, and optional token stored with Android
-secure credential storage.
+`feature:assistant` is a phase-2 adapter over Ollama Cloud's chat API. It
+uses build-time Cloud configuration for the API URL, the general chat model,
+the reasoning model, and the API key, while DataStore keeps only the user-level
+enable toggle.
 
 The assistant may:
 
@@ -181,7 +185,8 @@ The assistant must not directly modify a weekly plan. It returns a draft that
 the user reviews and explicitly applies. It must present fitness suggestions as
 general guidance, not diagnosis or medical advice.
 
-No AI dependency is permitted in core tracking flows.
+No AI dependency is permitted in core tracking flows. When the user invokes the
+assistant, prompts are sent to the configured Ollama Cloud endpoint.
 
 ## 7. Navigation
 
@@ -192,7 +197,7 @@ Use a bottom navigation bar with five destinations:
 | Today | Planned workout, food summary, reminders, and phase-2 steps |
 | Workouts | Exercises, templates, weekly plan, session history, personal records |
 | Nutrition | Daily diary, foods, saved meals, and recent entries |
-| Progress | Measurements, weekly photos, photo comparison, and weekly summary |
+| Progress | Measurements, transformation cycles, photo comparison, and cycle summary |
 | Settings | Goals, reminders, backup and restore, optional integrations |
 
 The active workout screen is a dedicated focused flow launched from Today or

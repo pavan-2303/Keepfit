@@ -51,6 +51,10 @@ import kotlin.system.exitProcess
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
+    onOpenAssistant: () -> Unit = {},
+    externalMessage: String? = null,
+    onExternalMessageShown: () -> Unit = {},
+    onTestAssistantConnection: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -73,9 +77,11 @@ fun SettingsScreen(
     var transformationDay by remember(appSettings.transformationReminder.dayOfWeek) { mutableStateOf(appSettings.transformationReminder.dayOfWeek) }
     var transformationHour by remember(appSettings.transformationReminder.hour) { mutableStateOf(appSettings.transformationReminder.hour.toString()) }
     var transformationMinute by remember(appSettings.transformationReminder.minute) { mutableStateOf(appSettings.transformationReminder.minute.toString()) }
+    var assistantEnabled by remember(appSettings.assistant.enabled) { mutableStateOf(appSettings.assistant.enabled) }
     var exportPassphrase by remember { mutableStateOf("") }
     var restorePassphrase by remember { mutableStateOf("") }
     var selectedRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    val canOpenAssistant = appSettings.assistant.enabled
 
     val exportLauncher = rememberLauncherForActivityResult(CreateDocument("application/octet-stream")) { uri ->
         uri?.let { viewModel.exportBackup(it, exportPassphrase) }
@@ -97,6 +103,13 @@ fun SettingsScreen(
         message?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.dismissMessage()
+        }
+    }
+
+    LaunchedEffect(externalMessage) {
+        externalMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            onExternalMessageShown()
         }
     }
 
@@ -234,6 +247,53 @@ fun SettingsScreen(
                     },
                 ) {
                     Text("Save progress reminder")
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            SettingsCard("Ollama Cloud assistant") {
+                ReminderToggle("Enable optional Ollama Cloud assistant", assistantEnabled) {
+                    assistantEnabled = it
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "This build uses an Ollama Cloud configuration injected during app build, not entered at runtime.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "General chat uses mistral-large-3:675b. Deeper planning and analysis use qwen3.5:397b.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Assistant replies are general fitness guidance, not medical advice.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow {
+                    Button(
+                        onClick = {
+                            viewModel.saveAssistantSettings(enabled = assistantEnabled)
+                        },
+                    ) {
+                        Text("Save assistant")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    FilledTonalButton(
+                        onClick = onTestAssistantConnection,
+                    ) {
+                        Text("Test connection")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    FilledTonalButton(
+                        onClick = onOpenAssistant,
+                        enabled = canOpenAssistant,
+                    ) {
+                        Text("Open assistant")
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))

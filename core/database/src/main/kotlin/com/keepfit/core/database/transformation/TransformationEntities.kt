@@ -14,7 +14,6 @@ enum class TransformationPhotoAngle {
     LEFT,
     RIGHT,
     BACK,
-    LEGS,
 }
 
 @Entity(
@@ -46,7 +45,7 @@ data class BodyMeasurementEntity(
 )
 
 @Entity(
-    tableName = "transformation_weeks",
+    tableName = "transformation_cycles",
     foreignKeys = [
         ForeignKey(
             entity = BodyProfileEntity::class,
@@ -55,31 +54,38 @@ data class BodyMeasurementEntity(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("bodyProfileId"), Index(value = ["bodyProfileId", "weekStartDate"], unique = true)],
+    indices = [Index("bodyProfileId"), Index("startDate"), Index("closedAt")],
 )
-data class TransformationWeekEntity(
+data class TransformationCycleEntity(
     @PrimaryKey val id: String,
     val bodyProfileId: String,
-    val weekStartDate: LocalDate,
+    val startDate: LocalDate,
     val notes: String?,
+    val closedAt: Long?,
     val createdAt: Long,
+    val updatedAt: Long,
 )
 
 @Entity(
     tableName = "transformation_photos",
     foreignKeys = [
         ForeignKey(
-            entity = TransformationWeekEntity::class,
+            entity = TransformationCycleEntity::class,
             parentColumns = ["id"],
-            childColumns = ["transformationWeekId"],
+            childColumns = ["transformationCycleId"],
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("transformationWeekId"), Index(value = ["transformationWeekId", "angle"], unique = true)],
+    indices = [
+        Index("transformationCycleId"),
+        Index("captureDate"),
+        Index(value = ["transformationCycleId", "captureDate", "angle"], unique = true),
+    ],
 )
 data class TransformationPhotoEntity(
     @PrimaryKey val id: String,
-    val transformationWeekId: String,
+    val transformationCycleId: String,
+    val captureDate: LocalDate,
     val angle: TransformationPhotoAngle,
     val relativePath: String,
     val mimeType: String,
@@ -87,8 +93,8 @@ data class TransformationPhotoEntity(
     val createdAt: Long,
 )
 
-data class TransformationWeekDetails(
-    @Embedded val week: TransformationWeekEntity,
-    @Relation(parentColumn = "id", entityColumn = "transformationWeekId")
+data class TransformationCycleDetails(
+    @Embedded val cycle: TransformationCycleEntity,
+    @Relation(parentColumn = "id", entityColumn = "transformationCycleId")
     val photos: List<TransformationPhotoEntity>,
 )

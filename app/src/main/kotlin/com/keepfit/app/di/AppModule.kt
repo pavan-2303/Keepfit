@@ -3,6 +3,7 @@ package com.keepfit.app.di
 import android.content.Context
 import com.keepfit.app.profile.ProfileRepository
 import com.keepfit.app.profile.RoomProfileRepository
+import com.keepfit.app.BuildConfig
 import com.keepfit.core.database.KeepfitDatabase
 import com.keepfit.core.database.KeepfitDatabaseFactory
 import com.keepfit.core.database.nutrition.NutritionDao
@@ -15,6 +16,9 @@ import com.keepfit.core.preferences.AppSettingsRepository
 import com.keepfit.core.preferences.DataStoreAppSettingsRepository
 import com.keepfit.core.preferences.ReminderScheduler
 import com.keepfit.core.preferences.WorkManagerReminderScheduler
+import com.keepfit.feature.assistant.data.AssistantRepository
+import com.keepfit.feature.assistant.data.AssistantRuntimeConfig
+import com.keepfit.feature.assistant.data.OllamaAssistantRepository
 import com.keepfit.feature.settings.data.BackupRepository
 import com.keepfit.feature.settings.data.DeviceBackupRepository
 import com.keepfit.feature.settings.data.RoomSettingsGoalsRepository
@@ -62,6 +66,22 @@ object AppModule {
         @ApplicationContext context: Context,
         scheduler: ReminderScheduler,
     ): AppSettingsRepository = DataStoreAppSettingsRepository(context, scheduler)
+
+    @Provides
+    @Singleton
+    fun provideAssistantRepository(
+        repository: OllamaAssistantRepository,
+    ): AssistantRepository = repository
+
+    @Provides
+    @Singleton
+    fun provideAssistantBuildTimeConfig(): AssistantRuntimeConfig =
+        AssistantRuntimeConfig(
+            baseUrl = BuildConfig.OLLAMA_BASE_URL,
+            generalChatModelName = BuildConfig.OLLAMA_GENERAL_CHAT_MODEL,
+            reasoningModelName = BuildConfig.OLLAMA_REASONING_MODEL,
+            apiKey = BuildConfig.OLLAMA_API_KEY,
+        )
 
     @Provides
     @Singleton

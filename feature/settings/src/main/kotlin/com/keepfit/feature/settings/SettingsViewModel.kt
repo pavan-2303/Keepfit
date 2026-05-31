@@ -99,6 +99,10 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
+    fun saveAssistantSettings(enabled: Boolean) = launchWrite("Assistant settings saved.") {
+        settingsRepository.updateAssistantSettings(enabled)
+    }
+
     fun dismissMessage() {
         _message.value = null
     }

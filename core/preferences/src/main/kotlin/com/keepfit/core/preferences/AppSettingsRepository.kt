@@ -7,6 +7,8 @@ interface AppSettingsRepository {
 
     suspend fun updateUnits(weightUnit: WeightUnit, measurementUnit: MeasurementUnit)
 
+    suspend fun updateAssistantSettings(enabled: Boolean)
+
     suspend fun updateRestTimerSeconds(seconds: Int)
 
     suspend fun updateWorkoutReminder(enabled: Boolean, hour: Int, minute: Int)

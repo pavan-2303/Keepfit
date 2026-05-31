@@ -27,7 +27,7 @@ Food 1 --- * FoodDiaryEntry
 SavedMeal 1 --- * FoodDiaryEntry
 
 BodyProfile 1 --- * BodyMeasurement
-BodyProfile 1 --- * TransformationWeek 1 --- * TransformationPhoto
+BodyProfile 1 --- * TransformationCycle 1 --- * TransformationPhoto
 
 AssistantConversation 1 --- * AssistantMessage
 ```
@@ -244,29 +244,33 @@ changes do not affect transformation history.
 BMI is derived from the most recent weight and profile height. It is displayed
 as a general reference value, not a diagnosis.
 
-### `TransformationWeek`
+### `TransformationCycle`
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `id` | UUID | Primary key |
 | `bodyProfileId` | UUID | Foreign key to `BodyProfile` |
-| `weekStartDate` | LocalDate | Monday-normalized and unique per profile |
-| `notes` | String? | Optional weekly note |
+| `startDate` | LocalDate | Derived from the first uploaded photo batch |
+| `notes` | String? | Optional cycle note |
+| `closedAt` | Instant? | Null while the cycle is active |
 | `createdAt` | Instant | Creation timestamp |
+| `updatedAt` | Instant | Last state update |
 
 ### `TransformationPhoto`
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `id` | UUID | Primary key |
-| `transformationWeekId` | UUID | Foreign key to `TransformationWeek` |
-| `angle` | Enum | `FRONT`, `LEFT`, `RIGHT`, `BACK`, or `LEGS` |
+| `transformationCycleId` | UUID | Foreign key to `TransformationCycle` |
+| `captureDate` | LocalDate | Upload day within the cycle |
+| `angle` | Enum | `FRONT`, `LEFT`, `RIGHT`, or `BACK` |
 | `relativePath` | String | Path below `files/media/transformation/` |
 | `mimeType` | String | Validated during import |
 | `sizeBytes` | Long | Used for backup summaries |
 | `createdAt` | Instant | Import timestamp |
 
-Allow at most one photo for each week and angle. Replacement follows the same
+Allow at most one photo for each cycle day and angle. Uploading the same angle
+twice on the same day replaces the earlier file. Replacement follows the same
 copy-before-update rule as exercise media. Phase 1C supports private JPEG, PNG,
 and WebP imports.
 
@@ -297,12 +301,13 @@ Store simple local settings in DataStore rather than Room:
 - preferred measurement unit;
 - week start preference;
 - workout reminder settings;
-- weekly transformation reminder settings;
+- transformation-cycle reminder settings;
 - rest timer duration;
 - phase-2 optional integration toggles.
 
-Tokens and secrets do not belong in DataStore. Use Android secure credential
-storage for phase-2 Ollama credentials.
+Tokens and secrets do not belong in DataStore. The phase-2 Ollama Cloud
+endpoint, model names, and API key are expected to come from build-time app
+configuration.
 
 ## 7. Optional Phase-2 Models
 

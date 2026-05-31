@@ -26,7 +26,6 @@ import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Insights
-import androidx.compose.material.icons.outlined.MonitorWeight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,12 +36,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,12 +59,13 @@ import com.keepfit.core.database.transformation.TransformationPhotoAngle
 import com.keepfit.feature.transformation.TransformationViewModel
 import com.keepfit.feature.transformation.data.BodyMeasurement
 import com.keepfit.feature.transformation.data.CurrentProgressOverview
+import com.keepfit.feature.transformation.data.TransformationCycle
+import com.keepfit.feature.transformation.data.TransformationCycleDay
 import com.keepfit.feature.transformation.data.TransformationPhoto
-import com.keepfit.feature.transformation.data.TransformationWeek
+import com.keepfit.feature.transformation.data.TransformationTimeline
 import com.keepfit.feature.transformation.data.formatMetric
-import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 @Composable
 fun ProgressScreen(
@@ -76,20 +74,22 @@ fun ProgressScreen(
 ) {
     val currentOverview by viewModel.currentOverview.collectAsStateWithLifecycle()
     val measurements by viewModel.measurements.collectAsStateWithLifecycle()
-    val weeks by viewModel.weeks.collectAsStateWithLifecycle()
+    val timeline by viewModel.timeline.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showMeasurementEditor by remember { mutableStateOf(false) }
-    var selectedWeekStart by rememberSaveable { mutableStateOf(LocalDate.now().with(DayOfWeek.MONDAY)) }
+    var selectedCaptureDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var compareAngle by rememberSaveable { mutableStateOf(TransformationPhotoAngle.FRONT) }
-    var leftWeekId by rememberSaveable { mutableStateOf<String?>(null) }
-    var rightWeekId by rememberSaveable { mutableStateOf<String?>(null) }
+    var leftCaptureDate by rememberSaveable { mutableStateOf<String?>(null) }
+    var rightCaptureDate by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingImportAngle by remember { mutableStateOf<TransformationPhotoAngle?>(null) }
-    val currentWeek = weeks.firstOrNull { it.weekStartDate == selectedWeekStart }
+    val activeCycle = timeline.activeCycle
+    val comparisonCycle = activeCycle ?: timeline.history.firstOrNull()
+    val currentDay = activeCycle?.days?.firstOrNull { it.captureDate == selectedCaptureDate }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         val angle = pendingImportAngle
         if (uri != null && angle != null) {
-            viewModel.importPhoto(selectedWeekStart, angle, uri)
+            viewModel.importPhoto(selectedCaptureDate, angle, uri)
         }
         pendingImportAngle = null
     }
@@ -100,13 +100,13 @@ fun ProgressScreen(
             viewModel.dismissMessage()
         }
     }
-    LaunchedEffect(weeks) {
-        if (leftWeekId == null) {
-            leftWeekId = weeks.firstOrNull()?.id
-        }
-        if (rightWeekId == null) {
-            rightWeekId = weeks.drop(1).firstOrNull()?.id ?: weeks.firstOrNull()?.id
-        }
+    LaunchedEffect(activeCycle?.id, activeCycle?.latestCaptureDate) {
+        activeCycle?.latestCaptureDate?.let { selectedCaptureDate = it }
+    }
+    LaunchedEffect(comparisonCycle?.id) {
+        val comparison = comparisonCycle?.defaultComparison
+        leftCaptureDate = comparison?.leftDay?.captureDate?.toString()
+        rightCaptureDate = comparison?.rightDay?.captureDate?.toString()
     }
 
     Scaffold(
@@ -139,24 +139,29 @@ fun ProgressScreen(
             MeasurementHistory(measurements)
             Spacer(modifier = Modifier.height(18.dp))
             Text(
-                text = "WEEKLY PHOTOS",
+                text = "TRANSFORMATION CYCLE",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(10.dp))
-            WeekEditorCard(
-                selectedWeekStart = selectedWeekStart,
-                currentWeek = currentWeek,
-                onPreviousWeek = { selectedWeekStart = selectedWeekStart.minusWeeks(1) },
-                onNextWeek = { selectedWeekStart = selectedWeekStart.plusWeeks(1) },
-                onSaveNotes = viewModel::saveWeekNotes,
+            CycleEditorCard(
+                selectedCaptureDate = selectedCaptureDate,
+                activeCycle = activeCycle,
+                currentDay = currentDay,
+                onPreviousDay = { selectedCaptureDate = selectedCaptureDate.minusDays(1) },
+                onNextDay = { selectedCaptureDate = selectedCaptureDate.plusDays(1) },
+                onSaveNotes = viewModel::saveCycleNotes,
+                onCloseCycle = viewModel::closeActiveCycle,
                 onImportAngle = { angle ->
                     pendingImportAngle = angle
                     launcher.launch(arrayOf("image/jpeg", "image/png", "image/webp"))
                 },
             )
             Spacer(modifier = Modifier.height(12.dp))
-            WeekList(weeks)
+            CycleHistoryList(
+                timeline = timeline,
+                onReopen = viewModel::reopenCycle,
+            )
             Spacer(modifier = Modifier.height(18.dp))
             Text(
                 text = "COMPARE",
@@ -165,14 +170,22 @@ fun ProgressScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             ComparisonCard(
-                weeks = weeks,
-                leftWeekId = leftWeekId,
-                rightWeekId = rightWeekId,
+                cycle = comparisonCycle,
+                leftCaptureDate = leftCaptureDate,
+                rightCaptureDate = rightCaptureDate,
                 angle = compareAngle,
-                onPreviousLeft = { leftWeekId = cycleWeekId(weeks, leftWeekId, -1) },
-                onNextLeft = { leftWeekId = cycleWeekId(weeks, leftWeekId, 1) },
-                onPreviousRight = { rightWeekId = cycleWeekId(weeks, rightWeekId, -1) },
-                onNextRight = { rightWeekId = cycleWeekId(weeks, rightWeekId, 1) },
+                onPreviousLeft = {
+                    leftCaptureDate = cycleDayDate(comparisonCycle?.days.orEmpty(), leftCaptureDate, -1)?.toString()
+                },
+                onNextLeft = {
+                    leftCaptureDate = cycleDayDate(comparisonCycle?.days.orEmpty(), leftCaptureDate, 1)?.toString()
+                },
+                onPreviousRight = {
+                    rightCaptureDate = cycleDayDate(comparisonCycle?.days.orEmpty(), rightCaptureDate, -1)?.toString()
+                },
+                onNextRight = {
+                    rightCaptureDate = cycleDayDate(comparisonCycle?.days.orEmpty(), rightCaptureDate, 1)?.toString()
+                },
                 onSelectAngle = { compareAngle = it },
             )
         }
@@ -215,7 +228,7 @@ fun TodayProgressSection(
                 Text("No measurements yet", style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Weekly progress summaries will appear here.",
+                    "Transformation cycle summaries will appear here.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -277,7 +290,12 @@ private fun MetricPill(label: String, value: String) {
 @Composable
 private fun SectionHeader(title: String, actionLabel: String, onAction: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
         FilledTonalButton(onClick = onAction, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
             Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
@@ -329,16 +347,18 @@ private fun MeasurementHistory(measurements: List<BodyMeasurement>) {
 }
 
 @Composable
-private fun WeekEditorCard(
-    selectedWeekStart: LocalDate,
-    currentWeek: TransformationWeek?,
-    onPreviousWeek: () -> Unit,
-    onNextWeek: () -> Unit,
-    onSaveNotes: (LocalDate, String) -> Unit,
+private fun CycleEditorCard(
+    selectedCaptureDate: LocalDate,
+    activeCycle: TransformationCycle?,
+    currentDay: TransformationCycleDay?,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
+    onSaveNotes: (String) -> Unit,
+    onCloseCycle: () -> Unit,
     onImportAngle: (TransformationPhotoAngle) -> Unit,
 ) {
-    var notes by remember(selectedWeekStart, currentWeek?.notes) {
-        mutableStateOf(currentWeek?.notes.orEmpty())
+    var notes by remember(activeCycle?.id, activeCycle?.notes) {
+        mutableStateOf(activeCycle?.notes.orEmpty())
     }
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -346,37 +366,51 @@ private fun WeekEditorCard(
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPreviousWeek) {
-                    Icon(Icons.Outlined.ArrowBack, contentDescription = "Previous week")
+                IconButton(onClick = onPreviousDay) {
+                    Icon(Icons.Outlined.ArrowBack, contentDescription = "Previous cycle day")
                 }
                 Text(
-                    selectedWeekStart.format(DateTimeFormatter.ofPattern("MMM d")),
+                    selectedCaptureDate.toString(),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = onNextWeek) {
-                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Next week")
+                IconButton(onClick = onNextDay) {
+                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Next cycle day")
                 }
             }
-            Text(
-                "Week of ${selectedWeekStart}",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Week notes") },
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            FilledTonalButton(onClick = { onSaveNotes(selectedWeekStart, notes) }) {
-                Text("Save week")
+            if (activeCycle == null) {
+                Text(
+                    "No active transformation cycle. Import a photo on the selected date to start one.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                val selectedDayNumber = currentDay?.dayNumber
+                    ?: ChronoUnit.DAYS.between(activeCycle.startDate, selectedCaptureDate).toInt().coerceAtLeast(0)
+                Text(
+                    "Cycle start ${activeCycle.startDate} • Day $selectedDayNumber • Latest update ${activeCycle.latestCaptureDate}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Cycle notes") },
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = { onSaveNotes(notes) }) {
+                        Text("Save cycle")
+                    }
+                    OutlinedButton(onClick = onCloseCycle) {
+                        Text("Close cycle")
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(14.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 TransformationPhotoAngle.entries.forEach { angle ->
-                    val photo = currentWeek?.photos?.firstOrNull { it.angle == angle }
+                    val photo = currentDay?.photos?.firstOrNull { it.angle == angle }
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = MaterialTheme.shapes.medium,
@@ -404,12 +438,16 @@ private fun WeekEditorCard(
 }
 
 @Composable
-private fun WeekList(weeks: List<TransformationWeek>) {
-    if (weeks.isEmpty()) {
-        Text("No saved weeks yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun CycleHistoryList(
+    timeline: TransformationTimeline,
+    onReopen: (String) -> Unit,
+) {
+    val history = timeline.history
+    if (history.isEmpty()) {
+        Text("No closed transformation cycles yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
-    weeks.forEach { week ->
+    history.forEach { cycle ->
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -418,18 +456,32 @@ private fun WeekList(weeks: List<TransformationWeek>) {
             shape = MaterialTheme.shapes.medium,
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text("Week of ${week.weekStartDate}", style = MaterialTheme.typography.titleMedium)
-                week.notes?.let {
-                    Spacer(modifier = Modifier.height(4.dp))
+                Text("Cycle from ${cycle.startDate}", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Last update ${cycle.latestCaptureDate} • ${cycle.days.size} logged day(s)",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                cycle.notes?.let {
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MetricPill("Photos", week.photos.size.toString())
-                    MetricPill("Workouts", week.summary.workoutsCompleted.toString())
-                    MetricPill("Avg kcal", week.summary.averageCalories?.formatMetric() ?: "--")
-                    MetricPill("Avg protein", week.summary.averageProteinGrams?.formatMetric()?.plus(" g") ?: "--")
-                    MetricPill("Weight delta", week.summary.weightChangeKg?.let { "${if (it > 0) "+" else ""}${it.formatMetric()} kg" } ?: "--")
+                    MetricPill("Days", cycle.days.size.toString())
+                    MetricPill("Photos", cycle.days.sumOf { it.photos.size }.toString())
+                    MetricPill("Workouts", cycle.summary.workoutsCompleted.toString())
+                    MetricPill("Avg kcal", cycle.summary.averageCalories?.formatMetric() ?: "--")
+                    MetricPill(
+                        "Weight delta",
+                        cycle.summary.weightChangeKg?.let { "${if (it > 0) "+" else ""}${it.formatMetric()} kg" } ?: "--",
+                    )
+                }
+                if (cycle.canReopen) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(onClick = { onReopen(cycle.id) }) {
+                        Text("Reopen cycle")
+                    }
                 }
             }
         }
@@ -438,9 +490,9 @@ private fun WeekList(weeks: List<TransformationWeek>) {
 
 @Composable
 private fun ComparisonCard(
-    weeks: List<TransformationWeek>,
-    leftWeekId: String?,
-    rightWeekId: String?,
+    cycle: TransformationCycle?,
+    leftCaptureDate: String?,
+    rightCaptureDate: String?,
     angle: TransformationPhotoAngle,
     onPreviousLeft: () -> Unit,
     onNextLeft: () -> Unit,
@@ -448,8 +500,22 @@ private fun ComparisonCard(
     onNextRight: () -> Unit,
     onSelectAngle: (TransformationPhotoAngle) -> Unit,
 ) {
-    val leftWeek = weeks.firstOrNull { it.id == leftWeekId }
-    val rightWeek = weeks.firstOrNull { it.id == rightWeekId }
+    if (cycle == null) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = MaterialTheme.shapes.medium,
+        ) {
+            Text(
+                "No transformation cycle to compare yet.",
+                modifier = Modifier.padding(16.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+    val leftDay = cycle.days.firstOrNull { it.captureDate.toString() == leftCaptureDate } ?: cycle.defaultComparison.leftDay
+    val rightDay = cycle.days.firstOrNull { it.captureDate.toString() == rightCaptureDate } ?: cycle.defaultComparison.rightDay
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -465,8 +531,8 @@ private fun ComparisonCard(
             }
             Spacer(modifier = Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ComparisonPane(leftWeek, angle, onPreviousLeft, onNextLeft, Modifier.weight(1f))
-                ComparisonPane(rightWeek, angle, onPreviousRight, onNextRight, Modifier.weight(1f))
+                ComparisonPane(leftDay, angle, onPreviousLeft, onNextLeft, Modifier.weight(1f))
+                ComparisonPane(rightDay, angle, onPreviousRight, onNextRight, Modifier.weight(1f))
             }
         }
     }
@@ -474,27 +540,27 @@ private fun ComparisonCard(
 
 @Composable
 private fun ComparisonPane(
-    week: TransformationWeek?,
+    day: TransformationCycleDay,
     angle: TransformationPhotoAngle,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val photo = week?.photos?.firstOrNull { it.angle == angle }
+    val photo = day.photos.firstOrNull { it.angle == angle }
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onPrevious) {
-                Icon(Icons.Outlined.ArrowBack, contentDescription = "Previous comparison week")
+                Icon(Icons.Outlined.ArrowBack, contentDescription = "Previous comparison day")
             }
             Text(
-                week?.weekStartDate?.toString() ?: "No week",
+                "Day ${day.dayNumber} • ${day.captureDate}",
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             IconButton(onClick = onNext) {
-                Icon(Icons.Outlined.ArrowForward, contentDescription = "Next comparison week")
+                Icon(Icons.Outlined.ArrowForward, contentDescription = "Next comparison day")
             }
         }
         PhotoPreview(photo = photo, emptyLabel = "No ${angle.label.lowercase()} photo")
@@ -600,13 +666,13 @@ private fun MeasurementEditorDialog(
     )
 }
 
-private fun cycleWeekId(weeks: List<TransformationWeek>, currentWeekId: String?, delta: Int): String? {
-    if (weeks.isEmpty()) {
+private fun cycleDayDate(days: List<TransformationCycleDay>, currentCaptureDate: String?, delta: Int): LocalDate? {
+    if (days.isEmpty()) {
         return null
     }
-    val currentIndex = weeks.indexOfFirst { it.id == currentWeekId }.takeIf { it >= 0 } ?: 0
-    val nextIndex = (currentIndex + delta).mod(weeks.size)
-    return weeks[nextIndex].id
+    val currentIndex = days.indexOfFirst { it.captureDate.toString() == currentCaptureDate }.takeIf { it >= 0 } ?: 0
+    val nextIndex = (currentIndex + delta).mod(days.size)
+    return days[nextIndex].captureDate
 }
 
 private val TransformationPhotoAngle.label: String
@@ -615,5 +681,4 @@ private val TransformationPhotoAngle.label: String
         TransformationPhotoAngle.LEFT -> "Left"
         TransformationPhotoAngle.RIGHT -> "Right"
         TransformationPhotoAngle.BACK -> "Back"
-        TransformationPhotoAngle.LEGS -> "Legs"
     }

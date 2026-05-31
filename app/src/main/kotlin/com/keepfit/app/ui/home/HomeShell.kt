@@ -54,6 +54,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.keepfit.core.model.BodyProfile
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.keepfit.feature.assistant.ui.AssistantRoute
+import com.keepfit.feature.assistant.ui.assistantRoute
 import com.keepfit.feature.nutrition.ui.NutritionScreen
 import com.keepfit.feature.nutrition.ui.TodayNutritionSection
 import com.keepfit.feature.settings.ui.SettingsScreen
@@ -66,36 +70,46 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun HomeShell(profile: BodyProfile) {
+fun HomeShell(
+    profile: BodyProfile,
+    viewModel: HomeShellViewModel = hiltViewModel(),
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val assistantLaunchState by viewModel.assistantLaunchState.collectAsStateWithLifecycle()
+    val assistantConnectionMessage by viewModel.assistantConnectionMessage.collectAsStateWithLifecycle()
+    val showBottomBar = HomeDestination.entries.any { destination ->
+        currentDestination?.hierarchy?.any { it.route == destination.route } == true
+    }
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ) {
-                HomeDestination.entries.forEach { item ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (showBottomBar) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ) {
+                    HomeDestination.entries.forEach { item ->
+                        NavigationBarItem(
+                            selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = item.icon(),
-                                contentDescription = item.label,
-                            )
-                        },
-                        label = { Text(item.label) },
-                    )
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = item.icon(),
+                                    contentDescription = item.label,
+                                )
+                            },
+                            label = { Text(item.label) },
+                        )
+                    }
                 }
             }
         },
@@ -126,7 +140,22 @@ fun HomeShell(profile: BodyProfile) {
                 ProgressScreen(modifier = Modifier.padding(padding))
             }
             composable(HomeDestination.SETTINGS.route) {
-                SettingsScreen(modifier = Modifier.padding(padding))
+                SettingsScreen(
+                    modifier = Modifier.padding(padding),
+                    onOpenAssistant = { navController.navigate(assistantRoute) },
+                    externalMessage = assistantConnectionMessage,
+                    onExternalMessageShown = viewModel::dismissAssistantConnectionMessage,
+                    onTestAssistantConnection = viewModel::testAssistantConnection,
+                )
+            }
+            composable(assistantRoute) {
+                AssistantRoute(
+                    isEnabled = assistantLaunchState.isEnabled,
+                    config = assistantLaunchState.config,
+                    validationMessage = assistantLaunchState.validationMessage,
+                    onBack = { navController.popBackStack() },
+                    modifier = Modifier.padding(padding),
+                )
             }
         }
     }

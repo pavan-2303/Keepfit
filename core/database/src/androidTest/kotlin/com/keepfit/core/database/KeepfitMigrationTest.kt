@@ -100,6 +100,81 @@ class KeepfitMigrationTest {
         }
     }
 
+    @Test
+    fun migrateFourToFiveConvertsWeeksIntoClosedCyclesAndDropsLegPhotos() {
+        helper.createDatabase(TEST_DATABASE, 4).use { database ->
+            database.execSQL(
+                """
+                INSERT INTO body_profiles (
+                    id, displayName, heightCm, birthDate, dailyCalorieGoal,
+                    dailyProteinGoalGrams, dailyCarbohydrateGoalGrams, dailyFatGoalGrams,
+                    createdAt, updatedAt
+                ) VALUES (
+                    'profile-id', 'Pavan', 178.0, NULL, 2400.0,
+                    150.0, 250.0, 70.0, 100, 100
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO transformation_weeks (
+                    id, bodyProfileId, weekStartDate, notes, createdAt
+                ) VALUES (
+                    'week-1', 'profile-id', '2026-05-25', 'Week one', 200
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO transformation_photos (
+                    id, transformationWeekId, angle, relativePath, mimeType, sizeBytes, createdAt
+                ) VALUES (
+                    'photo-front', 'week-1', 'FRONT', 'media/transformation/week-1/front.jpg', 'image/jpeg', 123, 201
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO transformation_photos (
+                    id, transformationWeekId, angle, relativePath, mimeType, sizeBytes, createdAt
+                ) VALUES (
+                    'photo-legs', 'week-1', 'LEGS', 'media/transformation/week-1/legs.jpg', 'image/jpeg', 124, 202
+                )
+                """.trimIndent(),
+            )
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DATABASE,
+            5,
+            true,
+            KeepfitMigrations.FOUR_TO_FIVE,
+        ).use { database ->
+            database.query(
+                """
+                SELECT startDate, closedAt, notes
+                FROM transformation_cycles
+                WHERE id = 'week-1'
+                """.trimIndent(),
+            ).use { cursor ->
+                assertEquals(true, cursor.moveToFirst())
+                assertEquals("2026-05-25", cursor.getString(0))
+                assertEquals(200L, cursor.getLong(1))
+                assertEquals("Week one", cursor.getString(2))
+            }
+            database.query(
+                """
+                SELECT COUNT(*)
+                FROM transformation_photos
+                WHERE transformationCycleId = 'week-1'
+                """.trimIndent(),
+            ).use { cursor ->
+                assertEquals(true, cursor.moveToFirst())
+                assertEquals(1, cursor.getInt(0))
+            }
+        }
+    }
+
     private companion object {
         const val TEST_DATABASE = "keepfit-migration-test"
     }

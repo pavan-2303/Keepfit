@@ -22,6 +22,7 @@ data class BodyMeasurement(
 
 data class TransformationPhoto(
     val id: String,
+    val captureDate: LocalDate,
     val angle: TransformationPhotoAngle,
     val relativePath: String,
     val absolutePath: String,
@@ -30,7 +31,7 @@ data class TransformationPhoto(
     val createdAt: Long,
 )
 
-data class WeeklyProgressSummary(
+data class TransformationCycleSummary(
     val workoutsCompleted: Int,
     val averageCalories: Double?,
     val averageProteinGrams: Double?,
@@ -39,12 +40,32 @@ data class WeeklyProgressSummary(
     val weightChangeKg: Double?,
 )
 
-data class TransformationWeek(
-    val id: String,
-    val weekStartDate: LocalDate,
-    val notes: String?,
+data class TransformationCycleDay(
+    val captureDate: LocalDate,
+    val dayNumber: Int,
     val photos: List<TransformationPhoto>,
-    val summary: WeeklyProgressSummary,
+)
+
+data class TransformationComparison(
+    val leftDay: TransformationCycleDay,
+    val rightDay: TransformationCycleDay,
+)
+
+data class TransformationCycle(
+    val id: String,
+    val startDate: LocalDate,
+    val latestCaptureDate: LocalDate,
+    val isActive: Boolean,
+    val canReopen: Boolean,
+    val notes: String?,
+    val days: List<TransformationCycleDay>,
+    val summary: TransformationCycleSummary,
+    val defaultComparison: TransformationComparison,
+)
+
+data class TransformationTimeline(
+    val activeCycle: TransformationCycle?,
+    val history: List<TransformationCycle>,
 )
 
 data class CurrentProgressOverview(

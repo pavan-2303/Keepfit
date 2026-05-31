@@ -36,4 +36,5 @@ data class AppSettings(
         hour = 9,
         minute = 0,
     ),
+    val assistant: AssistantSettings = AssistantSettings(),
 )

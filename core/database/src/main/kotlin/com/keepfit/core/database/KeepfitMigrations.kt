@@ -304,4 +304,89 @@ object KeepfitMigrations {
             )
         }
     }
+
+    val FOUR_TO_FIVE = object : Migration(4, 5) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `transformation_cycles` (
+                    `id` TEXT NOT NULL,
+                    `bodyProfileId` TEXT NOT NULL,
+                    `startDate` TEXT NOT NULL,
+                    `notes` TEXT,
+                    `closedAt` INTEGER,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_transformation_cycles_bodyProfileId` ON `transformation_cycles` (`bodyProfileId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_transformation_cycles_startDate` ON `transformation_cycles` (`startDate`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_transformation_cycles_closedAt` ON `transformation_cycles` (`closedAt`)")
+            database.execSQL(
+                """
+                INSERT INTO `transformation_cycles` (
+                    `id`, `bodyProfileId`, `startDate`, `notes`, `closedAt`, `createdAt`, `updatedAt`
+                )
+                SELECT
+                    `id`,
+                    `bodyProfileId`,
+                    `weekStartDate`,
+                    `notes`,
+                    `createdAt`,
+                    `createdAt`,
+                    `createdAt`
+                FROM `transformation_weeks`
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `transformation_photos_new` (
+                    `id` TEXT NOT NULL,
+                    `transformationCycleId` TEXT NOT NULL,
+                    `captureDate` TEXT NOT NULL,
+                    `angle` TEXT NOT NULL,
+                    `relativePath` TEXT NOT NULL,
+                    `mimeType` TEXT NOT NULL,
+                    `sizeBytes` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`transformationCycleId`) REFERENCES `transformation_cycles`(`id`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_transformation_photos_new_transformationCycleId` ON `transformation_photos_new` (`transformationCycleId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_transformation_photos_new_captureDate` ON `transformation_photos_new` (`captureDate`)")
+            database.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_transformation_photos_new_transformationCycleId_captureDate_angle` ON `transformation_photos_new` (`transformationCycleId`, `captureDate`, `angle`)",
+            )
+            database.execSQL(
+                """
+                INSERT INTO `transformation_photos_new` (
+                    `id`, `transformationCycleId`, `captureDate`, `angle`, `relativePath`, `mimeType`, `sizeBytes`, `createdAt`
+                )
+                SELECT
+                    photo.`id`,
+                    photo.`transformationWeekId`,
+                    week.`weekStartDate`,
+                    photo.`angle`,
+                    photo.`relativePath`,
+                    photo.`mimeType`,
+                    photo.`sizeBytes`,
+                    photo.`createdAt`
+                FROM `transformation_photos` AS photo
+                INNER JOIN `transformation_weeks` AS week
+                    ON week.`id` = photo.`transformationWeekId`
+                WHERE photo.`angle` != 'LEGS'
+                """.trimIndent(),
+            )
+            database.execSQL("DROP TABLE `transformation_photos`")
+            database.execSQL("ALTER TABLE `transformation_photos_new` RENAME TO `transformation_photos`")
+            database.execSQL("DROP TABLE `transformation_weeks`")
+        }
+    }
 }

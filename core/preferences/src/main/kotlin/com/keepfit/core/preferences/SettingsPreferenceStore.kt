@@ -28,6 +28,12 @@ class DataStoreAppSettingsRepository(
         syncReminders()
     }
 
+    override suspend fun updateAssistantSettings(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.ASSISTANT_ENABLED] = enabled
+        }
+    }
+
     override suspend fun updateRestTimerSeconds(seconds: Int) {
         context.dataStore.edit { preferences ->
             preferences[Keys.REST_TIMER_SECONDS] = seconds
@@ -79,11 +85,15 @@ class DataStoreAppSettingsRepository(
                 hour = this[Keys.TRANSFORMATION_REMINDER_HOUR] ?: 9,
                 minute = this[Keys.TRANSFORMATION_REMINDER_MINUTE] ?: 0,
             ),
+            assistant = AssistantSettings(
+                enabled = this[Keys.ASSISTANT_ENABLED] ?: false,
+            ),
         )
 
     private object Keys {
         val WEIGHT_UNIT = intPreferencesKey("weight_unit")
         val MEASUREMENT_UNIT = intPreferencesKey("measurement_unit")
+        val ASSISTANT_ENABLED = booleanPreferencesKey("assistant_enabled")
         val REST_TIMER_SECONDS = intPreferencesKey("rest_timer_seconds")
         val WORKOUT_REMINDER_ENABLED = booleanPreferencesKey("workout_reminder_enabled")
         val WORKOUT_REMINDER_HOUR = intPreferencesKey("workout_reminder_hour")

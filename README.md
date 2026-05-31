@@ -11,8 +11,8 @@ complexity.
 - Build workout templates and weekly workout plans.
 - Log sets, repetitions, weight, notes, history, and personal records.
 - Track personal foods, reusable meals, calories, and macronutrients.
-- Record weight, BMI inputs, optional measurements, and weekly progress photos.
-- Compare transformation photos between selected weeks.
+- Record weight, BMI inputs, optional measurements, and transformation-cycle photos.
+- Compare transformation photos between cycle day 0 and later updates.
 - Export and restore an encrypted local backup.
 - Optional Health Connect step tracking and an Ollama assistant.
 
@@ -40,11 +40,10 @@ project now includes a runnable Android application with:
 - a Today nutrition summary backed by the same diary data;
 - dated body measurement logging with BMI derived from profile height and the
   latest weight;
-- weekly transformation weeks with private photo imports for front, left,
-  right, back, and legs angles;
-- two-week angle comparison with empty states when a photo is missing;
-- weekly progress summaries with workout counts, nutrition averages, and weight
-  change;
+- transformation cycles with private photo imports for front, left, right, and
+  back angles;
+- cycle-day comparison with empty states when a photo is missing;
+- cycle summaries with workout counts, nutrition averages, and weight change;
 - a real Settings screen for calorie and macro goals, units, workout reminder
   time, weekly progress reminder time, and configurable rest timer duration;
 - DataStore-backed settings persistence and WorkManager-based local reminder
@@ -74,6 +73,7 @@ Read these references before implementation:
 - [Architecture overview](docs/architecture/keepfit-overview.md)
 - [Data model](docs/architecture/keepfit-data-model.md)
 - [Delivery roadmap](docs/architecture/keepfit-roadmap.md)
+- [User manual](docs/user-manual/README.md)
 - [AI agent rules](AGENTS.md)
 
 ## Delivery Sequence
@@ -83,7 +83,7 @@ Read these references before implementation:
 | Phase 0 | Android foundation, navigation, Room setup, and local profile |
 | Phase 1A | Exercise library, workout plans, logging, history, and records |
 | Phase 1B | Personal foods, reusable meals, nutrition diary, and today summary |
-| Phase 1C | Measurements, BMI, weekly transformation photos, comparison, and summaries |
+| Phase 1C | Measurements, BMI, transformation cycles, comparison, and summaries |
 | Phase 1D | Encrypted backup, restore, reminders, and complete offline MVP |
 | Phase 2A | Optional read-only Health Connect steps |
 | Phase 2B | Optional Ollama assistant with reviewable plan suggestions |
@@ -119,6 +119,7 @@ Read these references before implementation:
 |   `-- workouts/
 |-- docs/
 |   |-- architecture/
+|   |-- user-manual/
 |   `-- superpowers/
 |       `-- plans/
 |-- gradle/
@@ -194,6 +195,17 @@ Run Room instrumentation tests on a connected Android emulator or device:
 ```powershell
 .\gradlew.bat :core:database:connectedDebugAndroidTest
 ```
+
+## User Guides
+
+End-user setup and usage documentation lives in [docs/user-manual](docs/user-manual/README.md).
+
+- [Getting started](docs/user-manual/getting-started.md)
+- [Workouts](docs/user-manual/workouts.md)
+- [Nutrition](docs/user-manual/nutrition.md)
+- [Progress](docs/user-manual/progress.md)
+- [Settings, backup, and restore](docs/user-manual/settings-backup-and-restore.md)
+- [Health Connect and assistant](docs/user-manual/integrations.md)
 
 ## License
 
