@@ -97,6 +97,27 @@ class BackupArchiveCodecTest {
         }
     }
 
+    @Test
+    fun rejectsTruncatedArchiveWithClearMessage() {
+        val workingDirectory = createTempDirectory("keepfit-backup-test").toFile()
+        try {
+            val result = runCatching {
+                codec.extractValidatedArchive(
+                    passphrase = "long-secret",
+                    inputStream = ByteArrayInputStream(byteArrayOf()),
+                    workingDirectory = File(workingDirectory, "restore").apply { mkdirs() },
+                )
+            }
+
+            assertEquals(
+                "The backup file is incomplete or corrupted.",
+                result.exceptionOrNull()?.message,
+            )
+        } finally {
+            workingDirectory.deleteRecursively()
+        }
+    }
+
     private fun sampleSettings() = BackupSettingsSnapshot(
         weightUnit = "KG",
         measurementUnit = "CM",
