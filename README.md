@@ -49,6 +49,8 @@ with:
   time, weekly progress reminder time, and configurable rest timer duration;
 - DataStore-backed settings persistence and WorkManager-based local reminder
   scheduling;
+- encrypted backup export plus restore preview, checksum validation, and
+  replace-data restore flow;
 - Hilt dependency injection;
 - Room schema export with explicit version `1` to `2`, `2` to `3`, and `3` to
   `4` migrations;

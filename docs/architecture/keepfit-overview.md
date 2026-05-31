@@ -137,6 +137,7 @@ An exported backup is a single encrypted archive containing:
 ```text
 manifest.json
 database.sqlite
+settings.json
 media/
 ```
 

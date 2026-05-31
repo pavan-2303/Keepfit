@@ -16,6 +16,14 @@ data class WeeklyReminderInput(
 )
 
 object SettingsInputValidator {
+    fun validateBackupPassphrase(passphrase: String): Result<String> {
+        val normalized = passphrase.trim()
+        if (normalized.length < 8) {
+            return Result.failure(IllegalArgumentException("Backup passphrase must be at least 8 characters."))
+        }
+        return Result.success(normalized)
+    }
+
     fun validateRestTimerSeconds(seconds: String): Result<Int> {
         val value = seconds.trim().toIntOrNull()
             ?: return Result.failure(IllegalArgumentException("Rest timer must be a whole number."))

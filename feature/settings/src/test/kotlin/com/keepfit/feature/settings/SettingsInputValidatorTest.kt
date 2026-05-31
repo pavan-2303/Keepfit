@@ -33,4 +33,12 @@ class SettingsInputValidatorTest {
             SettingsInputValidator.validateReminder(true, "18", "61").exceptionOrNull()?.message,
         )
     }
+
+    @Test
+    fun rejectsShortBackupPassphrase() {
+        assertEquals(
+            "Backup passphrase must be at least 8 characters.",
+            SettingsInputValidator.validateBackupPassphrase("short").exceptionOrNull()?.message,
+        )
+    }
 }

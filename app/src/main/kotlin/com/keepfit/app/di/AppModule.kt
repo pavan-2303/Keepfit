@@ -15,6 +15,8 @@ import com.keepfit.core.preferences.AppSettingsRepository
 import com.keepfit.core.preferences.DataStoreAppSettingsRepository
 import com.keepfit.core.preferences.ReminderScheduler
 import com.keepfit.core.preferences.WorkManagerReminderScheduler
+import com.keepfit.feature.settings.data.BackupRepository
+import com.keepfit.feature.settings.data.DeviceBackupRepository
 import com.keepfit.feature.settings.data.RoomSettingsGoalsRepository
 import com.keepfit.feature.settings.data.SettingsGoalsRepository
 import com.keepfit.feature.nutrition.data.NutritionRepository
@@ -63,6 +65,14 @@ object AppModule {
     @Singleton
     fun provideSettingsGoalsRepository(dao: BodyProfileDao): SettingsGoalsRepository =
         RoomSettingsGoalsRepository(dao)
+
+    @Provides
+    @Singleton
+    fun provideBackupRepository(
+        @ApplicationContext context: Context,
+        database: KeepfitDatabase,
+        settingsRepository: AppSettingsRepository,
+    ): BackupRepository = DeviceBackupRepository(context, database, settingsRepository)
 
     @Provides
     fun provideNutritionDao(database: KeepfitDatabase): NutritionDao =

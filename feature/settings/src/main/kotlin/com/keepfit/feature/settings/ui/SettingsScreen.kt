@@ -1,7 +1,13 @@
 package com.keepfit.feature.settings.ui
 
+import android.app.Activity
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
+import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,11 +22,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,22 +34,31 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepfit.core.preferences.MeasurementUnit
 import com.keepfit.core.preferences.WeightUnit
 import com.keepfit.feature.settings.SettingsViewModel
+import com.keepfit.feature.settings.data.BackupPreview
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import kotlin.system.exitProcess
 
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val appSettings by viewModel.appSettings.collectAsStateWithLifecycle()
     val nutritionGoals by viewModel.nutritionGoals.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val backupPreview by viewModel.backupPreview.collectAsStateWithLifecycle()
+    val restartRequired by viewModel.restartRequired.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var calorieGoal by remember(nutritionGoals.calorieGoal) { mutableStateOf(nutritionGoals.calorieGoal?.toInt()?.toString().orEmpty()) }
@@ -58,12 +73,42 @@ fun SettingsScreen(
     var transformationDay by remember(appSettings.transformationReminder.dayOfWeek) { mutableStateOf(appSettings.transformationReminder.dayOfWeek) }
     var transformationHour by remember(appSettings.transformationReminder.hour) { mutableStateOf(appSettings.transformationReminder.hour.toString()) }
     var transformationMinute by remember(appSettings.transformationReminder.minute) { mutableStateOf(appSettings.transformationReminder.minute.toString()) }
+    var exportPassphrase by remember { mutableStateOf("") }
+    var restorePassphrase by remember { mutableStateOf("") }
+    var selectedRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(CreateDocument("application/octet-stream")) { uri ->
+        uri?.let { viewModel.exportBackup(it, exportPassphrase) }
+    }
+    val restoreLauncher = rememberLauncherForActivityResult(OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            selectedRestoreUri = uri
+            viewModel.clearBackupPreview()
+        }
+    }
 
     LaunchedEffect(message) {
         message?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.dismissMessage()
         }
+    }
+
+    LaunchedEffect(restartRequired) {
+        if (!restartRequired) return@LaunchedEffect
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        if (launchIntent != null) {
+            context.startActivity(launchIntent)
+        }
+        (context as? Activity)?.finishAffinity()
+        exitProcess(0)
     }
 
     Scaffold(
@@ -191,6 +236,76 @@ fun SettingsScreen(
                     Text("Save progress reminder")
                 }
             }
+            Spacer(modifier = Modifier.height(12.dp))
+            SettingsCard("Backup and restore") {
+                Text(
+                    "Encrypted backup",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = exportPassphrase,
+                    onValueChange = { exportPassphrase = it },
+                    label = { Text("Export passphrase") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                    onClick = {
+                        exportLauncher.launch("keepfit-backup-${java.time.LocalDate.now()}.kfit")
+                    },
+                ) {
+                    Text("Export backup")
+                }
+                Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    "Restore backup",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = restorePassphrase,
+                    onValueChange = {
+                        restorePassphrase = it
+                        viewModel.clearBackupPreview()
+                    },
+                    label = { Text("Restore passphrase") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                FilledTonalButton(onClick = { restoreLauncher.launch(arrayOf("*/*")) }) {
+                    Text(if (selectedRestoreUri == null) "Choose backup file" else "Change backup file")
+                }
+                selectedRestoreUri?.let { uri ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Selected: ${uri.lastPathSegment ?: uri.toString()}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(onClick = { viewModel.previewBackup(uri, restorePassphrase) }) {
+                        Text("Preview restore")
+                    }
+                }
+                backupPreview?.let {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    BackupPreviewCard(preview = it)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(onClick = { viewModel.restoreBackup(selectedRestoreUri!!, restorePassphrase) }) {
+                        Text("Restore and replace local data")
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "This replaces the current local database, private media, and settings.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
         }
     }
 }
@@ -210,9 +325,42 @@ private fun SettingsCard(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
+private fun BackupPreviewCard(preview: BackupPreview) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text("Backup preview", style = MaterialTheme.typography.titleSmall)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Exported: ${preview.exportedAtUtcEpochMillis.toLocalDateTimeLabel()}")
+            Text("Schema version: ${preview.databaseSchemaVersion}")
+            Text("Media size: ${preview.mediaSizeBytes.toReadableSize()}")
+            Spacer(modifier = Modifier.height(8.dp))
+            preview.recordCounts.forEach { (label, count) ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(label, modifier = Modifier.weight(1f))
+                    Text(count.toString())
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ReminderToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {
+    Row(modifier = Modifier.fillMaxWidth()) {
         Text(label, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
+
+private fun Long.toReadableSize(): String = when {
+    this >= 1_048_576 -> String.format("%.1f MB", this / 1_048_576.0)
+    this >= 1_024 -> String.format("%.1f KB", this / 1_024.0)
+    else -> "$this B"
+}
+
+private fun Long.toLocalDateTimeLabel(): String =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        .format(Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDateTime())

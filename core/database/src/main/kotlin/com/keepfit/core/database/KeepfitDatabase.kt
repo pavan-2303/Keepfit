@@ -54,4 +54,8 @@ abstract class KeepfitDatabase : RoomDatabase() {
     abstract fun nutritionDao(): NutritionDao
     abstract fun transformationDao(): TransformationDao
     abstract fun workoutDao(): WorkoutDao
+
+    companion object {
+        const val VERSION = 4
+    }
 }

@@ -121,8 +121,9 @@ Make weekly physical changes easy to record and compare privately.
 
 ## 6. Phase 1D: Backup, Restore, and Reminders
 
-Status: in progress on `develop`; settings and reminders slice implemented and
-emulator-verified.
+Status: in progress on `develop`; settings, reminders, and backup/restore
+implementation are complete, with final device-level backup roundtrip
+verification still pending.
 
 ### Goal
 

@@ -19,7 +19,7 @@ reminders, and rest timer editing.
 
 ### Task 2: Backup and Restore
 
-- [ ] Design encrypted backup archive format and manifest.
-- [ ] Implement backup export flow.
-- [ ] Implement restore preview, validation, and replace-data flow.
+- [x] Design encrypted backup archive format and manifest.
+- [x] Implement backup export flow.
+- [x] Implement restore preview, validation, and replace-data flow.
 - [ ] Verify backup and restore end to end.

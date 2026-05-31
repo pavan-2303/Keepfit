@@ -5,6 +5,7 @@ compose-compiler = "2.3.21"
 datastore = "1.2.1"
 hilt = "2.59.2"
 hilt-navigation-compose = "1.3.0"
+gson = "2.13.1"
 junit = "4.13.2"
 ksp = "2.3.9"
 lifecycle = "2.10.0"
@@ -40,6 +41,7 @@ androidx-test-runner = { module = "androidx.test:runner", version.ref = "test-ru
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]

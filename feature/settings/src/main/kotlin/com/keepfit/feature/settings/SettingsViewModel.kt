@@ -1,11 +1,14 @@
 package com.keepfit.feature.settings
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.keepfit.core.preferences.AppSettings
 import com.keepfit.core.preferences.AppSettingsRepository
 import com.keepfit.core.preferences.MeasurementUnit
 import com.keepfit.core.preferences.WeightUnit
+import com.keepfit.feature.settings.data.BackupPreview
+import com.keepfit.feature.settings.data.BackupRepository
 import com.keepfit.feature.settings.data.NutritionGoalSettings
 import com.keepfit.feature.settings.data.SettingsGoalsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +25,7 @@ import kotlinx.coroutines.launch
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: AppSettingsRepository,
     private val goalsRepository: SettingsGoalsRepository,
+    private val backupRepository: BackupRepository,
 ) : ViewModel() {
     val appSettings: StateFlow<AppSettings> = settingsRepository.observeSettings()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
@@ -35,6 +39,12 @@ class SettingsViewModel @Inject constructor(
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
+
+    private val _backupPreview = MutableStateFlow<BackupPreview?>(null)
+    val backupPreview: StateFlow<BackupPreview?> = _backupPreview.asStateFlow()
+
+    private val _restartRequired = MutableStateFlow(false)
+    val restartRequired: StateFlow<Boolean> = _restartRequired.asStateFlow()
 
     fun saveUnits(weightUnit: WeightUnit, measurementUnit: MeasurementUnit) = launchWrite("Units saved.") {
         settingsRepository.updateUnits(weightUnit, measurementUnit)
@@ -91,6 +101,54 @@ class SettingsViewModel @Inject constructor(
 
     fun dismissMessage() {
         _message.value = null
+    }
+
+    fun clearBackupPreview() {
+        _backupPreview.value = null
+    }
+
+    fun exportBackup(destinationUri: Uri, passphrase: String) {
+        SettingsInputValidator.validateBackupPassphrase(passphrase)
+            .onSuccess { normalizedPassphrase ->
+                launchWrite("Backup exported.") {
+                    backupRepository.exportBackup(destinationUri, normalizedPassphrase)
+                }
+            }
+            .onFailure { _message.value = it.message }
+    }
+
+    fun previewBackup(sourceUri: Uri, passphrase: String) {
+        SettingsInputValidator.validateBackupPassphrase(passphrase)
+            .onSuccess { normalizedPassphrase ->
+                _backupPreview.value = null
+                viewModelScope.launch {
+                    runCatching { backupRepository.previewBackup(sourceUri, normalizedPassphrase) }
+                        .onSuccess {
+                            _backupPreview.value = it
+                            _message.value = "Backup preview loaded."
+                        }
+                        .onFailure {
+                            _backupPreview.value = null
+                            _message.value = it.message ?: "Something went wrong."
+                        }
+                }
+            }
+            .onFailure { _message.value = it.message }
+    }
+
+    fun restoreBackup(sourceUri: Uri, passphrase: String) {
+        SettingsInputValidator.validateBackupPassphrase(passphrase)
+            .onSuccess { normalizedPassphrase ->
+                viewModelScope.launch {
+                    runCatching { backupRepository.restoreBackup(sourceUri, normalizedPassphrase) }
+                        .onSuccess {
+                            _restartRequired.value = true
+                            _message.value = "Backup restored. Restarting the app."
+                        }
+                        .onFailure { _message.value = it.message ?: "Something went wrong." }
+                }
+            }
+            .onFailure { _message.value = it.message }
     }
 
     private fun launchWrite(successMessage: String?, block: suspend () -> Unit) {
