@@ -2,6 +2,7 @@ package com.keepfit.feature.assistant.data
 
 import java.net.URI
 import java.time.DayOfWeek
+import java.time.LocalDate
 
 enum class AssistantConnectionStatus {
     DISABLED,
@@ -41,6 +42,7 @@ data class AssistantUiState(
     val connectionStatus: AssistantConnectionStatus = AssistantConnectionStatus.IDLE,
     val messages: List<AssistantChatMessage> = emptyList(),
     val draftMessage: String = "",
+    val pendingDraftPlan: AssistantDraftWorkoutPlan? = null,
     val isWorking: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -57,6 +59,67 @@ data class AssistantRequestError(
 data class AssistantProgressSummary(
     val title: String,
     val summary: String,
+)
+
+data class AssistantRecentWorkoutSummary(
+    val workoutDate: LocalDate,
+    val exerciseNames: List<String>,
+)
+
+data class AssistantRecordSummary(
+    val exerciseName: String,
+    val highestWeightKg: Double,
+    val highestRepetitions: Int,
+)
+
+data class AssistantNutritionSnapshot(
+    val date: LocalDate,
+    val calories: Double,
+    val proteinGrams: Double,
+    val carbohydrateGrams: Double,
+    val fatGrams: Double,
+    val calorieGoal: Double?,
+    val proteinGoalGrams: Double?,
+    val carbohydrateGoalGrams: Double?,
+    val fatGoalGrams: Double?,
+    val hasEntries: Boolean,
+)
+
+data class AssistantTransformationCycleSnapshot(
+    val startDate: LocalDate,
+    val latestCaptureDate: LocalDate,
+    val latestDayNumber: Int,
+    val workoutsCompleted: Int,
+    val averageCalories: Double?,
+    val averageProteinGrams: Double?,
+    val averageCarbohydrateGrams: Double?,
+    val averageFatGrams: Double?,
+    val weightChangeKg: Double?,
+)
+
+data class AssistantProgressSnapshot(
+    val latestMeasurementDate: LocalDate?,
+    val latestWeightKg: Double?,
+    val heightCm: Double?,
+    val bmi: Double?,
+    val activeCycle: AssistantTransformationCycleSnapshot? = null,
+)
+
+data class AssistantStepsSnapshotSummary(
+    val todaySteps: Long,
+    val sevenDayTotal: Long,
+) {
+    val sevenDayAverage: Long
+        get() = if (sevenDayTotal == 0L) 0L else kotlin.math.round(sevenDayTotal / 7.0).toLong()
+}
+
+data class AssistantLocalSummary(
+    val generatedOn: LocalDate,
+    val recentWorkouts: List<AssistantRecentWorkoutSummary>,
+    val records: List<AssistantRecordSummary>,
+    val nutrition: AssistantNutritionSnapshot,
+    val progress: AssistantProgressSnapshot,
+    val steps: AssistantStepsSnapshotSummary?,
 )
 
 data class AssistantDraftWorkoutExercise(

@@ -250,52 +250,16 @@ fun SettingsScreen(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            SettingsCard("Ollama Cloud assistant") {
-                ReminderToggle("Enable optional Ollama Cloud assistant", assistantEnabled) {
-                    assistantEnabled = it
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "This build uses an Ollama Cloud configuration injected during app build, not entered at runtime.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    "General chat uses mistral-large-3:675b. Deeper planning and analysis use qwen3.5:397b.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    "Assistant replies are general fitness guidance, not medical advice.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                FlowRow {
-                    Button(
-                        onClick = {
-                            viewModel.saveAssistantSettings(enabled = assistantEnabled)
-                        },
-                    ) {
-                        Text("Save assistant")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    FilledTonalButton(
-                        onClick = onTestAssistantConnection,
-                    ) {
-                        Text("Test connection")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    FilledTonalButton(
-                        onClick = onOpenAssistant,
-                        enabled = canOpenAssistant,
-                    ) {
-                        Text("Open assistant")
-                    }
-                }
-            }
+            AssistantSettingsCard(
+                assistantEnabled = assistantEnabled,
+                canOpenAssistant = canOpenAssistant,
+                onAssistantEnabledChange = { assistantEnabled = it },
+                onSaveAssistant = {
+                    viewModel.saveAssistantSettings(enabled = assistantEnabled)
+                },
+                onTestAssistantConnection = onTestAssistantConnection,
+                onOpenAssistant = onOpenAssistant,
+            )
             Spacer(modifier = Modifier.height(12.dp))
             SettingsCard("Backup and restore") {
                 Text(
@@ -365,6 +329,55 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun AssistantSettingsCard(
+    assistantEnabled: Boolean,
+    canOpenAssistant: Boolean,
+    onAssistantEnabledChange: (Boolean) -> Unit,
+    onSaveAssistant: () -> Unit,
+    onTestAssistantConnection: () -> Unit,
+    onOpenAssistant: () -> Unit,
+) {
+    SettingsCard("Ollama Cloud assistant") {
+        ReminderToggle("Enable optional Ollama Cloud assistant", assistantEnabled, onAssistantEnabledChange)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "This build uses an Ollama Cloud configuration injected during app build, not entered at runtime.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "General chat uses mistral-large-3:675b. Deeper planning and analysis use qwen3.5:397b.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "Assistant replies are general fitness guidance, not medical advice.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        FlowRow {
+            Button(onClick = onSaveAssistant) {
+                Text("Save assistant")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            FilledTonalButton(onClick = onTestAssistantConnection) {
+                Text("Test connection")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            FilledTonalButton(
+                onClick = onOpenAssistant,
+                enabled = canOpenAssistant,
+            ) {
+                Text("Open assistant")
             }
         }
     }

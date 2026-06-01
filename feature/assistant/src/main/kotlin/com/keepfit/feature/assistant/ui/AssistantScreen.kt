@@ -33,8 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.keepfit.feature.assistant.data.AssistantChatMessage
+import com.keepfit.feature.assistant.data.AssistantDraftWorkoutPlan
 import com.keepfit.feature.assistant.data.AssistantMessageRole
 import com.keepfit.feature.assistant.data.AssistantUiState
+import java.time.format.TextStyle
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,12 +48,17 @@ fun AssistantScreen(
     onBack: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
+    onSummarizeProgress: () -> Unit,
+    onDraftWeeklyPlan: () -> Unit,
+    onApplyDraftPlan: () -> Unit,
+    onDismissDraftPlan: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
     val canSend = isEnabled && validationMessage == null && !uiState.isWorking
     val canRetry = canSend && uiState.errorMessage != null && uiState.draftMessage.isNotBlank()
+    val canSummarize = isEnabled && validationMessage == null && !uiState.isWorking
 
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
@@ -104,7 +112,7 @@ fun AssistantScreen(
                 uiState.messages.isEmpty() -> {
                     AssistantNoticeCard(
                         title = "Start a conversation",
-                        message = "Ask a general training or nutrition question. Local summary and draft-plan actions will be added in the next slice.",
+                        message = "Ask a general training or nutrition question, generate a local-data-backed progress summary, or draft a weekly plan for review.",
                     )
                 }
             }
@@ -116,6 +124,15 @@ fun AssistantScreen(
                     .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                uiState.pendingDraftPlan?.let { draft ->
+                    DraftPlanCard(
+                        draft = draft,
+                        onApply = onApplyDraftPlan,
+                        onDismiss = onDismissDraftPlan,
+                        enabled = !uiState.isWorking,
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
                 uiState.messages.forEach { message ->
                     MessageBubble(message = message)
                     Spacer(modifier = Modifier.height(10.dp))
@@ -143,6 +160,25 @@ fun AssistantScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                FilledTonalButton(
+                    onClick = onSummarizeProgress,
+                    enabled = canSummarize,
+                ) {
+                    Text("Summarize progress")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                FilledTonalButton(
+                    onClick = onDraftWeeklyPlan,
+                    enabled = canSummarize,
+                ) {
+                    Text("Draft weekly plan")
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Button(
                     onClick = onSend,
                     enabled = canSend && uiState.draftMessage.isNotBlank(),
@@ -163,6 +199,75 @@ fun AssistantScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DraftPlanCard(
+    draft: AssistantDraftWorkoutPlan,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit,
+    enabled: Boolean,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Draft weekly plan",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = draft.name,
+                style = MaterialTheme.typography.titleLarge,
+            )
+            draft.overview?.let {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            draft.days.forEach { day ->
+                Text(
+                    text = "${day.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)}: ${day.templateName}",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                day.notes?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = day.exercises.joinToString { exercise ->
+                        buildString {
+                            append(exercise.name)
+                            exercise.targetSets?.let { sets ->
+                                append(" ${sets}x")
+                                append(exercise.targetReps ?: "?")
+                            }
+                        }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = onApply, enabled = enabled) {
+                    Text("Apply draft")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                FilledTonalButton(onClick = onDismiss, enabled = enabled) {
+                    Text("Dismiss draft")
                 }
             }
         }

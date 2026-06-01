@@ -13,7 +13,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Singleton
-class OllamaAssistantRepository @Inject constructor() : AssistantRepository {
+class OllamaAssistantRepository @Inject constructor(
+    private val summaryRepository: AssistantSummaryRepository,
+    private val promptAssembler: AssistantPromptAssembler,
+) : AssistantRepository {
     private val gson = Gson()
 
     override suspend fun testConnection(config: AssistantRuntimeConfig): Result<Unit> =
@@ -37,16 +40,43 @@ class OllamaAssistantRepository @Inject constructor() : AssistantRepository {
 
     override suspend fun generateProgressSummary(
         config: AssistantRuntimeConfig,
-    ): Result<AssistantProgressSummary> = Result.failure(
-        IllegalStateException("Progress summaries are not available yet."),
-    )
+    ): Result<AssistantProgressSummary> {
+        val prompt = promptAssembler.buildProgressSummaryPrompt(
+            summaryRepository.loadProgressSummary(),
+        )
+        return executeChatRequest(
+            config = config,
+            purpose = AssistantModelPurpose.REASONING,
+            history = emptyList(),
+            userMessage = prompt,
+        ).map { response ->
+            AssistantProgressSummary(
+                title = "Progress summary",
+                summary = response.content,
+            )
+        }
+    }
 
     override suspend fun requestDraftPlan(
         config: AssistantRuntimeConfig,
         input: AssistantDraftInput,
-    ): Result<AssistantDraftWorkoutPlan> = Result.failure(
-        IllegalStateException("Draft workout plans are not available yet."),
-    )
+    ): Result<AssistantDraftWorkoutPlan> {
+        val prompt = promptAssembler.buildDraftPlanPrompt(
+            summaryRepository.loadProgressSummary(),
+            input,
+        )
+        return executeChatRequest(
+            config = config,
+            purpose = AssistantModelPurpose.REASONING,
+            history = emptyList(),
+            userMessage = prompt,
+        ).fold(
+            onSuccess = { response ->
+                parseOllamaDraftPlanResponse(response.content)
+            },
+            onFailure = { Result.failure(it) },
+        )
+    }
 
     private suspend fun executeChatRequest(
         config: AssistantRuntimeConfig,
@@ -109,6 +139,7 @@ class OllamaAssistantRepository @Inject constructor() : AssistantRepository {
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", OLLAMA_CLOUD_USER_AGENT)
             config.apiKey?.takeIf { it.isNotBlank() }?.let {
                 setRequestProperty("Authorization", "Bearer $it")
             }
@@ -141,10 +172,14 @@ class OllamaAssistantRepository @Inject constructor() : AssistantRepository {
         return when (statusCode) {
             HttpURLConnection.HTTP_UNAUTHORIZED,
             HttpURLConnection.HTTP_FORBIDDEN,
-            -> structuredError ?: "Assistant authentication failed. Check the saved API key."
+            -> structuredError ?: "Assistant access was denied by Ollama Cloud. Check the API key and model access."
 
             in 500..599 -> structuredError ?: "Assistant server error ($statusCode)."
             else -> structuredError ?: "Assistant request failed ($statusCode)."
         }
+    }
+
+    private companion object {
+        const val OLLAMA_CLOUD_USER_AGENT = "Keepfit-Android/0.1"
     }
 }

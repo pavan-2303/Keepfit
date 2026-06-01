@@ -8,15 +8,29 @@
 
 **Tech Stack:** Kotlin, Jetpack Compose, Hilt, coroutines, `Flow`, DataStore, Android secure storage abstraction, Room-backed repositories, and Ollama HTTP `/api/chat`.
 
-**Progress Update (2026-05-31):**
+**Progress Update (2026-06-01):**
 
-- Tasks 1 through 10 are complete.
-- The app now includes assistant settings persistence, secure token storage, a chat route, a real non-streaming Ollama `/api/chat` adapter, and a working Settings connection test flow.
+- Tasks 1 through 17 are complete.
+- The app now includes build-time Ollama Cloud configuration, cloud-safe chat requests, a working Settings connection test, local-data-backed progress summaries, structured weekly-plan draft generation, draft review, and approved-plan application into the existing Workouts plan flow.
 - Verification completed in-session:
   - `.\gradlew.bat :feature:assistant:testDebugUnitTest`
+  - `.\gradlew.bat :feature:settings:testDebugUnitTest`
   - `.\gradlew.bat :app:testDebugUnitTest --tests com.keepfit.app.ui.home.HomeShellViewModelTest`
   - `.\gradlew.bat :app:assembleDebug`
-- Remaining scope starts at local summary assembly and draft-plan generation.
+  - `.\gradlew.bat :app:installDebug`
+  - `.\gradlew.bat :feature:settings:connectedDebugAndroidTest`
+  - `.\gradlew.bat :feature:assistant:connectedDebugAndroidTest`
+  - `.\gradlew.bat :core:preferences:lintDebug`
+  - `.\gradlew.bat lintDebug`
+- Manual emulator verification completed for:
+  - reachable assistant chat,
+  - progress summary generation,
+  - draft weekly-plan generation,
+  - review-before-apply behavior,
+  - approved draft appearing in `Workouts > Plan`,
+  - assistant disabled leaving core workflows unchanged,
+  - unreachable endpoint preserving drafted text after a real failed send.
+- Residual limitation: final verification was completed on the emulator and not yet repeated on a physical device.
 
 ---
 
@@ -263,16 +277,16 @@
 - Create: `feature/assistant/src/test/kotlin/com/keepfit/feature/assistant/AssistantPromptAssemblerTest.kt`
 - Modify: `app/src/main/kotlin/com/keepfit/app/di/AppModule.kt`
 
-- [ ] Write failing tests for prompt assembly from existing read models:
+- [x] Write failing tests for prompt assembly from existing read models:
   - recent workout history and records,
   - current nutrition totals and goals,
   - latest weight/BMI/progress metrics,
   - optional steps summary when available.
-- [ ] Run the focused prompt-assembler test and confirm failure.
-- [ ] Implement a summary repository that reads existing feature repositories through app-wired interfaces.
-- [ ] Implement a prompt assembler that produces compact deterministic sections rather than raw dumps.
-- [ ] Re-run the focused tests until they pass.
-- [ ] Run: `.\gradlew.bat :feature:assistant:testDebugUnitTest --tests com.keepfit.feature.assistant.AssistantPromptAssemblerTest`
+- [x] Run the focused prompt-assembler test and confirm failure.
+- [x] Implement a summary repository that reads existing feature repositories through app-wired interfaces.
+- [x] Implement a prompt assembler that produces compact deterministic sections rather than raw dumps.
+- [x] Re-run the focused tests until they pass.
+- [x] Run: `.\gradlew.bat :feature:assistant:testDebugUnitTest --tests com.keepfit.feature.assistant.AssistantPromptAssemblerTest`
 
 ### Task 12: Add Explicit Progress Summary Action
 
@@ -281,10 +295,10 @@
 - Modify: `feature/assistant/src/main/kotlin/com/keepfit/feature/assistant/ui/AssistantScreen.kt`
 - Modify: `feature/assistant/src/main/kotlin/com/keepfit/feature/assistant/data/AssistantRepository.kt`
 
-- [ ] Add a dedicated assistant action to generate a local-data-backed progress summary.
-- [ ] Ensure summary generation only happens after explicit user action.
-- [ ] Render the returned summary as a normal assistant message with disclaimer text preserved on screen.
-- [ ] Run: `.\gradlew.bat :feature:assistant:testDebugUnitTest`
+- [x] Add a dedicated assistant action to generate a local-data-backed progress summary.
+- [x] Ensure summary generation only happens after explicit user action.
+- [x] Render the returned summary as a normal assistant message with disclaimer text preserved on screen.
+- [x] Run: `.\gradlew.bat :feature:assistant:testDebugUnitTest`
 
 ### Task 13: Define Draft Workout Plan Response Shape
 
@@ -292,18 +306,20 @@
 - Modify: `feature/assistant/src/main/kotlin/com/keepfit/feature/assistant/data/AssistantModels.kt`
 - Create: `feature/assistant/src/test/kotlin/com/keepfit/feature/assistant/OllamaResponseParsingTest.kt`
 
-- [ ] Write failing tests for parsing a structured draft plan response into:
+- [x] Write failing tests for parsing a structured draft plan response into:
   - plan name,
   - weekdays,
   - template names,
   - ordered exercise names,
   - optional notes.
-- [ ] Run the focused parsing test and confirm failure.
-- [ ] Define a strict draft-plan model and parser that rejects malformed or partial responses.
-- [ ] Re-run the focused test until it passes.
-- [ ] Run: `.\gradlew.bat :feature:assistant:testDebugUnitTest --tests com.keepfit.feature.assistant.OllamaResponseParsingTest`
+- [x] Run the focused parsing test and confirm failure.
+- [x] Define a strict draft-plan model and parser that rejects malformed or partial responses.
+- [x] Re-run the focused test until it passes.
+- [x] Run: `.\gradlew.bat :feature:assistant:testDebugUnitTest --tests com.keepfit.feature.assistant.OllamaResponseParsingTest`
 
 ### Task 14: Add Draft Plan Request and Review UI
+
+Status: completed on 2026-06-01.
 
 **Files:**
 - Modify: `feature/assistant/src/main/kotlin/com/keepfit/feature/assistant/AssistantViewModel.kt`
@@ -317,6 +333,8 @@
 - [ ] Run: `.\gradlew.bat :feature:assistant:testDebugUnitTest`
 
 ### Task 15: Apply Approved Drafts Through Existing Workouts APIs
+
+Status: completed on 2026-06-01.
 
 **Files:**
 - Modify: `feature/assistant/src/main/kotlin/com/keepfit/feature/assistant/data/AssistantRepository.kt`
@@ -334,14 +352,14 @@
 **Files:**
 - Add or modify relevant Compose UI test files for assistant settings, chat, and draft review.
 
-- [ ] Add Compose UI coverage for:
+- [x] Add Compose UI coverage for:
   - assistant settings form,
   - failed send retaining drafted input,
   - review-before-apply draft flow.
-- [ ] Run: `.\gradlew.bat :feature:assistant:testDebugUnitTest`
-- [ ] Run: `.\gradlew.bat :feature:settings:testDebugUnitTest`
-- [ ] Run: `.\gradlew.bat :app:assembleDebug`
-- [ ] Run: `.\gradlew.bat lintDebug`
+- [x] Run: `.\gradlew.bat :feature:assistant:testDebugUnitTest`
+- [x] Run: `.\gradlew.bat :feature:settings:testDebugUnitTest`
+- [x] Run: `.\gradlew.bat :app:assembleDebug`
+- [x] Run: `.\gradlew.bat lintDebug`
 
 ### Task 17: Documentation and Manual Exit-Criteria Verification
 
@@ -350,16 +368,16 @@
 - Modify: `docs/architecture/keepfit-overview.md`
 - Modify: `docs/architecture/keepfit-roadmap.md`
 
-- [ ] Update README setup notes for the optional assistant, including Ollama Cloud defaults and API-key behavior.
-- [ ] Update architecture docs if any final assistant boundaries differ from the current phase description.
-- [ ] Manually verify on device or emulator:
+- [x] Update README setup notes for the optional assistant, including Ollama Cloud defaults and API-key behavior.
+- [x] Update architecture docs if any final assistant boundaries differ from the current phase description.
+- [x] Manually verify on device or emulator:
   - assistant disabled leaves core workflows unchanged,
   - reachable Ollama endpoint completes a chat request,
   - unreachable endpoint preserves drafted text,
   - progress summary uses local data,
   - draft plan does not change the weekly plan before approval,
   - approved draft applies correctly.
-- [ ] Record any residual limitations discovered during device verification.
+- [x] Record any residual limitations discovered during device verification.
 
 ## Self-Review
 

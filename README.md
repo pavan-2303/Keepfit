@@ -54,13 +54,17 @@ project now includes a runnable Android application with:
   brand mark;
 - an optional Today steps card backed by Health Connect availability checks,
   permission request flow, and daily plus seven-day step aggregates;
+- an optional Ollama Cloud assistant with connection testing, normal chat,
+  local-data-backed progress summaries, and reviewable weekly-plan drafts that
+  only affect Workouts after explicit approval;
 - Hilt dependency injection;
 - Room schema export with explicit version `1` to `2`, `2` to `3`, and `3` to
   `4` migrations;
 - unit tests plus Room DAO and migration instrumentation tests.
 
 The current implementation target is supported-device verification for the
-Health Connect steps flow and the later optional Ollama assistant phase.
+Health Connect steps flow plus broader assistant hardening and UI-test
+coverage.
 
 ## Architecture
 
@@ -148,6 +152,19 @@ Set the local SDK path in an ignored `local.properties` file:
 ```properties
 sdk.dir=C\:\\Users\\your-name\\AppData\\Local\\Android\\Sdk
 ```
+
+Optional assistant builds also read these ignored `local.properties` values:
+
+```properties
+keepfit.ollama.baseUrl=https://ollama.com/api
+keepfit.ollama.generalModel=mistral-large-3:675b
+keepfit.ollama.reasoningModel=qwen3.5:397b
+keepfit.ollama.apiKey=your-api-key
+```
+
+The assistant is disabled by default at the user-settings level even when these
+build-time values exist. General chat uses `mistral-large-3:675b`. Progress
+summaries and draft weekly plans use `qwen3.5:397b`.
 
 ### Commands
 

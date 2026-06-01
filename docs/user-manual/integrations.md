@@ -33,10 +33,11 @@ Current capabilities:
 - enable or disable assistant access;
 - test the configured connection;
 - open a chat screen;
-- send and retry normal chat requests.
-
-Planned later capabilities include local summaries and reviewable draft weekly
-plans.
+- send and retry normal chat requests;
+- generate a progress summary from local workout, nutrition, progress, and
+  optional steps data;
+- request a draft weekly plan;
+- review, dismiss, or apply the draft only after you inspect it.
 
 ### Configure the Assistant
 
@@ -45,6 +46,18 @@ plans.
 3. Save the setting.
 4. Use `Test connection`.
 5. Tap `Open assistant`.
+
+### Use the Assistant
+
+Inside the assistant screen you can:
+
+1. Ask a normal question and tap `Send`.
+2. Tap `Summarize progress` to generate a summary from your local data.
+3. Type an optional goal or constraint, then tap `Draft weekly plan`.
+4. Review the draft card before choosing `Apply draft` or `Dismiss draft`.
+
+If you leave the input blank before tapping `Draft weekly plan`, Keepfit uses a
+safe default request for a balanced weekly plan.
 
 ### Build-Time Cloud Configuration
 
@@ -71,3 +84,5 @@ Use direct model names. Do not use names ending in `-cloud` when calling
 - Assistant requests are sent to Ollama Cloud when you use this feature.
 - If the endpoint is unreachable, drafted chat text should remain available for
   retry.
+- Applying a draft weekly plan can create missing exercises with generic
+  defaults so the schedule can be applied without manual setup first.

@@ -29,6 +29,14 @@ fun AssistantRoute(
         onSend = {
             config?.let(viewModel::sendDraftMessage)
         },
+        onSummarizeProgress = {
+            config?.let(viewModel::generateProgressSummary)
+        },
+        onDraftWeeklyPlan = {
+            config?.let(viewModel::requestDraftPlan)
+        },
+        onApplyDraftPlan = viewModel::applyDraftPlan,
+        onDismissDraftPlan = viewModel::dismissDraftPlan,
         onRetry = {
             config?.let(viewModel::retryLastMessage)
         },
