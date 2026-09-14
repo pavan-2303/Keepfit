@@ -97,20 +97,18 @@ class HomeShellViewModelTest {
     }
 
     @Test
-    fun blocksConnectionTestWhenAssistantIsDisabled() = runTest(dispatcher) {
+    fun coachConnectionIsAvailableWithoutASeparateEnableToggle() = runTest(dispatcher) {
         val viewModel = HomeShellViewModel(
             settingsRepository = settingsRepository,
             buildTimeConfig = sampleConfig(),
             assistantRepository = assistantRepository,
         )
+        advanceUntilIdle()
 
         viewModel.testAssistantConnection()
         advanceUntilIdle()
 
-        assertEquals(
-            "Enable assistant before testing the connection.",
-            viewModel.assistantConnectionMessage.value,
-        )
+        assertEquals("Assistant connection successful.", viewModel.assistantConnectionMessage.value)
     }
 
     private class FakeAppSettingsRepository : AppSettingsRepository {

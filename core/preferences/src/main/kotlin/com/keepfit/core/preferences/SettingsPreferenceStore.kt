@@ -41,6 +41,22 @@ class DataStoreAppSettingsRepository(
         syncReminders()
     }
 
+    override suspend fun updateWeeklyReviewPaused(paused: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.WEEKLY_REVIEW_PAUSED] = paused
+        }
+    }
+
+    override suspend fun updateNutritionTracking(
+        depth: NutritionTrackingDepth,
+        targetRangePercent: Int,
+    ) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.NUTRITION_TRACKING_DEPTH] = depth.ordinal
+            preferences[Keys.NUTRITION_TARGET_RANGE_PERCENT] = targetRangePercent.toSupportedNutritionRange()
+        }
+    }
+
     override suspend fun updateWorkoutReminder(enabled: Boolean, hour: Int, minute: Int) {
         context.dataStore.edit { preferences ->
             preferences[Keys.WORKOUT_REMINDER_ENABLED] = enabled
@@ -74,6 +90,11 @@ class DataStoreAppSettingsRepository(
             weightUnit = WeightUnit.entries[this[Keys.WEIGHT_UNIT] ?: WeightUnit.KG.ordinal],
             measurementUnit = MeasurementUnit.entries[this[Keys.MEASUREMENT_UNIT] ?: MeasurementUnit.CM.ordinal],
             restTimerSeconds = this[Keys.REST_TIMER_SECONDS] ?: 90,
+            weeklyReviewPaused = this[Keys.WEEKLY_REVIEW_PAUSED] ?: false,
+            nutritionTrackingDepth = NutritionTrackingDepth.entries.getOrElse(
+                this[Keys.NUTRITION_TRACKING_DEPTH] ?: NutritionTrackingDepth.DETAILED_MACROS.ordinal,
+            ) { NutritionTrackingDepth.DETAILED_MACROS },
+            nutritionTargetRangePercent = (this[Keys.NUTRITION_TARGET_RANGE_PERCENT] ?: 10).toSupportedNutritionRange(),
             workoutReminder = ReminderTime(
                 enabled = this[Keys.WORKOUT_REMINDER_ENABLED] ?: false,
                 hour = this[Keys.WORKOUT_REMINDER_HOUR] ?: 18,
@@ -95,6 +116,9 @@ class DataStoreAppSettingsRepository(
         val MEASUREMENT_UNIT = intPreferencesKey("measurement_unit")
         val ASSISTANT_ENABLED = booleanPreferencesKey("assistant_enabled")
         val REST_TIMER_SECONDS = intPreferencesKey("rest_timer_seconds")
+        val WEEKLY_REVIEW_PAUSED = booleanPreferencesKey("weekly_review_paused")
+        val NUTRITION_TRACKING_DEPTH = intPreferencesKey("nutrition_tracking_depth")
+        val NUTRITION_TARGET_RANGE_PERCENT = intPreferencesKey("nutrition_target_range_percent")
         val WORKOUT_REMINDER_ENABLED = booleanPreferencesKey("workout_reminder_enabled")
         val WORKOUT_REMINDER_HOUR = intPreferencesKey("workout_reminder_hour")
         val WORKOUT_REMINDER_MINUTE = intPreferencesKey("workout_reminder_minute")
@@ -103,4 +127,10 @@ class DataStoreAppSettingsRepository(
         val TRANSFORMATION_REMINDER_HOUR = intPreferencesKey("transformation_reminder_hour")
         val TRANSFORMATION_REMINDER_MINUTE = intPreferencesKey("transformation_reminder_minute")
     }
+}
+
+private fun Int.toSupportedNutritionRange(): Int = when {
+    this <= 7 -> 5
+    this <= 12 -> 10
+    else -> 15
 }

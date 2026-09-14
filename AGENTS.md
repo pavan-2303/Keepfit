@@ -10,7 +10,8 @@ Before making implementation decisions, read:
 1. [README.md](README.md)
 2. [Architecture overview](docs/architecture/keepfit-overview.md)
 3. [Data model](docs/architecture/keepfit-data-model.md)
-4. [Delivery roadmap](docs/architecture/keepfit-roadmap.md)
+4. [Documentation roadmap](docs/ROADMAP.md)
+5. [Backlog index](docs/backlog/INDEX.md)
 
 Inspect the current repository state before editing. Do not assume a planned
 module, dependency, script, or Android scaffold already exists.
@@ -42,8 +43,8 @@ change.
   depend on another `feature:*` module.
 - Put genuinely shared behavior in a focused `core:*` module or coordinate it
   through `app`.
-- Keep Health Connect and Ollama behind optional adapters. Core workflows must
-  build, run, and test without them.
+- Keep Health Connect and external AI providers behind optional adapters. Core
+  workflows must build, run, and test without them.
 
 When the Android scaffold exists, preserve the module boundaries defined in
 [keepfit-overview.md](docs/architecture/keepfit-overview.md). Introduce modules
@@ -83,13 +84,15 @@ model, update the architecture docs in the same change and explain why.
 
 ## 6. Delivery Rules
 
-Follow [keepfit-roadmap.md](docs/architecture/keepfit-roadmap.md) in order:
+Follow the staged documentation lifecycle in [docs/README.md](docs/README.md):
 
-1. Build the Phase 0 foundation.
-2. Finish and verify each Phase 1 increment before expanding the MVP.
-3. Add Health Connect steps only after the offline MVP is dependable.
-4. Add Ollama only after tracking data is stable and only as an optional
-   feature.
+1. Begin multi-sprint work as a backlog initiative.
+2. Create an execution-ready version specification only after its scope is
+   approved.
+3. Track active work in an execution log without rewriting the frozen version
+   specification.
+4. Create an immutable done record only after implementation and verification
+   are complete.
 
 Each implementation change must leave the application runnable. Avoid
 placeholder screens, speculative abstractions, and unused dependencies.
@@ -109,7 +112,7 @@ Minimum expectations:
 - Unit tests for repositories, calculations, scheduling, and backup validation.
 - Room instrumentation tests for DAO behavior and migrations.
 - Compose UI tests for primary logging, restore, and comparison workflows.
-- Fake adapters for Health Connect and Ollama.
+- Fake adapters for Health Connect and external AI providers.
 - Manual emulator verification for user-facing Android flows.
 
 Do not claim a build, test, or lint result unless the corresponding command was

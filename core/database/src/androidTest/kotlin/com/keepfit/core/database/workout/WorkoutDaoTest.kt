@@ -36,6 +36,37 @@ class WorkoutDaoTest {
     }
 
     @Test
+    fun exerciseDetailsIncludeOptionalPrivateDemoMedia() = runBlocking {
+        val exercise = ExerciseEntity(
+            id = "demo-exercise",
+            name = "Demo exercise",
+            muscleGroup = "General",
+            instructions = "Move with control.",
+            notes = null,
+            isBodyweight = true,
+            createdAt = 1L,
+            updatedAt = 1L,
+            archivedAt = null,
+        )
+        val media = ExerciseMediaEntity(
+            id = "demo-media",
+            exerciseId = exercise.id,
+            mediaType = "VIDEO",
+            relativePath = "media/exercises/demo.mp4",
+            mimeType = "video/mp4",
+            sizeBytes = 42L,
+            createdAt = 2L,
+        )
+        dao.upsertExercise(exercise)
+        dao.upsertExerciseMedia(media)
+
+        val details = dao.observeExerciseDetails("demo").first().single()
+
+        assertEquals(exercise, details.exercise)
+        assertEquals(media, details.media)
+    }
+
+    @Test
     fun workoutLifecyclePreservesHistoryAndDerivesRecords() = runBlocking {
         val exercise = ExerciseEntity(
             id = "exercise",
@@ -136,7 +167,7 @@ class WorkoutDaoTest {
                 isCompleted = true,
             ),
         )
-        dao.completeSession("session", 5L)
+        dao.completeSession("session", 5L, energyLevel = null, difficulty = null)
         dao.archiveExercise(exercise.id, 6L)
 
         assertTrue(dao.observeExercises("").first().isEmpty())
@@ -210,5 +241,58 @@ class WorkoutDaoTest {
 
         dao.deleteExercise(exercise.id)
         assertTrue(dao.observeExercises("").first().isEmpty())
+    }
+
+    @Test
+    fun weeklyScheduleReplacementRollsBackWhenAnyAssignmentIsInvalid() = runBlocking {
+        val template = WorkoutTemplateEntity(
+            id = "valid-template",
+            name = "Full body",
+            notes = null,
+            createdAt = 1L,
+            updatedAt = 1L,
+            archivedAt = null,
+        )
+        dao.upsertTemplate(template)
+        val originalPlan = WeeklyPlanEntity(
+            id = "default-weekly-plan",
+            name = "Default week",
+            startsOn = LocalDate.parse("2026-09-07"),
+            isActive = true,
+            createdAt = 2L,
+            updatedAt = 2L,
+        )
+        dao.upsertWeeklyPlan(originalPlan)
+        dao.upsertPlannedWorkout(
+            PlannedWorkoutEntity(
+                id = "original-workout",
+                weeklyPlanId = originalPlan.id,
+                workoutTemplateId = template.id,
+                dayOfWeek = DayOfWeek.MONDAY,
+                position = 0,
+            ),
+        )
+
+        val result = runCatching {
+            dao.replaceWeeklySchedule(
+                plan = originalPlan.copy(updatedAt = 3L),
+                workouts = listOf(
+                    PlannedWorkoutEntity(
+                        id = "invalid-workout",
+                        weeklyPlanId = originalPlan.id,
+                        workoutTemplateId = "missing-template",
+                        dayOfWeek = DayOfWeek.TUESDAY,
+                        position = 0,
+                    ),
+                ),
+            )
+        }
+
+        assertTrue(result.isFailure)
+        assertEquals(
+            "original-workout",
+            dao.observePlannedWorkouts(DayOfWeek.MONDAY).first().single().id,
+        )
+        assertTrue(dao.observePlannedWorkouts(DayOfWeek.TUESDAY).first().isEmpty())
     }
 }

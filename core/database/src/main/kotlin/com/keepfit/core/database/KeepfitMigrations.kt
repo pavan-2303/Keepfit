@@ -389,4 +389,167 @@ object KeepfitMigrations {
             database.execSQL("DROP TABLE `transformation_weeks`")
         }
     }
+
+    val FIVE_TO_SIX = object : Migration(5, 6) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "ALTER TABLE `workout_templates` ADD COLUMN `origin` TEXT NOT NULL DEFAULT 'CUSTOM'",
+            )
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `journey_profiles` (
+                    `id` TEXT NOT NULL,
+                    `bodyProfileId` TEXT NOT NULL,
+                    `primaryGoal` TEXT NOT NULL,
+                    `experienceLevel` TEXT NOT NULL,
+                    `preferredDays` TEXT NOT NULL,
+                    `sessionMinutes` INTEGER NOT NULL,
+                    `equipment` TEXT NOT NULL,
+                    `avoidedExerciseKeys` TEXT NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_journey_profiles_bodyProfileId` ON `journey_profiles` (`bodyProfileId`)",
+            )
+        }
+    }
+
+    val SIX_TO_SEVEN = object : Migration(6, 7) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `workout_occurrences` (
+                    `id` TEXT NOT NULL,
+                    `sourcePlannedWorkoutId` TEXT,
+                    `sourceTemplateId` TEXT,
+                    `templateNameSnapshot` TEXT NOT NULL,
+                    `originalDate` TEXT NOT NULL,
+                    `scheduledDate` TEXT NOT NULL,
+                    `decisionType` TEXT NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`sourcePlannedWorkoutId`) REFERENCES `planned_workouts`(`id`)
+                        ON UPDATE NO ACTION ON DELETE SET NULL
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_workout_occurrences_sourcePlannedWorkoutId` ON `workout_occurrences` (`sourcePlannedWorkoutId`)",
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_workout_occurrences_originalDate` ON `workout_occurrences` (`originalDate`)",
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_workout_occurrences_scheduledDate` ON `workout_occurrences` (`scheduledDate`)",
+            )
+            database.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_workout_occurrences_sourcePlannedWorkoutId_originalDate` ON `workout_occurrences` (`sourcePlannedWorkoutId`, `originalDate`)",
+            )
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `workout_occurrence_exercises` (
+                    `id` TEXT NOT NULL,
+                    `workoutOccurrenceId` TEXT NOT NULL,
+                    `sourceTemplateExerciseId` TEXT,
+                    `exerciseId` TEXT NOT NULL,
+                    `exerciseNameSnapshot` TEXT NOT NULL,
+                    `position` INTEGER NOT NULL,
+                    `targetSets` INTEGER NOT NULL,
+                    `targetReps` TEXT,
+                    PRIMARY KEY(`id`),
+                    FOREIGN KEY(`workoutOccurrenceId`) REFERENCES `workout_occurrences`(`id`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE,
+                    FOREIGN KEY(`exerciseId`) REFERENCES `exercises`(`id`)
+                        ON UPDATE NO ACTION ON DELETE NO ACTION
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_workout_occurrence_exercises_workoutOccurrenceId` ON `workout_occurrence_exercises` (`workoutOccurrenceId`)",
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_workout_occurrence_exercises_exerciseId` ON `workout_occurrence_exercises` (`exerciseId`)",
+            )
+            database.execSQL(
+                "ALTER TABLE `workout_sessions` ADD COLUMN `workoutOccurrenceId` TEXT",
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_workout_sessions_workoutOccurrenceId` ON `workout_sessions` (`workoutOccurrenceId`)",
+            )
+        }
+    }
+
+    val SEVEN_TO_EIGHT = object : Migration(7, 8) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "ALTER TABLE `workout_sessions` ADD COLUMN `sessionVariant` TEXT NOT NULL DEFAULT 'FULL'",
+            )
+            database.execSQL(
+                "ALTER TABLE `workout_sessions` ADD COLUMN `energyLevel` INTEGER",
+            )
+            database.execSQL(
+                "ALTER TABLE `workout_sessions` ADD COLUMN `difficulty` INTEGER",
+            )
+            database.execSQL(
+                "ALTER TABLE `exercise_logs` ADD COLUMN `targetSets` INTEGER",
+            )
+            database.execSQL(
+                "ALTER TABLE `exercise_logs` ADD COLUMN `targetReps` TEXT",
+            )
+        }
+    }
+
+    val EIGHT_TO_NINE = object : Migration(8, 9) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `weekly_review_outcomes` (
+                    `id` TEXT NOT NULL,
+                    `weekStart` TEXT NOT NULL,
+                    `status` TEXT NOT NULL,
+                    `draftType` TEXT,
+                    `sourcePlannedWorkoutId` TEXT,
+                    `sourceDate` TEXT,
+                    `targetDate` TEXT,
+                    `occurrenceId` TEXT,
+                    `decidedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_weekly_review_outcomes_weekStart` ON `weekly_review_outcomes` (`weekStart`)",
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_weekly_review_outcomes_occurrenceId` ON `weekly_review_outcomes` (`occurrenceId`)",
+            )
+        }
+    }
+
+    val NINE_TO_TEN = object : Migration(9, 10) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `meal_quality_check_ins` (
+                    `id` TEXT NOT NULL,
+                    `diaryDate` TEXT NOT NULL,
+                    `mealType` TEXT NOT NULL,
+                    `quality` TEXT NOT NULL,
+                    `loggedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_meal_quality_check_ins_diaryDate_mealType` ON `meal_quality_check_ins` (`diaryDate`, `mealType`)",
+            )
+        }
+    }
 }

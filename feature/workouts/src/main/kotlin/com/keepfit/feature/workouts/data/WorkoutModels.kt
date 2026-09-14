@@ -1,5 +1,6 @@
 package com.keepfit.feature.workouts.data
 
+import com.keepfit.feature.workouts.execution.ProgressionSuggestion
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -10,6 +11,13 @@ data class Exercise(
     val instructions: String?,
     val notes: String?,
     val isBodyweight: Boolean,
+    val demo: ExerciseDemo? = null,
+)
+
+data class ExerciseDemo(
+    val uri: String,
+    val mediaType: String,
+    val mimeType: String,
 )
 
 data class TemplateExercise(
@@ -33,6 +41,8 @@ data class PlannedWorkout(
     val templateId: String,
     val templateName: String,
     val dayOfWeek: DayOfWeek,
+    val position: Int = 0,
+    val planStartsOn: LocalDate = LocalDate.MIN,
 )
 
 data class LoggedSet(
@@ -43,9 +53,14 @@ data class LoggedSet(
 
 data class ActiveExercise(
     val exerciseLogId: String,
+    val exerciseId: String,
     val exerciseName: String,
     val notes: String?,
-    val previousSet: LoggedSet?,
+    val targetSets: Int?,
+    val targetReps: String?,
+    val previousSets: List<LoggedSet>,
+    val nextSetSuggestion: LoggedSet?,
+    val progressionSuggestion: ProgressionSuggestion?,
     val sets: List<LoggedSet>,
 )
 
@@ -54,6 +69,12 @@ data class ActiveWorkout(
     val templateName: String,
     val workoutDate: LocalDate,
     val exercises: List<ActiveExercise>,
+    val sessionVariant: String = "FULL",
+)
+
+data class WorkoutFeedback(
+    val energyLevel: Int? = null,
+    val difficulty: Int? = null,
 )
 
 data class WorkoutHistory(
@@ -68,4 +89,3 @@ data class PersonalRecord(
     val highestWeightKg: Double,
     val highestRepetitions: Int,
 )
-

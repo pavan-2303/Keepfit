@@ -5,47 +5,70 @@ is intended to provide a focused alternative to subscription-based fitness
 apps: useful daily tracking without accounts, social feeds, or unnecessary
 complexity.
 
-## Planned Capabilities
+## Product Capabilities
 
-- Create exercises with optional offline animated demonstrations.
+- Browse 40 offline exercise guides, create personal exercises, and optionally
+  view live animated demonstrations.
 - Build workout templates and weekly workout plans.
 - Log sets, repetitions, weight, notes, history, and personal records.
 - Track personal foods, reusable meals, calories, and macronutrients.
 - Record weight, BMI inputs, optional measurements, and transformation-cycle photos.
 - Compare transformation photos between cycle day 0 and later updates.
 - Export and restore an encrypted local backup.
-- Optional Health Connect step tracking and an Ollama assistant.
+- Optional Health Connect step tracking and a user-authorized OpenRouter assistant.
 
 ## Project Status
 
-Phase 0, Phase 1A, Phase 1B, and Phase 1C are implemented on the active
-development branch. Phase 1D implementation is complete, with final device
-backup roundtrip verification still pending. Phase 2A is in progress. The
-project now includes a runnable Android application with:
+The active development branch contains a runnable Android application with:
 
 - a first-run local profile form persisted with Room;
-- a five-destination Compose Navigation shell;
+- a five-destination Compose Navigation shell organized as Today, Plan, Log,
+  Progress, and Coach, with Settings behind the profile action;
 - a searchable exercise library with edit, archive, and optional private demo
   media import;
+- a source-aware exercise browser with 40 original offline guides, explicit
+  duplicate-safe addition, and a transient view-only ExerciseDB prototype;
+- current live GIF demonstrations with attribution, cache-disabled loading, and
+  recoverable offline, timeout, malformed-response, and provider states;
+- an offline guided setup that creates an editable starter week from a goal,
+  experience, available days, time, equipment, exercises to avoid, and a
+  maintainable nutrition-tracking preference;
 - reusable workout templates and a recurring weekday plan;
-- a Today card that starts the planned workout;
-- active workout logging with sets, repetitions, kilograms, exercise notes,
-  previous values, and a 90-second vibration timer;
+- a decisive Today workout card that starts or resumes the next action and
+  supports reviewed full, shorter, minimum, substitution, reschedule, skip,
+  and restore decisions for one date without editing the reusable template;
+- recovery for the most recent unresolved planned workout from the previous
+  seven days;
+- focused active workout execution with target progress, editable previous-set
+  defaults, one-tap repeat, automatic configurable rest timing, safe minimum
+  and substitution adaptations, and optional completion feedback;
+- explained offline progression suggestions that either repeat the last
+  completed performance or propose one bounded weight or repetition increase;
+- a two-minute offline weekly review with a seven-day completion ribbon,
+  evidence-based encouragement, optional nutrition and step trends, and at
+  most two small coming-week drafts;
+- explicit approve, edit, dismiss, pause, and resume review controls, with an
+  approved change stored as one dated occurrence rather than a template or
+  recurring-plan rewrite;
 - completed workout history and derived personal records;
 - a personal food library with favorites, recents, archive, and reusable saved
   meals;
 - a selected-date nutrition diary with breakfast, lunch, dinner, and snack
   sections;
 - duplicate-yesterday nutrition logging and derived calorie and macro totals;
-- a Today nutrition summary backed by the same diary data;
+- selectable full-macro, calorie-and-protein, meal-quality, and disabled
+  nutrition lenses that preserve all existing history when changed;
+- 5%, 10%, or 15% goal ranges, serving presets, scoped previous-meal repeat,
+  and saved-meal expansion that stays independent from later meal edits;
+- a mode-specific Today nutrition summary and direct logging or check-in action;
 - dated body measurement logging with BMI derived from profile height and the
   latest weight;
 - transformation cycles with private photo imports for front, left, right, and
   back angles;
 - cycle-day comparison with empty states when a photo is missing;
 - cycle summaries with workout counts, nutrition averages, and weight change;
-- a real Settings screen for calorie and macro goals, units, workout reminder
-  time, weekly progress reminder time, and configurable rest timer duration;
+- categorized Settings for goals, training preferences, connections, private
+  data, and safety information;
 - DataStore-backed settings persistence and WorkManager-based local reminder
   scheduling;
 - encrypted backup export plus restore preview, checksum validation, and
@@ -54,17 +77,39 @@ project now includes a runnable Android application with:
   brand mark;
 - an optional Today steps card backed by Health Connect availability checks,
   permission request flow, and daily plus seven-day step aggregates;
-- an optional Ollama Cloud assistant with connection testing, normal chat,
-  local-data-backed progress summaries, and reviewable weekly-plan drafts that
-  only affect Workouts after explicit approval;
+- a dedicated query-only Coach authorized through the user's own OpenRouter
+  account, with Keystore-encrypted credentials, an explicit privacy disclosure,
+  general chat, and automatic compact local-progress context for relevant
+  questions; Keepfit adds no local request cap;
 - Hilt dependency injection;
-- Room schema export with explicit version `1` to `2`, `2` to `3`, and `3` to
-  `4` migrations;
-- unit tests plus Room DAO and migration instrumentation tests.
+- Room schema export with explicit migrations through schema version `10`;
+- unit tests plus Room DAO, migration, Compose UI, and end-to-end backup
+  instrumentation coverage.
 
-The current implementation target is supported-device verification for the
-Health Connect steps flow plus broader assistant hardening and UI-test
-coverage.
+The approved product direction and phase-wise delivery plan are documented in
+the [Practical Fitness Journey and Optional AI Coach](docs/backlog/items/practical-fitness-journey-and-ai-coach.md)
+initiative. Slice A was delivered in
+[v0.2.0 - Offline Starter Week](docs/done/versions/v0.2.0.md), and Slice B was
+delivered in [v0.3.0 - Decisive Today](docs/done/versions/v0.3.0.md). Slice C
+was delivered in
+[v0.4.0 - Low-Friction Workout Execution](docs/done/versions/v0.4.0.md).
+Slice D was delivered in
+[v0.5.0 - Weekly Review and Flexible Motivation](docs/done/versions/v0.5.0.md).
+Slice E was delivered in
+[v0.6.0 - Sustainable Nutrition](docs/done/versions/v0.6.0.md). Slice F was
+delivered in [v0.7.0 - Exercise Guidance and Live Demo Prototype](docs/done/versions/v0.7.0.md).
+Slice G was delivered in
+[v0.8.0 - Private OpenRouter Access](docs/done/versions/v0.8.0.md). Slice H was
+delivered as the pre-beta
+[v0.9.0 - Bounded Coaching Workflows](docs/done/versions/v0.9.0.md). The next
+approved slice is
+[v0.10.0 - Guided Journey and Interface Reorganization](docs/versions/v0.10.0.md).
+Approved follow-on work for recovery, multiple profiles, transformation pose
+sets, an audited offline catalogue, persistent named Coaches, optional AI plan
+creation, and visual polish is organized in the
+[Durable Personalized Fitness Companion](docs/backlog/items/durable-personalized-fitness-companion.md)
+initiative. It remains planning-only until the current version closes and the
+next sprint specification is approved.
 
 ## Architecture
 
@@ -76,21 +121,27 @@ Read these references before implementation:
 
 - [Architecture overview](docs/architecture/keepfit-overview.md)
 - [Data model](docs/architecture/keepfit-data-model.md)
-- [Delivery roadmap](docs/architecture/keepfit-roadmap.md)
+- [Documentation guide](docs/README.md)
+- [Forward roadmap](docs/ROADMAP.md)
+- [Backlog index](docs/backlog/INDEX.md)
 - [User manual](docs/user-manual/README.md)
+- [Exercise catalogue rights register](docs/references/exercise-catalogue-rights-register.md)
 - [AI agent rules](AGENTS.md)
 
-## Delivery Sequence
+## Product Direction
 
-| Phase | Outcome |
-| --- | --- |
-| Phase 0 | Android foundation, navigation, Room setup, and local profile |
-| Phase 1A | Exercise library, workout plans, logging, history, and records |
-| Phase 1B | Personal foods, reusable meals, nutrition diary, and today summary |
-| Phase 1C | Measurements, BMI, transformation cycles, comparison, and summaries |
-| Phase 1D | Encrypted backup, restore, reminders, and complete offline MVP |
-| Phase 2A | Optional read-only Health Connect steps |
-| Phase 2B | Optional Ollama assistant with reviewable plan suggestions |
+Forward planning follows this lifecycle:
+
+```text
+backlog initiative
+  -> approved sprint version
+  -> execution log
+  -> immutable done record
+```
+
+Themes and sequencing live in [docs/ROADMAP.md](docs/ROADMAP.md). Historical
+phase plans are intentionally not retained in the working tree; Git history is
+the archive for superseded planning.
 
 ## Privacy Principles
 
@@ -117,15 +168,20 @@ Read these references before implementation:
 |   `-- model/
 |-- feature/
 |   |-- nutrition/
+|   |-- review/
+|   |-- assistant/
 |   |-- settings/
 |   |-- steps/
 |   |-- transformation/
 |   `-- workouts/
 |-- docs/
 |   |-- architecture/
+|   |-- backlog/
+|   |-- done/
+|   |-- execution/
+|   |-- references/
 |   |-- user-manual/
-|   `-- superpowers/
-|       `-- plans/
+|   `-- versions/
 |-- gradle/
 |   |-- libs.versions.toml
 |   `-- wrapper/
@@ -153,18 +209,9 @@ Set the local SDK path in an ignored `local.properties` file:
 sdk.dir=C\:\\Users\\your-name\\AppData\\Local\\Android\\Sdk
 ```
 
-Optional assistant builds also read these ignored `local.properties` values:
-
-```properties
-keepfit.ollama.baseUrl=https://ollama.com/api
-keepfit.ollama.generalModel=mistral-large-3:675b
-keepfit.ollama.reasoningModel=qwen3.5:397b
-keepfit.ollama.apiKey=your-api-key
-```
-
-The assistant is disabled by default at the user-settings level even when these
-build-time values exist. General chat uses `mistral-large-3:675b`. Progress
-summaries and draft weekly plans use `qwen3.5:397b`.
+Coach contains no packaged provider key and does not read one from
+`local.properties`. It remains inactive until a user explicitly authorizes
+their own OpenRouter account from the system browser.
 
 ### Commands
 
@@ -219,10 +266,11 @@ End-user setup and usage documentation lives in [docs/user-manual](docs/user-man
 
 - [Getting started](docs/user-manual/getting-started.md)
 - [Workouts](docs/user-manual/workouts.md)
+- [Weekly review](docs/user-manual/weekly-review.md)
 - [Nutrition](docs/user-manual/nutrition.md)
 - [Progress](docs/user-manual/progress.md)
 - [Settings, backup, and restore](docs/user-manual/settings-backup-and-restore.md)
-- [Health Connect and assistant](docs/user-manual/integrations.md)
+- [Optional integrations](docs/user-manual/integrations.md)
 
 ## License
 

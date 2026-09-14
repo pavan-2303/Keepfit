@@ -1,6 +1,7 @@
 package com.keepfit.feature.assistant.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,16 +9,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -25,19 +36,23 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.keepfit.feature.assistant.access.AssistantAccessState
+import com.keepfit.feature.assistant.access.AssistantAccessStatus
 import com.keepfit.feature.assistant.data.AssistantChatMessage
-import com.keepfit.feature.assistant.data.AssistantDraftWorkoutPlan
 import com.keepfit.feature.assistant.data.AssistantMessageRole
 import com.keepfit.feature.assistant.data.AssistantUiState
-import java.time.format.TextStyle
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,25 +60,30 @@ fun AssistantScreen(
     uiState: AssistantUiState,
     isEnabled: Boolean,
     validationMessage: String?,
-    onBack: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
-    onSummarizeProgress: () -> Unit,
-    onDraftWeeklyPlan: () -> Unit,
-    onApplyDraftPlan: () -> Unit,
-    onDismissDraftPlan: () -> Unit,
     onRetry: () -> Unit,
+    onConnect: () -> Unit = {},
+    onConfirmConnect: () -> Unit = {},
+    onDismissDisclosure: () -> Unit = {},
+    onCancelAuthorization: () -> Unit = {},
+    onInspectConnection: () -> Unit = {},
+    onDisconnect: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val scrollState = rememberScrollState()
-    val canSend = isEnabled && validationMessage == null && !uiState.isWorking
-    val canRetry = canSend && uiState.errorMessage != null && uiState.draftMessage.isNotBlank()
-    val canSummarize = isEnabled && validationMessage == null && !uiState.isWorking
+    val listState = rememberLazyListState()
+    val hasAccess = uiState.accessState.status == AssistantAccessStatus.CONNECTED
+    val canSend = isEnabled && validationMessage == null && hasAccess &&
+        uiState.draftMessage.isNotBlank() && !uiState.isWorking
 
-    LaunchedEffect(uiState.messages.size) {
-        if (uiState.messages.isNotEmpty()) {
-            scrollState.animateScrollTo(scrollState.maxValue)
-        }
+    if (uiState.showPrivacyDisclosure) {
+        OpenRouterDisclosureDialog(onConfirmConnect, onDismissDisclosure)
+    }
+
+    LaunchedEffect(uiState.messages.size, uiState.isWorking) {
+        if (uiState.messages.isNotEmpty()) listState.animateScrollToItem(uiState.messages.lastIndex)
     }
 
     Scaffold(
@@ -71,203 +91,101 @@ fun AssistantScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Assistant") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                title = {
+                    Column {
+                        Text("Coach")
+                        Text(
+                            "Ask anything. Your logs are used only when relevant.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                },
+                navigationIcon = {
+                    onBack?.let { back ->
+                        IconButton(onClick = back) {
+                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile and settings")
                     }
                 },
             )
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-        ) {
-            AssistantNoticeCard(
-                title = "Optional Ollama Cloud guidance",
-                message = "Assistant replies come from Ollama Cloud and are general fitness suggestions, not medical advice.",
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            CompactAccessRow(
+                accessState = uiState.accessState,
+                onCancelAuthorization = onCancelAuthorization,
+                onInspectConnection = onInspectConnection,
+                onDisconnect = onDisconnect,
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+
             when {
-                !isEnabled -> {
-                    AssistantNoticeCard(
-                        title = "Assistant disabled",
-                        message = "Enable the Ollama Cloud assistant in Settings before starting a chat.",
-                    )
-                }
-
-                validationMessage != null -> {
-                    AssistantNoticeCard(
-                        title = "Settings need attention",
-                        message = validationMessage,
-                    )
-                }
-
-                uiState.messages.isEmpty() -> {
-                    AssistantNoticeCard(
-                        title = "Start a conversation",
-                        message = "Ask a general training or nutrition question, generate a local-data-backed progress summary, or draft a weekly plan for review.",
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                uiState.pendingDraftPlan?.let { draft ->
-                    DraftPlanCard(
-                        draft = draft,
-                        onApply = onApplyDraftPlan,
-                        onDismiss = onDismissDraftPlan,
-                        enabled = !uiState.isWorking,
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                }
-                uiState.messages.forEach { message ->
-                    MessageBubble(message = message)
-                    Spacer(modifier = Modifier.height(10.dp))
-                }
-            }
-            if (uiState.errorMessage != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                AssistantNoticeCard(
-                    title = "Last request failed",
-                    message = uiState.errorMessage,
+                !isEnabled || validationMessage != null -> CoachUnavailable(
+                    title = "Coach needs attention",
+                    detail = validationMessage ?: "Open Profile and settings to enable Coach.",
                 )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = uiState.draftMessage,
-                onValueChange = onDraftChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Ask Keepfit assistant") },
-                minLines = 3,
-                maxLines = 5,
-                enabled = isEnabled && validationMessage == null,
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                FilledTonalButton(
-                    onClick = onSummarizeProgress,
-                    enabled = canSummarize,
-                ) {
-                    Text("Summarize progress")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                FilledTonalButton(
-                    onClick = onDraftWeeklyPlan,
-                    enabled = canSummarize,
-                ) {
-                    Text("Draft weekly plan")
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Button(
-                    onClick = onSend,
-                    enabled = canSend && uiState.draftMessage.isNotBlank(),
-                ) {
-                    Text(if (uiState.isWorking) "Sending..." else "Send")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                FilledTonalButton(
-                    onClick = onRetry,
-                    enabled = canRetry,
-                ) {
-                    Text("Retry")
-                }
-                if (uiState.isWorking) {
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Working...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DraftPlanCard(
-    draft: AssistantDraftWorkoutPlan,
-    onApply: () -> Unit,
-    onDismiss: () -> Unit,
-    enabled: Boolean,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Draft weekly plan",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = draft.name,
-                style = MaterialTheme.typography.titleLarge,
-            )
-            draft.overview?.let {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                !hasAccess -> CoachUnavailable(
+                    title = "Ask with your own OpenRouter account",
+                    detail = "Connect once in the browser. Keepfit never asks you to paste a key or pays for requests on your behalf.",
+                    action = if (uiState.accessState.status == AssistantAccessStatus.CONNECTING) null else "Connect OpenRouter",
+                    onAction = onConnect,
                 )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            draft.days.forEach { day ->
-                Text(
-                    text = "${day.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)}: ${day.templateName}",
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                day.notes?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    text = day.exercises.joinToString { exercise ->
-                        buildString {
-                            append(exercise.name)
-                            exercise.targetSets?.let { sets ->
-                                append(" ${sets}x")
-                                append(exercise.targetReps ?: "?")
+                else -> {
+                    Box(Modifier.weight(1f)) {
+                        if (uiState.messages.isEmpty()) {
+                            EmptyConversation(onPrompt = onDraftChange)
+                        } else {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                items(uiState.messages, key = { it.id }) { MessageBubble(it) }
+                                if (uiState.lastResponseUsedLocalContext) {
+                                    item {
+                                        Text(
+                                            "Recent Keepfit activity was included in the last answer.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
                             }
                         }
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onApply, enabled = enabled) {
-                    Text("Apply draft")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                FilledTonalButton(onClick = onDismiss, enabled = enabled) {
-                    Text("Dismiss draft")
+                    }
+                    uiState.safetyMessage?.let { InlineNotice(it) }
+                    uiState.errorMessage?.let { error ->
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(error, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.error)
+                            TextButton(onClick = onRetry, enabled = uiState.draftMessage.isNotBlank()) { Text("Retry") }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = uiState.draftMessage,
+                        onValueChange = onDraftChange,
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        placeholder = { Text("Ask about training, nutrition, or your progress") },
+                        minLines = 1,
+                        maxLines = 4,
+                        enabled = !uiState.isWorking,
+                        trailingIcon = {
+                            IconButton(onClick = onSend, enabled = canSend) {
+                                Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = "Send question")
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                        keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
+                    )
                 }
             }
         }
@@ -275,26 +193,112 @@ private fun DraftPlanCard(
 }
 
 @Composable
-private fun AssistantNoticeCard(
-    title: String,
-    message: String,
+private fun CompactAccessRow(
+    accessState: AssistantAccessState,
+    onCancelAuthorization: () -> Unit,
+    onInspectConnection: () -> Unit,
+    onDisconnect: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    var menuOpen by remember { mutableStateOf(false) }
+    val (label, color) = when (accessState.status) {
+        AssistantAccessStatus.CONNECTED -> "OpenRouter connected" to MaterialTheme.colorScheme.primary
+        AssistantAccessStatus.CONNECTING -> "Waiting for browser" to MaterialTheme.colorScheme.secondary
+        AssistantAccessStatus.PROVIDER_LIMIT_REACHED -> "Provider limit reached" to MaterialTheme.colorScheme.error
+        AssistantAccessStatus.INVALID -> "Connection invalid" to MaterialTheme.colorScheme.error
+        AssistantAccessStatus.REVOKED -> "Access revoked" to MaterialTheme.colorScheme.error
+        AssistantAccessStatus.PROVIDER_UNAVAILABLE -> "Provider unavailable" to MaterialTheme.colorScheme.error
+        AssistantAccessStatus.DISCONNECTED -> "Not connected" to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Row(
+        Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Surface(color = color, shape = MaterialTheme.shapes.extraSmall, modifier = Modifier.size(8.dp)) {}
+        Spacer(Modifier.width(10.dp))
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        if (accessState.status != AssistantAccessStatus.DISCONNECTED) {
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = "Coach connection options")
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (accessState.status == AssistantAccessStatus.CONNECTING) {
+                        DropdownMenuItem(
+                            text = { Text("Cancel connection") },
+                            onClick = { menuOpen = false; onCancelAuthorization() },
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text("Check connection") },
+                            onClick = { menuOpen = false; onInspectConnection() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Disconnect") },
+                            onClick = { menuOpen = false; onDisconnect() },
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun EmptyConversation(onPrompt: (String) -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            Icons.Outlined.AutoAwesome,
+            contentDescription = null,
+            modifier = Modifier.size(36.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(14.dp))
+        Text("What would you like to understand?", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Ask a general question, or ask about your own recent training and nutrition.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(18.dp))
+        FilledTonalButton(onClick = { onPrompt("How has my training consistency changed recently?") }) {
+            Text("Review my consistency")
+        }
+        TextButton(onClick = { onPrompt("What is progressive overload?") }) {
+            Text("Explain progressive overload")
+        }
+    }
+}
+
+@Composable
+private fun CoachUnavailable(
+    title: String,
+    detail: String,
+    action: String? = null,
+    onAction: () -> Unit = {},
+) {
+    Column(
+        Modifier.fillMaxSize().padding(28.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(title, style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(8.dp))
+        Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        action?.let {
+            Spacer(Modifier.height(18.dp))
+            Button(onClick = onAction) { Text(it) }
+        }
+    }
+}
+
+@Composable
+private fun InlineNotice(message: String) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+        Text(message, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onErrorContainer)
     }
 }
 
@@ -306,39 +310,33 @@ private fun MessageBubble(message: AssistantChatMessage) {
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
         Surface(
-            color = if (isUser) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            },
-            shape = MaterialTheme.shapes.large,
+            color = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+            contentColor = if (isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            shape = if (isUser) MaterialTheme.shapes.large else MaterialTheme.shapes.small,
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth(0.86f)
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-            ) {
-                Text(
-                    text = if (isUser) "You" else "Assistant",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (isUser) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = message.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isUser) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    textAlign = TextAlign.Start,
-                )
-            }
+            Text(
+                message.content,
+                modifier = Modifier.fillMaxWidth(0.86f).padding(horizontal = 14.dp, vertical = 12.dp),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
+}
+
+@Composable
+private fun OpenRouterDisclosureDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Before you connect") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("OpenRouter and the selected model provider receive each question you choose to send.")
+                Text("For questions about your progress, Keepfit may add compact workout, nutrition, and step summaries. The conversation shows when this happened.")
+                Text("Weight, BMI, height, transformation photos, measurements, identifiers, private notes, paths, and raw database records are excluded.")
+                Text("Your OpenRouter account controls provider limits and credits. Keepfit does not impose its own daily request cap.")
+            }
+        },
+        confirmButton = { Button(onClick = onConfirm) { Text("Continue to OpenRouter") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } },
+    )
 }

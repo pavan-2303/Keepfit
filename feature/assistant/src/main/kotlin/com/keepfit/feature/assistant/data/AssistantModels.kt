@@ -3,6 +3,9 @@ package com.keepfit.feature.assistant.data
 import java.net.URI
 import java.time.DayOfWeek
 import java.time.LocalDate
+import com.keepfit.feature.assistant.access.AssistantAccessState
+import com.keepfit.feature.assistant.coaching.CoachingIntent
+import com.keepfit.feature.assistant.coaching.CoachingProposal
 
 enum class AssistantConnectionStatus {
     DISABLED,
@@ -45,6 +48,13 @@ data class AssistantUiState(
     val pendingDraftPlan: AssistantDraftWorkoutPlan? = null,
     val isWorking: Boolean = false,
     val errorMessage: String? = null,
+    val accessState: AssistantAccessState = AssistantAccessState(),
+    val lastResponseUsedLocalContext: Boolean = false,
+    val showPrivacyDisclosure: Boolean = false,
+    val authorizationUrl: String? = null,
+    val selectedCoachingIntent: CoachingIntent = CoachingIntent.WEEKLY_SUMMARY,
+    val pendingCoachingProposal: CoachingProposal? = null,
+    val safetyMessage: String? = null,
 )
 
 data class AssistantDraftInput(

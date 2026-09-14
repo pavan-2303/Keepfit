@@ -12,6 +12,13 @@ enum class MeasurementUnit {
     IN,
 }
 
+enum class NutritionTrackingDepth {
+    DETAILED_MACROS,
+    CALORIES_PROTEIN,
+    MEAL_QUALITY,
+    DISABLED,
+}
+
 data class ReminderTime(
     val enabled: Boolean,
     val hour: Int,
@@ -29,6 +36,9 @@ data class AppSettings(
     val weightUnit: WeightUnit = WeightUnit.KG,
     val measurementUnit: MeasurementUnit = MeasurementUnit.CM,
     val restTimerSeconds: Int = 90,
+    val weeklyReviewPaused: Boolean = false,
+    val nutritionTrackingDepth: NutritionTrackingDepth = NutritionTrackingDepth.DETAILED_MACROS,
+    val nutritionTargetRangePercent: Int = 10,
     val workoutReminder: ReminderTime = ReminderTime(enabled = false, hour = 18, minute = 0),
     val transformationReminder: WeeklyReminderTime = WeeklyReminderTime(
         enabled = false,

@@ -9,23 +9,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface ProfileUiState {
     data object Loading : ProfileUiState
     data object SetupRequired : ProfileUiState
-    data class Ready(val profile: BodyProfile) : ProfileUiState
+    data class Ready(val profile: BodyProfile, val continueGuidedSetup: Boolean = false) : ProfileUiState
 }
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val repository: ProfileRepository,
 ) : ViewModel() {
-    val uiState: StateFlow<ProfileUiState> = repository.observeLocalProfile()
-        .map { profile ->
-            profile?.let(ProfileUiState::Ready) ?: ProfileUiState.SetupRequired
+    private val continueGuidedSetup = MutableStateFlow(false)
+    val uiState: StateFlow<ProfileUiState> = combine(
+        repository.observeLocalProfile(),
+        continueGuidedSetup,
+    ) { profile, shouldContinue ->
+            profile?.let { ProfileUiState.Ready(it, shouldContinue) } ?: ProfileUiState.SetupRequired
         }
         .stateIn(
             scope = viewModelScope,
@@ -41,6 +44,7 @@ class ProfileViewModel @Inject constructor(
             is ProfileValidationResult.Invalid -> _validationMessage.value = result.message
             is ProfileValidationResult.Valid -> {
                 _validationMessage.value = null
+                continueGuidedSetup.value = true
                 viewModelScope.launch {
                     repository.saveProfile(result.input)
                 }
@@ -48,4 +52,3 @@ class ProfileViewModel @Inject constructor(
         }
     }
 }
-

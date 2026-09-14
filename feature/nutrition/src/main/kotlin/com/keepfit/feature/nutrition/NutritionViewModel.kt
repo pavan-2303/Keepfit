@@ -3,9 +3,14 @@ package com.keepfit.feature.nutrition
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.keepfit.core.database.nutrition.MealType
+import com.keepfit.core.database.nutrition.MealQuality
+import com.keepfit.core.preferences.AppSettings
+import com.keepfit.core.preferences.AppSettingsRepository
+import com.keepfit.core.preferences.NutritionTrackingDepth
 import com.keepfit.feature.nutrition.data.DailyNutritionSummary
 import com.keepfit.feature.nutrition.data.DiaryEntry
 import com.keepfit.feature.nutrition.data.Food
+import com.keepfit.feature.nutrition.data.MealQualityCheckIn
 import com.keepfit.feature.nutrition.data.NutritionRepository
 import com.keepfit.feature.nutrition.data.SavedMeal
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,6 +29,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class NutritionViewModel @Inject constructor(
     private val repository: NutritionRepository,
+    private val settingsRepository: AppSettingsRepository,
 ) : ViewModel() {
     private val selectedDate = MutableStateFlow(LocalDate.now())
     private val foodSearchQuery = MutableStateFlow("")
@@ -69,6 +75,21 @@ class NutritionViewModel @Inject constructor(
                 hasEntries = false,
             ),
         )
+
+    val appSettings: StateFlow<AppSettings> = settingsRepository.observeSettings()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
+
+    val mealQualityCheckIns: StateFlow<List<MealQualityCheckIn>> = selectedDate
+        .flatMapLatest(repository::observeMealQualityCheckIns)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val todayMealQualityCheckIns: StateFlow<List<MealQualityCheckIn>> =
+        repository.observeMealQualityCheckIns(LocalDate.now())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val previousMealTypes: StateFlow<List<MealType>> = selectedDate
+        .flatMapLatest(repository::observePreviousMealTypes)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
@@ -161,6 +182,22 @@ class NutritionViewModel @Inject constructor(
         repository.duplicatePreviousDay(selectedDate.value)
     }
 
+    fun repeatYesterdayMeal(mealType: MealType) = launchWrite("Repeated yesterday's ${mealType.label.lowercase()}.") {
+        repository.repeatPreviousMeal(selectedDate.value, mealType)
+    }
+
+    fun setMealQuality(mealType: MealType, quality: MealQuality) = launchWrite(null) {
+        repository.setMealQuality(selectedDate.value, mealType, quality)
+    }
+
+    fun updateTrackingDepth(depth: NutritionTrackingDepth) = launchWrite("Nutrition view updated.") {
+        settingsRepository.updateNutritionTracking(depth, appSettings.value.nutritionTargetRangePercent)
+    }
+
+    fun updateTargetRangePercent(percent: Int) = launchWrite("Target range updated.") {
+        settingsRepository.updateNutritionTracking(appSettings.value.nutritionTrackingDepth, percent)
+    }
+
     fun dismissMessage() {
         _message.value = null
     }
@@ -173,3 +210,6 @@ class NutritionViewModel @Inject constructor(
         }
     }
 }
+
+private val MealType.label: String
+    get() = name.lowercase().replaceFirstChar(Char::uppercase)

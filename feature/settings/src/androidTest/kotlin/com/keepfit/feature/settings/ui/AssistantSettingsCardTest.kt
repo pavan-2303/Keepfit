@@ -1,8 +1,6 @@
 package com.keepfit.feature.settings.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import org.junit.Rule
@@ -13,37 +11,17 @@ class AssistantSettingsCardTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun openAssistantIsDisabledWhenAssistantIsOff() {
+    fun connectionSettingsPointToTheDedicatedCoachTab() {
         composeRule.setContent {
             AssistantSettingsCard(
-                assistantEnabled = false,
-                canOpenAssistant = false,
-                onAssistantEnabledChange = {},
-                onSaveAssistant = {},
                 onTestAssistantConnection = {},
                 onOpenAssistant = {},
             )
         }
 
-        composeRule.onNodeWithText("Ollama Cloud assistant").assertIsDisplayed()
-        composeRule.onNodeWithText("Save assistant").assertIsDisplayed()
-        composeRule.onNodeWithText("Test connection").assertIsDisplayed()
-        composeRule.onNodeWithText("Open assistant").assertIsNotEnabled()
-    }
-
-    @Test
-    fun openAssistantIsEnabledWhenAssistantIsOn() {
-        composeRule.setContent {
-            AssistantSettingsCard(
-                assistantEnabled = true,
-                canOpenAssistant = true,
-                onAssistantEnabledChange = {},
-                onSaveAssistant = {},
-                onTestAssistantConnection = {},
-                onOpenAssistant = {},
-            )
-        }
-
-        composeRule.onNodeWithText("Open assistant").assertIsEnabled()
+        composeRule.onNodeWithText("OpenRouter assistant").assertIsDisplayed()
+        composeRule.onNodeWithText("Check saved access").assertIsDisplayed()
+        composeRule.onNodeWithText("Open assistant").assertIsDisplayed()
+        composeRule.onNodeWithText("There is no Keepfit daily request cap and no pasted API key.", substring = true).assertIsDisplayed()
     }
 }

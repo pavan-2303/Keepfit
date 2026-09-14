@@ -122,6 +122,7 @@ class BackupArchiveCodecTest {
         weightUnit = "KG",
         measurementUnit = "CM",
         restTimerSeconds = 90,
+        weeklyReviewPaused = true,
         workoutReminderEnabled = true,
         workoutReminderHour = 18,
         workoutReminderMinute = 30,

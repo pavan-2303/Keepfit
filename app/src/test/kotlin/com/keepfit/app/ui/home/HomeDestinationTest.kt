@@ -7,7 +7,7 @@ class HomeDestinationTest {
     @Test
     fun bottomNavigationUsesFocusedFiveDestinationOrder() {
         assertEquals(
-            listOf("Today", "Workouts", "Nutrition", "Progress", "Settings"),
+            listOf("Today", "Plan", "Log", "Progress", "Coach"),
             HomeDestination.entries.map(HomeDestination::label),
         )
     }
@@ -15,8 +15,14 @@ class HomeDestinationTest {
     @Test
     fun destinationsExposeStableNavigationRoutes() {
         assertEquals(
-            listOf("today", "workouts", "nutrition", "progress", "settings"),
+            listOf("today", "plan", "log", "progress", "coach"),
             HomeDestination.entries.map(HomeDestination::route),
         )
+    }
+
+    @Test
+    fun largeTextUsesAccessibleIconOnlyNavigation() {
+        assertEquals(true, shouldShowNavigationLabels(fontScale = 1.0f))
+        assertEquals(false, shouldShowNavigationLabels(fontScale = 2.0f))
     }
 }

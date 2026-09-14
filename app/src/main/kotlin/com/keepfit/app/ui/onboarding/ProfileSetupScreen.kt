@@ -47,19 +47,19 @@ fun ProfileSetupScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "KEEPFIT",
+            text = "Step 1 of 8",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Your private training space.",
+            text = "Let’s make Keepfit yours.",
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Start with a local profile. Your workouts, meals, and progress photos stay on this device.",
+            text = "Start with the name you want to see in the app. Next, we’ll ask the practical questions that shape your first week.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -100,7 +100,7 @@ fun ProfileSetupScreen(
             onClick = { onSave(displayName, heightCm) },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Create local profile")
+            Text("Continue")
         }
         Spacer(modifier = Modifier.height(20.dp))
         Row(
@@ -120,4 +120,3 @@ fun ProfileSetupScreen(
         }
     }
 }
-

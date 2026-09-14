@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,11 +80,10 @@ fun SettingsScreen(
     var transformationDay by remember(appSettings.transformationReminder.dayOfWeek) { mutableStateOf(appSettings.transformationReminder.dayOfWeek) }
     var transformationHour by remember(appSettings.transformationReminder.hour) { mutableStateOf(appSettings.transformationReminder.hour.toString()) }
     var transformationMinute by remember(appSettings.transformationReminder.minute) { mutableStateOf(appSettings.transformationReminder.minute.toString()) }
-    var assistantEnabled by remember(appSettings.assistant.enabled) { mutableStateOf(appSettings.assistant.enabled) }
     var exportPassphrase by remember { mutableStateOf("") }
     var restorePassphrase by remember { mutableStateOf("") }
     var selectedRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    val canOpenAssistant = appSettings.assistant.enabled
+    var selectedSection by remember { mutableStateOf<SettingsSection?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(CreateDocument("application/octet-stream")) { uri ->
         uri?.let { viewModel.exportBackup(it, exportPassphrase) }
@@ -136,14 +138,25 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 18.dp),
         ) {
-            Text(
-                text = "PREFERENCES",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = "Settings", style = MaterialTheme.typography.headlineSmall)
+            if (selectedSection == null) {
+                Text(text = "Manage Keepfit", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Daily actions stay in the main tabs. Setup, reminders, connections, and private data live here.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                SettingsSection.entries.forEach { section ->
+                    SettingsSectionRow(section) { selectedSection = section }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+                }
+                return@Column
+            }
+            TextButton(onClick = { selectedSection = null }) { Text("Back to settings") }
+            Text(text = selectedSection!!.title, style = MaterialTheme.typography.headlineSmall)
+            Text(selectedSection!!.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(18.dp))
-            SettingsCard("Nutrition goals") {
+            if (selectedSection == SettingsSection.GOALS) SettingsCard("Nutrition goals") {
                 OutlinedTextField(calorieGoal, { calorieGoal = it }, label = { Text("Calories") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(proteinGoal, { proteinGoal = it }, label = { Text("Protein (g)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -157,7 +170,7 @@ fun SettingsScreen(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            SettingsCard("Units") {
+            if (selectedSection == SettingsSection.TRAINING) SettingsCard("Units") {
                 Text("Weight unit", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
                 FlowRow {
@@ -187,7 +200,7 @@ fun SettingsScreen(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            SettingsCard("Workout timer") {
+            if (selectedSection == SettingsSection.TRAINING) SettingsCard("Workout timer") {
                 OutlinedTextField(
                     value = restTimerSeconds,
                     onValueChange = { restTimerSeconds = it },
@@ -201,7 +214,7 @@ fun SettingsScreen(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            SettingsCard("Workout reminder") {
+            if (selectedSection == SettingsSection.TRAINING) SettingsCard("Workout reminder") {
                 ReminderToggle("Enable daily workout reminder", workoutReminderEnabled) {
                     workoutReminderEnabled = it
                 }
@@ -215,7 +228,7 @@ fun SettingsScreen(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            SettingsCard("Progress reminder") {
+            if (selectedSection == SettingsSection.TRAINING) SettingsCard("Progress reminder") {
                 ReminderToggle("Enable weekly progress reminder", transformationReminderEnabled) {
                     transformationReminderEnabled = it
                 }
@@ -250,18 +263,12 @@ fun SettingsScreen(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            AssistantSettingsCard(
-                assistantEnabled = assistantEnabled,
-                canOpenAssistant = canOpenAssistant,
-                onAssistantEnabledChange = { assistantEnabled = it },
-                onSaveAssistant = {
-                    viewModel.saveAssistantSettings(enabled = assistantEnabled)
-                },
+            if (selectedSection == SettingsSection.INTEGRATIONS) AssistantSettingsCard(
                 onTestAssistantConnection = onTestAssistantConnection,
                 onOpenAssistant = onOpenAssistant,
             )
             Spacer(modifier = Modifier.height(12.dp))
-            SettingsCard("Backup and restore") {
+            if (selectedSection == SettingsSection.DATA) SettingsCard("Backup and restore") {
                 Text(
                     "Encrypted backup",
                     style = MaterialTheme.typography.titleSmall,
@@ -330,30 +337,32 @@ fun SettingsScreen(
                     )
                 }
             }
+            if (selectedSection == SettingsSection.ABOUT) SettingsCard("Keepfit") {
+                Text("Private fitness tracking without an account, backend, ads, or analytics.")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Fitness and Coach responses are general information, not medical advice.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
 
 @Composable
 internal fun AssistantSettingsCard(
-    assistantEnabled: Boolean,
-    canOpenAssistant: Boolean,
-    onAssistantEnabledChange: (Boolean) -> Unit,
-    onSaveAssistant: () -> Unit,
     onTestAssistantConnection: () -> Unit,
     onOpenAssistant: () -> Unit,
 ) {
-    SettingsCard("Ollama Cloud assistant") {
-        ReminderToggle("Enable optional Ollama Cloud assistant", assistantEnabled, onAssistantEnabledChange)
-        Spacer(modifier = Modifier.height(8.dp))
+    SettingsCard("OpenRouter assistant") {
         Text(
-            "This build uses an Ollama Cloud configuration injected during app build, not entered at runtime.",
+            "Coach uses the OpenRouter account you connect from its tab. There is no Keepfit daily request cap and no pasted API key.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            "General chat uses mistral-large-3:675b. Deeper planning and analysis use qwen3.5:397b.",
+            "OpenRouter and the selected model provider control free-tier, rate, and credit limits.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -365,21 +374,41 @@ internal fun AssistantSettingsCard(
         )
         Spacer(modifier = Modifier.height(10.dp))
         FlowRow {
-            Button(onClick = onSaveAssistant) {
-                Text("Save assistant")
-            }
-            Spacer(modifier = Modifier.width(8.dp))
             FilledTonalButton(onClick = onTestAssistantConnection) {
-                Text("Test connection")
+                Text("Check saved access")
             }
             Spacer(modifier = Modifier.width(8.dp))
             FilledTonalButton(
                 onClick = onOpenAssistant,
-                enabled = canOpenAssistant,
             ) {
                 Text("Open assistant")
             }
         }
+    }
+}
+
+private enum class SettingsSection(
+    val title: String,
+    val description: String,
+) {
+    GOALS("Goals and nutrition", "Daily calorie and macro targets"),
+    TRAINING("Training preferences", "Units, rest timer, and reminders"),
+    INTEGRATIONS("Connections", "Coach and optional device services"),
+    DATA("Data and backup", "Export or restore your private local data"),
+    ABOUT("About and safety", "Privacy and guidance boundaries"),
+}
+
+@Composable
+private fun SettingsSectionRow(section: SettingsSection, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 16.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(section.title, style = MaterialTheme.typography.titleMedium)
+            Text(section.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
     }
 }
 

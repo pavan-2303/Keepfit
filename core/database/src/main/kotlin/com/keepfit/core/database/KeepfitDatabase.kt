@@ -3,13 +3,18 @@ package com.keepfit.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.keepfit.core.database.journey.JourneyDao
+import com.keepfit.core.database.journey.JourneyProfileEntity
 import com.keepfit.core.database.nutrition.FoodDiaryEntryEntity
 import com.keepfit.core.database.nutrition.FoodEntity
+import com.keepfit.core.database.nutrition.MealQualityCheckInEntity
 import com.keepfit.core.database.nutrition.NutritionDao
 import com.keepfit.core.database.nutrition.SavedMealEntity
 import com.keepfit.core.database.nutrition.SavedMealItemEntity
 import com.keepfit.core.database.profile.BodyProfileDao
 import com.keepfit.core.database.profile.BodyProfileEntity
+import com.keepfit.core.database.review.WeeklyReviewDao
+import com.keepfit.core.database.review.WeeklyReviewOutcomeEntity
 import com.keepfit.core.database.transformation.BodyMeasurementEntity
 import com.keepfit.core.database.transformation.TransformationCycleEntity
 import com.keepfit.core.database.transformation.TransformationDao
@@ -24,6 +29,8 @@ import com.keepfit.core.database.workout.WorkoutDao
 import com.keepfit.core.database.workout.WorkoutSessionEntity
 import com.keepfit.core.database.workout.WorkoutTemplateEntity
 import com.keepfit.core.database.workout.WorkoutTemplateExerciseEntity
+import com.keepfit.core.database.workout.WorkoutOccurrenceEntity
+import com.keepfit.core.database.workout.WorkoutOccurrenceExerciseEntity
 
 @Database(
     entities = [
@@ -32,6 +39,7 @@ import com.keepfit.core.database.workout.WorkoutTemplateExerciseEntity
         SavedMealEntity::class,
         SavedMealItemEntity::class,
         FoodDiaryEntryEntity::class,
+        MealQualityCheckInEntity::class,
         BodyMeasurementEntity::class,
         TransformationCycleEntity::class,
         TransformationPhotoEntity::class,
@@ -44,8 +52,12 @@ import com.keepfit.core.database.workout.WorkoutTemplateExerciseEntity
         WorkoutSessionEntity::class,
         ExerciseLogEntity::class,
         SetLogEntity::class,
+        JourneyProfileEntity::class,
+        WorkoutOccurrenceEntity::class,
+        WorkoutOccurrenceExerciseEntity::class,
+        WeeklyReviewOutcomeEntity::class,
     ],
-    version = 5,
+    version = 10,
     exportSchema = true,
 )
 @TypeConverters(KeepfitTypeConverters::class)
@@ -54,8 +66,10 @@ abstract class KeepfitDatabase : RoomDatabase() {
     abstract fun nutritionDao(): NutritionDao
     abstract fun transformationDao(): TransformationDao
     abstract fun workoutDao(): WorkoutDao
+    abstract fun journeyDao(): JourneyDao
+    abstract fun weeklyReviewDao(): WeeklyReviewDao
 
     companion object {
-        const val VERSION = 5
+        const val VERSION = 10
     }
 }

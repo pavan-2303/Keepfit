@@ -1,4 +1,15 @@
-# Health Connect and Assistant
+# Optional Integrations
+
+## Live Exercise Demonstrations
+
+The Workouts exercise-source rail includes an optional `Live demos` prototype.
+It uses the keyless ExerciseDB hosted API only after you submit a search. The
+request contains the exercise name and optional body-area, muscle, and equipment
+filters you entered; it does not include profile, workout, nutrition, progress,
+notes, identifiers, or private media.
+
+Results are view-only, not stored in Keepfit or included in backups. Use the
+40-item `Offline guide` whenever a connection or the provider is unavailable.
 
 ## Health Connect Steps
 
@@ -19,70 +30,71 @@ When available, Keepfit can show:
 
 ### Notes
 
-- Keepfit does not copy step history into Room.
+- Keepfit reads only the aggregate date ranges needed by Today or an opened
+  weekly review and does not copy step history into Room.
 - If Health Connect is unsupported, the rest of the app still works normally.
 - If permission is denied or revoked, the card shows an unavailable state.
 
-## Ollama Assistant
+## OpenRouter Coach
 
-The assistant is optional and currently configured for direct Ollama Cloud API
-usage through build-time app configuration.
+The assistant is optional. It contains no Keepfit-funded or build-time API key.
+You authorize your own OpenRouter account in the system browser, and requests
+use your account's free-model quota or credits.
 
 Current capabilities:
 
-- enable or disable assistant access;
-- test the configured connection;
-- open a chat screen;
-- send and retry normal chat requests;
-- generate a progress summary from local workout, nutrition, progress, and
-  optional steps data;
-- request a draft weekly plan;
-- review, dismiss, or apply the draft only after you inspect it.
+- connect, inspect, and disconnect your OpenRouter access;
+- ask ordinary training and nutrition questions;
+- ask about recent personal progress and receive insights from compact local
+  workout, nutrition, step, and transformation summaries; and
+- retry a failed query without exposing any data-changing action.
 
-### Configure the Assistant
+### Connect the Assistant
 
-1. Open `Settings`.
-2. Enable `optional Ollama Cloud assistant`.
-3. Save the setting.
-4. Use `Test connection`.
-5. Tap `Open assistant`.
+1. Open the `Coach` tab.
+2. Read the outbound-data disclosure and choose `Connect OpenRouter`.
+3. Approve access in the system browser and return to Keepfit.
+4. Use the connection menu if you want to check or disconnect access.
 
 ### Use the Assistant
 
-Inside the assistant screen you can:
+Inside Coach you can:
 
-1. Ask a normal question and tap `Send`.
-2. Tap `Summarize progress` to generate a summary from your local data.
-3. Type an optional goal or constraint, then tap `Draft weekly plan`.
-4. Review the draft card before choosing `Apply draft` or `Dismiss draft`.
+1. Type a general question, or choose a starter question.
+2. Ask about "my progress", "my recent workouts", or similar personal history
+   when you want Keepfit to include a compact local snapshot.
+3. Look for the context notice below the response to confirm local activity was
+   included.
 
-If you leave the input blank before tapping `Draft weekly plan`, Keepfit uses a
-safe default request for a balanced weekly plan.
+Coach is query-only in v0.10. It cannot edit plans, add food, or write local
+records.
 
-### Build-Time Cloud Configuration
+### Privacy and Usage Limits
 
-This build expects the following values to be supplied while building the app:
-
-```text
-keepfit.ollama.baseUrl=https://ollama.com/api
-keepfit.ollama.generalModel=mistral-large-3:675b
-keepfit.ollama.reasoningModel=qwen3.5:397b
-keepfit.ollama.apiKey=your-api-key
-```
-
-General assistant chat uses `mistral-large-3:675b`. Deeper reasoning tasks
-such as plan curation and later analysis flows use `qwen3.5:397b`.
-
-Use direct model names. Do not use names ending in `-cloud` when calling
-`ollama.com/api` directly.
+- The private beta uses `inclusionai/ling-3.0-flash-sante:free`; it never falls
+  back automatically to a paid model.
+- Keepfit does not enforce a daily request allowance. OpenRouter and the
+  selected provider enforce the user's free-tier, rate, and credit limits.
+- Every model request asks OpenRouter to deny provider data collection and use
+  only zero-data-retention endpoints. If none is eligible, the request fails
+  without relaxing the privacy rule.
+- Chat sends the conversation you type. Questions about your own progress may
+  also send compact workout, nutrition, step, and transformation aggregates.
+- Weight, BMI, height, transformation photos, body measurements, identifiers,
+  private paths, and raw database rows are excluded.
+- OpenRouter records request metadata such as model, token counts, and latency.
+  Its prompt logging is off by default according to its current documentation.
+- The encrypted credential and OAuth transaction are not included in Keepfit
+  backups. Disconnect removes them from the device.
 
 ### Assistant Safety Notes
 
 - The assistant is general fitness guidance only.
 - It is not medical advice.
+- Requests for diagnosis, rehabilitation, medication changes, extreme dieting,
+  or unsafe progression are refused locally.
 - Keep core workflows independent of the assistant.
-- Assistant requests are sent to Ollama Cloud when you use this feature.
+- Assistant requests are sent through OpenRouter when you use this feature.
 - If the endpoint is unreachable, drafted chat text should remain available for
   retry.
-- Applying a draft weekly plan can create missing exercises with generic
-  defaults so the schedule can be applied without manual setup first.
+- Provider output cannot write fitness data in the current Coach experience.

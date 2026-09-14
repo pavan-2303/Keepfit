@@ -15,6 +15,24 @@ enum class MealType {
     SNACK,
 }
 
+enum class MealQuality {
+    BALANCED,
+    ONE_FOCUS,
+    FLEXIBLE,
+}
+
+@Entity(
+    tableName = "meal_quality_check_ins",
+    indices = [Index(value = ["diaryDate", "mealType"], unique = true)],
+)
+data class MealQualityCheckInEntity(
+    @PrimaryKey val id: String,
+    val diaryDate: LocalDate,
+    val mealType: MealType,
+    val quality: MealQuality,
+    val loggedAt: Long,
+)
+
 @Entity(tableName = "foods")
 data class FoodEntity(
     @PrimaryKey val id: String,

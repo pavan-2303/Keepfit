@@ -168,4 +168,55 @@ class NutritionDaoTest {
             dao.observeDiaryEntries(LocalDate.parse("2026-05-31")).first().map { it.foodName },
         )
     }
+
+    @Test
+    fun mealQualityCheckInReplacesOneMealWithoutDuplicatingIt() = runBlocking {
+        val date = LocalDate.parse("2026-09-12")
+        dao.upsertMealQualityCheckIn(
+            MealQualityCheckInEntity("quality-1", date, MealType.LUNCH, MealQuality.BALANCED, 1L),
+        )
+        dao.upsertMealQualityCheckIn(
+            MealQualityCheckInEntity("quality-2", date, MealType.LUNCH, MealQuality.FLEXIBLE, 2L),
+        )
+
+        val checkIns = dao.observeMealQualityCheckIns(date).first()
+        assertEquals(1, checkIns.size)
+        assertEquals(MealQuality.FLEXIBLE, checkIns.single().quality)
+    }
+
+    @Test
+    fun repeatPreviousMealReplacesOnlyThatMealAndKeepsCopiedRowsIndependent() = runBlocking {
+        val yesterday = LocalDate.parse("2026-09-11")
+        val today = LocalDate.parse("2026-09-12")
+        val food = FoodEntity("food", "Dal", "1 bowl", 1.0, 220.0, 14.0, 34.0, 4.0, false, 1L, 1L, null)
+        val other = FoodEntity("other", "Fruit", "1 piece", 1.0, 80.0, 1.0, 20.0, 0.0, false, 1L, 1L, null)
+        dao.upsertFood(food)
+        dao.upsertFood(other)
+        dao.insertDiaryEntries(
+            listOf(
+                FoodDiaryEntryEntity("source", yesterday, MealType.LUNCH, food.id, null, 1.5, 1L),
+                FoodDiaryEntryEntity("old-target", today, MealType.LUNCH, other.id, null, 1.0, 2L),
+                FoodDiaryEntryEntity("keep-dinner", today, MealType.DINNER, other.id, null, 1.0, 2L),
+            ),
+        )
+
+        dao.repeatDiaryMeal(yesterday, today, MealType.LUNCH, 3L)
+
+        val rows = dao.observeDiaryEntries(today).first()
+        assertEquals(listOf(MealType.LUNCH, MealType.DINNER), rows.map { it.mealType })
+        assertEquals("Dal", rows.first().foodName)
+        assertEquals(1.5, rows.first().servings, 0.0)
+    }
+
+    @Test
+    fun repeatMissingPreviousMealKeepsTheTargetMeal() = runBlocking {
+        val today = LocalDate.parse("2026-09-12")
+        val food = FoodEntity("food", "Fruit", "1 piece", 1.0, 80.0, 1.0, 20.0, 0.0, false, 1L, 1L, null)
+        dao.upsertFood(food)
+        dao.insertDiaryEntry(FoodDiaryEntryEntity("target", today, MealType.LUNCH, food.id, null, 1.0, 1L))
+
+        dao.repeatDiaryMeal(today.minusDays(1), today, MealType.LUNCH, 2L)
+
+        assertEquals(listOf("Fruit"), dao.observeDiaryEntries(today).first().map { it.foodName })
+    }
 }

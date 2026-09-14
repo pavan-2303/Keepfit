@@ -1,14 +1,23 @@
 package com.keepfit.feature.assistant.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import com.keepfit.feature.assistant.data.AssistantDraftWorkoutDay
-import com.keepfit.feature.assistant.data.AssistantDraftWorkoutExercise
-import com.keepfit.feature.assistant.data.AssistantDraftWorkoutPlan
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import com.keepfit.feature.assistant.access.AssistantAccessState
+import com.keepfit.feature.assistant.access.AssistantAccessStatus
+import com.keepfit.feature.assistant.data.AssistantChatMessage
+import com.keepfit.feature.assistant.data.AssistantMessageRole
 import com.keepfit.feature.assistant.data.AssistantUiState
-import java.time.DayOfWeek
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -18,78 +27,118 @@ class AssistantScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun failedSendStateKeepsDraftVisible() {
-        composeRule.setContent {
-            AssistantScreen(
-                uiState = AssistantUiState(
-                    draftMessage = "Keep my drafted question",
-                    errorMessage = "Assistant request failed.",
-                ),
-                isEnabled = true,
-                validationMessage = null,
-                onBack = {},
-                onDraftChange = {},
-                onSend = {},
-                onSummarizeProgress = {},
-                onDraftWeeklyPlan = {},
-                onApplyDraftPlan = {},
-                onDismissDraftPlan = {},
-                onRetry = {},
-            )
-        }
+    fun disconnectedCoachUsesCompactConnectionStateWithoutLocalQuota() {
+        var connectCount = 0
+        show(
+            state = AssistantUiState(accessState = AssistantAccessState()),
+            onConnect = { connectCount++ },
+        )
 
-        composeRule.onNodeWithText("Keep my drafted question").assertIsDisplayed()
-        composeRule.onNodeWithText("Last request failed").assertIsDisplayed()
-        composeRule.onNodeWithText("Assistant request failed.").assertIsDisplayed()
+        composeRule.onNodeWithText("Not connected").assertIsDisplayed()
+        composeRule.onNodeWithText("Connect OpenRouter").performClick()
+        composeRule.onNodeWithText("Today's requests").assertDoesNotExist()
+        composeRule.onNodeWithText("Your AI access").assertDoesNotExist()
+        assertEquals(1, connectCount)
     }
 
     @Test
-    fun draftPlanReviewShowsActionsAndInvokesCallbacks() {
-        var applyCount = 0
-        var dismissCount = 0
+    fun connectedCoachPrioritizesConversationAndQueryComposer() {
+        show(
+            AssistantUiState(
+                accessState = connectedAccess(),
+                messages = listOf(
+                    AssistantChatMessage("1", AssistantMessageRole.USER, "How am I doing?", 1L),
+                    AssistantChatMessage("2", AssistantMessageRole.ASSISTANT, "You trained three times this week.", 2L),
+                ),
+            ),
+        )
+
+        composeRule.onNodeWithText("You trained three times this week.").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Send question").assertIsDisplayed()
+        composeRule.onNodeWithText("Create reviewable proposal").assertDoesNotExist()
+        composeRule.onNodeWithText("Plan next week").assertDoesNotExist()
+    }
+
+    @Test
+    fun progressContextUseIsVisibleAfterAResponse() {
+        show(
+            AssistantUiState(
+                accessState = connectedAccess(),
+                messages = listOf(
+                    AssistantChatMessage("2", AssistantMessageRole.ASSISTANT, "Consistency improved.", 2L),
+                ),
+                lastResponseUsedLocalContext = true,
+            ),
+        )
+
+        composeRule.onNodeWithText("Recent Keepfit activity was included in the last answer.").assertIsDisplayed()
+    }
+
+    @Test
+    fun disclosureExplainsProviderLimitsAndExcludedData() {
+        show(AssistantUiState(showPrivacyDisclosure = true))
+
+        composeRule.onNodeWithText("Before you connect").assertIsDisplayed()
+        composeRule.onNodeWithText("Continue to OpenRouter").assertIsDisplayed()
+        composeRule.onNodeWithText(
+            "Your OpenRouter account controls provider limits and credits. Keepfit does not impose its own daily request cap.",
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun connectedCoachKeepsResponseAndComposerReachableAtCompactWidthAndLargeText() {
+        val state = AssistantUiState(
+            accessState = connectedAccess(),
+            draftMessage = "What should I focus on next?",
+            messages = listOf(
+                AssistantChatMessage(
+                    "1",
+                    AssistantMessageRole.ASSISTANT,
+                    "Keep the next workout simple and repeatable.",
+                    1L,
+                ),
+            ),
+        )
 
         composeRule.setContent {
-            AssistantScreen(
-                uiState = AssistantUiState(
-                    pendingDraftPlan = AssistantDraftWorkoutPlan(
-                        name = "Balanced Foundation Plan",
-                        overview = "A conservative 4-day split.",
-                        days = listOf(
-                            AssistantDraftWorkoutDay(
-                                dayOfWeek = DayOfWeek.MONDAY,
-                                templateName = "Upper Body A",
-                                notes = "Focus on controlled movements.",
-                                exercises = listOf(
-                                    AssistantDraftWorkoutExercise(
-                                        name = "Bench Press",
-                                        targetSets = 3,
-                                        targetReps = "8-12",
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-                isEnabled = true,
-                validationMessage = null,
-                onBack = {},
-                onDraftChange = {},
-                onSend = {},
-                onSummarizeProgress = {},
-                onDraftWeeklyPlan = {},
-                onApplyDraftPlan = { applyCount++ },
-                onDismissDraftPlan = { dismissCount++ },
-                onRetry = {},
-            )
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                Box(Modifier.width(360.dp).height(640.dp)) {
+                    AssistantScreen(
+                        uiState = state,
+                        isEnabled = true,
+                        validationMessage = null,
+                        onDraftChange = {},
+                        onSend = {},
+                        onRetry = {},
+                    )
+                }
+            }
         }
 
-        composeRule.onNodeWithText("Balanced Foundation Plan").assertIsDisplayed()
-        composeRule.onNodeWithText("Apply draft").assertIsDisplayed()
-        composeRule.onNodeWithText("Dismiss draft").assertIsDisplayed()
-        composeRule.onNodeWithText("Apply draft").performClick()
-        composeRule.onNodeWithText("Dismiss draft").performClick()
-
-        assertEquals(1, applyCount)
-        assertEquals(1, dismissCount)
+        composeRule.onNodeWithText("Keep the next workout simple and repeatable.").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Send question").assertIsDisplayed()
     }
+
+    private fun show(
+        state: AssistantUiState,
+        onConnect: () -> Unit = {},
+    ) {
+        composeRule.setContent {
+            AssistantScreen(
+                uiState = state,
+                isEnabled = true,
+                validationMessage = null,
+                onDraftChange = {},
+                onSend = {},
+                onRetry = {},
+                onConnect = onConnect,
+            )
+        }
+    }
+
+    private fun connectedAccess() = AssistantAccessState(
+        status = AssistantAccessStatus.CONNECTED,
+        hasCredential = true,
+    )
 }

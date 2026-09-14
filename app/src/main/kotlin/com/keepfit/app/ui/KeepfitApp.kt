@@ -34,7 +34,10 @@ fun KeepfitApp(viewModel: ProfileViewModel = hiltViewModel()) {
                     validationMessage = validationMessage,
                     onSave = viewModel::saveProfile,
                 )
-                is ProfileUiState.Ready -> HomeShell(profile = state.profile)
+                is ProfileUiState.Ready -> HomeShell(
+                    profile = state.profile,
+                    startInGuidedSetup = state.continueGuidedSetup,
+                )
             }
         }
     }
@@ -49,4 +52,3 @@ private fun LoadingScreen() {
         CircularProgressIndicator()
     }
 }
-

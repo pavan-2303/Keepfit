@@ -16,5 +16,10 @@ object KeepfitDatabaseFactory {
             .addMigrations(KeepfitMigrations.TWO_TO_THREE)
             .addMigrations(KeepfitMigrations.THREE_TO_FOUR)
             .addMigrations(KeepfitMigrations.FOUR_TO_FIVE)
+            .addMigrations(KeepfitMigrations.FIVE_TO_SIX)
+            .addMigrations(KeepfitMigrations.SIX_TO_SEVEN)
+            .addMigrations(KeepfitMigrations.SEVEN_TO_EIGHT)
+            .addMigrations(KeepfitMigrations.EIGHT_TO_NINE)
+            .addMigrations(KeepfitMigrations.NINE_TO_TEN)
             .build()
 }

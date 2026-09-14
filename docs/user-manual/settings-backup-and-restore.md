@@ -2,25 +2,26 @@
 
 ## Nutrition Goals
 
-In `Settings`, you can save:
+Open the profile icon, choose `Goals and nutrition`, then save:
 
 - calorie goal;
 - protein goal;
 - carbohydrate goal;
 - fat goal.
 
-These values are used for diary comparisons and summaries.
+These values are used as the midpoint of the flexible target ranges selected
+from `Nutrition`.
 
 ## Units
 
-You can switch:
+Open `Training preferences` to switch:
 
 - weight unit between `KG` and `LB`;
 - measurement unit between `CM` and `IN`.
 
 ## Timers and Reminders
 
-Current options include:
+`Training preferences` also contains:
 
 - rest timer duration for workouts;
 - daily workout reminder time;
@@ -34,8 +35,8 @@ Keepfit supports encrypted local backup export.
 
 Typical export flow:
 
-1. Open `Settings`.
-2. Go to the backup section.
+1. Open the profile icon and choose `Data and backup`.
+2. Go to the encrypted backup section.
 3. Enter a passphrase.
 4. Choose an export destination through the Android document picker.
 
@@ -62,3 +63,5 @@ If validation fails, existing local data should remain intact.
 - Export backups regularly if the data matters to you.
 - Test restore only when you understand it replaces local app data.
 - Exercise media and transformation photos are included in valid backups.
+- Nutrition lens, target flexibility, meal check-ins, foods, saved meals, and
+  diary entries are included.

@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
@@ -26,7 +27,6 @@ import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FitnessCenter
-import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -64,16 +64,21 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepfit.feature.workouts.WorkoutViewModel
+import com.keepfit.feature.workouts.ExerciseCatalogViewModel
 import com.keepfit.feature.workouts.data.Exercise
 import com.keepfit.feature.workouts.data.PlannedWorkout
 import com.keepfit.feature.workouts.data.WorkoutTemplate
+import com.keepfit.feature.workouts.today.TodayChangeRequest
+import com.keepfit.feature.workouts.today.TodayChangeType
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 
 @Composable
 fun WorkoutsScreen(
     modifier: Modifier = Modifier,
+    onOpenStarterPlan: () -> Unit = {},
     viewModel: WorkoutViewModel = hiltViewModel(),
+    catalogViewModel: ExerciseCatalogViewModel = hiltViewModel(),
 ) {
     val exercises by viewModel.exercises.collectAsStateWithLifecycle()
     val templates by viewModel.templates.collectAsStateWithLifecycle()
@@ -83,6 +88,9 @@ fun WorkoutsScreen(
     val records by viewModel.records.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val timerSeconds by viewModel.timerSeconds.collectAsStateWithLifecycle()
+    val workoutWriteInProgress by viewModel.workoutWriteInProgress.collectAsStateWithLifecycle()
+    val liveCatalogState by catalogViewModel.liveState.collectAsStateWithLifecycle()
+    val catalogMessage by catalogViewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(message) {
@@ -91,28 +99,40 @@ fun WorkoutsScreen(
             viewModel.dismissMessage()
         }
     }
+    LaunchedEffect(catalogMessage) {
+        catalogMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            catalogViewModel.dismissMessage()
+        }
+    }
 
     if (activeWorkout != null) {
         ActiveWorkoutScreen(
             workout = requireNotNull(activeWorkout),
+            exercises = exercises,
             timerSeconds = timerSeconds,
             snackbarHostState = snackbarHostState,
+            isWriting = workoutWriteInProgress,
             onAddSet = viewModel::addSet,
+            onRepeatPrevious = viewModel::repeatPreviousSet,
             onSaveNotes = viewModel::updateExerciseNotes,
             onStartTimer = viewModel::startRestTimer,
-            onComplete = { viewModel.completeWorkout() },
+            onSubstitute = viewModel::substituteActiveExercise,
+            onMinimum = viewModel::convertActiveWorkoutToMinimum,
+            onComplete = { feedback -> viewModel.completeWorkout(feedback) },
             modifier = modifier,
         )
         return
     }
 
     var selectedTab by rememberSaveable { mutableStateOf(WorkoutTab.EXERCISES) }
+    var selectedExerciseSource by rememberSaveable { mutableStateOf(ExerciseSource.PERSONAL) }
     var showExerciseEditor by remember { mutableStateOf(false) }
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (selectedTab == WorkoutTab.EXERCISES) {
+            if (selectedTab == WorkoutTab.EXERCISES && selectedExerciseSource == ExerciseSource.PERSONAL) {
                 FloatingActionButton(onClick = { showExerciseEditor = true }) {
                     Icon(Icons.Outlined.Add, contentDescription = "Add exercise")
                 }
@@ -131,6 +151,15 @@ fun WorkoutsScreen(
                     title = "Workouts",
                     description = "Build your exercise library, reusable templates, and a weekly rhythm that is easy to maintain.",
                 )
+                Spacer(modifier = Modifier.height(14.dp))
+                FilledTonalButton(
+                    onClick = onOpenStarterPlan,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.FitnessCenter, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Build my starter week")
+                }
             }
             PrimaryTabRow(selectedTabIndex = selectedTab.ordinal) {
                 WorkoutTab.entries.forEach { tab ->
@@ -142,13 +171,36 @@ fun WorkoutsScreen(
                 }
             }
             when (selectedTab) {
-                WorkoutTab.EXERCISES -> ExerciseLibrary(
-                    exercises = exercises,
-                    onSearch = viewModel::search,
-                    onSave = viewModel::saveExercise,
-                    onArchive = viewModel::archiveExercise,
-                    onDelete = viewModel::deleteExercise,
-                )
+                WorkoutTab.EXERCISES -> Column(modifier = Modifier.fillMaxSize()) {
+                    ExerciseSourceRail(
+                        selected = selectedExerciseSource,
+                        personalCount = exercises.size,
+                        onSelect = { source ->
+                            viewModel.search("")
+                            selectedExerciseSource = source
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                    Box(modifier = Modifier.weight(1f)) {
+                        when (selectedExerciseSource) {
+                            ExerciseSource.PERSONAL -> ExerciseLibrary(
+                                exercises = exercises,
+                                onSearch = viewModel::search,
+                                onSave = viewModel::saveExercise,
+                                onArchive = viewModel::archiveExercise,
+                                onDelete = viewModel::deleteExercise,
+                            )
+                            ExerciseSource.OFFLINE -> OfflineExerciseGuide(
+                                personalExerciseNames = exercises.map { it.name }.toSet(),
+                                onAdd = catalogViewModel::addOfflineGuide,
+                            )
+                            ExerciseSource.LIVE -> LiveExerciseCatalogue(
+                                state = liveCatalogState,
+                                onSearch = catalogViewModel::searchLive,
+                            )
+                        }
+                    }
+                }
                 WorkoutTab.TEMPLATES -> TemplateLibrary(
                     exercises = exercises,
                     templates = templates,
@@ -186,44 +238,35 @@ fun TodayWorkoutSection(
     onOpenWorkout: () -> Unit,
     viewModel: WorkoutViewModel = hiltViewModel(),
 ) {
-    val todayPlan by viewModel.todayPlan.collectAsStateWithLifecycle()
-    val activeWorkout by viewModel.activeWorkout.collectAsStateWithLifecycle()
-    val plannedWorkout = todayPlan.firstOrNull()
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.medium,
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.FitnessCenter, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text("NEXT WORKOUT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            when {
-                activeWorkout != null -> {
-                    Text("Workout in progress", style = MaterialTheme.typography.titleLarge)
-                    Text(requireNotNull(activeWorkout).templateName, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(onClick = onOpenWorkout) { Text("Resume workout") }
-                }
-                plannedWorkout != null -> {
-                    Text(plannedWorkout.templateName, style = MaterialTheme.typography.titleLarge)
-                    Text("Planned for today", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(onClick = { viewModel.startWorkout(plannedWorkout, onOpenWorkout) }) {
-                        Icon(Icons.Outlined.PlayArrow, contentDescription = null)
-                        Text("Start workout")
-                    }
-                }
-                else -> {
-                    Text("No workout planned", style = MaterialTheme.typography.titleLarge)
-                    Text("Assign a template in your weekly plan.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    }
+    val todayWorkout by viewModel.todayWorkout.collectAsStateWithLifecycle()
+    val preview by viewModel.todayPreview.collectAsStateWithLifecycle()
+    val exercises by viewModel.exercises.collectAsStateWithLifecycle()
+    val isWorking by viewModel.todayChangeInProgress.collectAsStateWithLifecycle()
+    val message by viewModel.message.collectAsStateWithLifecycle()
+    DecisiveTodayCard(
+        state = todayWorkout,
+        preview = preview,
+        exercises = exercises,
+        isWorking = isWorking,
+        message = message,
+        onStart = { action -> viewModel.startTodayWorkout(action, onOpenWorkout) },
+        onResume = onOpenWorkout,
+        onPreviewChange = viewModel::previewTodayChange,
+        onConfirmPreview = viewModel::confirmTodayChange,
+        onDismissPreview = viewModel::dismissTodayPreview,
+        onDismissMessage = viewModel::dismissMessage,
+        onRestore = { action ->
+            viewModel.previewTodayChange(
+                TodayChangeRequest(
+                    plannedWorkoutId = action.plannedWorkoutId,
+                    occurrenceId = action.occurrenceId,
+                    originalDate = action.originalDate,
+                    type = TodayChangeType.RESTORE,
+                ),
+            )
+        },
+        onOpenWorkouts = onOpenWorkout,
+    )
 }
 
 @Composable
@@ -237,6 +280,7 @@ private fun ExerciseLibrary(
     var query by remember { mutableStateOf("") }
     var editingExercise by remember { mutableStateOf<Exercise?>(null) }
     var deletingExercise by remember { mutableStateOf<Exercise?>(null) }
+    var viewingExercise by remember { mutableStateOf<Exercise?>(null) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -262,7 +306,8 @@ private fun ExerciseLibrary(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 10.dp)
-                    .animateContentSize(),
+                    .animateContentSize()
+                    .clickable { viewingExercise = exercise },
                 color = MaterialTheme.colorScheme.surface,
                 shape = MaterialTheme.shapes.medium,
             ) {
@@ -273,6 +318,13 @@ private fun ExerciseLibrary(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(exercise.name, style = MaterialTheme.typography.titleMedium)
                         Text(exercise.muscleGroup, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (exercise.demo != null) {
+                            Text(
+                                "Private demo attached",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                     IconButton(onClick = { editingExercise = exercise }) {
                         Icon(Icons.Outlined.Edit, contentDescription = "Edit ${exercise.name}")
@@ -295,6 +347,16 @@ private fun ExerciseLibrary(
                 onSave(id, name, group, instructions, notes, bodyweight, media)
                 editingExercise = null
             },
+        )
+    }
+    viewingExercise?.let { exercise ->
+        PersonalExerciseDetailDialog(
+            exercise = exercise,
+            onEdit = {
+                viewingExercise = null
+                editingExercise = exercise
+            },
+            onDismiss = { viewingExercise = null },
         )
     }
     deletingExercise?.let { exercise ->

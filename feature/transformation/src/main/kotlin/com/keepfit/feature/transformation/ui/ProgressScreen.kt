@@ -205,42 +205,32 @@ fun ProgressScreen(
 @Composable
 fun TodayProgressSection(
     modifier: Modifier = Modifier,
+    onOpenProgress: () -> Unit = {},
     viewModel: TransformationViewModel = hiltViewModel(),
 ) {
     val overview by viewModel.currentOverview.collectAsStateWithLifecycle()
     Card(
+        onClick = onOpenProgress,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Insights, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "PROGRESS",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.Insights, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(12.dp))
             val latest = overview.latestMeasurement
-            if (latest?.weightKg == null) {
-                Text("No measurements yet", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(4.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Progress", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Transformation cycle summaries will appear here.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Text("${latest.weightKg.formatMetric()} kg", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "BMI ${overview.bmi?.formatMetric() ?: "--"}  •  ${latest.measurementDate}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    if (latest?.weightKg == null) "No measurements yet"
+                    else "${latest.weightKg.formatMetric()} kg · BMI ${overview.bmi?.formatMetric() ?: "--"}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Text("Open", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

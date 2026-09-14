@@ -5,6 +5,8 @@ import com.keepfit.core.database.nutrition.FoodDiaryEntryDetails
 import com.keepfit.core.database.nutrition.FoodDiaryEntryEntity
 import com.keepfit.core.database.nutrition.FoodEntity
 import com.keepfit.core.database.nutrition.MealType
+import com.keepfit.core.database.nutrition.MealQuality
+import com.keepfit.core.database.nutrition.MealQualityCheckInEntity
 import com.keepfit.core.database.nutrition.NutritionDao
 import com.keepfit.core.database.nutrition.SavedMealDetails
 import com.keepfit.core.database.nutrition.SavedMealEntity
@@ -61,6 +63,12 @@ class RoomNutritionRepository(
                 hasEntries = entries.isNotEmpty(),
             )
         }
+
+    override fun observeMealQualityCheckIns(date: LocalDate): Flow<List<MealQualityCheckIn>> =
+        dao.observeMealQualityCheckIns(date).map { rows -> rows.map(MealQualityCheckInEntity::toModel) }
+
+    override fun observePreviousMealTypes(date: LocalDate): Flow<List<MealType>> =
+        dao.observeLoggedMealTypes(date.minusDays(1))
 
     override suspend fun saveFood(id: String?, input: FoodInput) {
         val existing = id?.let { dao.findFood(it) }
@@ -135,6 +143,33 @@ class RoomNutritionRepository(
         )
     }
 
+    override suspend fun addFoodsToDiary(
+        date: LocalDate,
+        mealType: MealType,
+        items: List<FoodDiaryAddition>,
+    ) {
+        require(items.isNotEmpty()) { "Choose at least one food." }
+        require(items.size <= 6 && items.map { it.foodId }.distinct().size == items.size)
+        items.forEach { item ->
+            require(item.servings.isFinite() && item.servings in 0.25..5.0)
+            requireNotNull(dao.findFood(item.foodId)) { "Food not found." }
+        }
+        val now = clock()
+        dao.insertDiaryEntries(
+            items.map { item ->
+                FoodDiaryEntryEntity(
+                    id = idFactory(),
+                    diaryDate = date,
+                    mealType = mealType,
+                    foodId = item.foodId,
+                    savedMealId = null,
+                    servings = item.servings,
+                    loggedAt = now,
+                )
+            },
+        )
+    }
+
     override suspend fun addSavedMealToDiary(
         date: LocalDate,
         mealType: MealType,
@@ -169,6 +204,31 @@ class RoomNutritionRepository(
             sourceDate = targetDate.minusDays(1),
             targetDate = targetDate,
             loggedAt = clock(),
+        )
+    }
+
+    override suspend fun repeatPreviousMeal(targetDate: LocalDate, mealType: MealType) {
+        dao.repeatDiaryMeal(
+            sourceDate = targetDate.minusDays(1),
+            targetDate = targetDate,
+            mealType = mealType,
+            loggedAt = clock(),
+        )
+    }
+
+    override suspend fun setMealQuality(
+        date: LocalDate,
+        mealType: MealType,
+        quality: MealQuality,
+    ) {
+        dao.upsertMealQualityCheckIn(
+            MealQualityCheckInEntity(
+                id = idFactory(),
+                diaryDate = date,
+                mealType = mealType,
+                quality = quality,
+                loggedAt = clock(),
+            ),
         )
     }
 }
@@ -220,4 +280,11 @@ private fun DailyNutritionTotalsRow.toModel() = NutritionTotals(
     proteinGrams = proteinGrams,
     carbohydrateGrams = carbohydrateGrams,
     fatGrams = fatGrams,
+)
+
+private fun MealQualityCheckInEntity.toModel() = MealQualityCheckIn(
+    id = id,
+    date = diaryDate,
+    mealType = mealType,
+    quality = quality,
 )

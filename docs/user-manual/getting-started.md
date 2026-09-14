@@ -4,30 +4,35 @@
 
 1. Install the debug or release APK on an Android 12+ device.
 2. Open Keepfit.
-3. Complete the first-run profile form with your display name and height.
+3. Complete the guided setup: local profile, goal, experience, realistic days,
+   session time, available equipment, movements to avoid, and preferred
+   nutrition detail.
+4. Review the offline starter week before applying it.
 
-The profile is required because BMI and some summaries depend on height.
+Height is optional and is used only for BMI context. The training plan does not
+depend on it.
 
 ## Main Navigation
 
 Keepfit uses five main areas:
 
-- `Today`: a dashboard for the current day.
-- `Workouts`: exercise library, templates, weekly plan, and history.
-- `Nutrition`: food library, saved meals, and the daily diary.
-- `Progress`: measurements, transformation cycles, and comparisons.
-- `Settings`: goals, units, reminders, backup, restore, and optional features.
+- `Today`: one next workout action plus compact supporting status.
+- `Plan`: starter journey, weekly schedule, exercise library, and templates.
+- `Log`: food diary, saved meals, and reusable nutrition entries.
+- `Progress`: weekly review, records, measurements, cycles, and comparisons.
+- `Coach`: general questions and query-only insights about recent progress.
+
+Open the profile icon for categorized Settings; it is not a daily-use tab.
 
 ## Start With the Basics
 
 Recommended first setup order:
 
-1. Open `Settings` and set calorie and macro goals if you use them.
-2. Add at least a few exercises in `Workouts`.
-3. Build one workout template.
-4. Assign the template to a weekday in the weekly plan.
-5. Add a few foods in `Nutrition`.
-6. Log a first body measurement in `Progress`.
+1. Review and apply the starter week created during guided setup.
+2. Adjust the schedule or exercise library from `Plan` if needed.
+3. Open the profile icon and set nutrition goals if you use them.
+4. Add a few foods in `Log`.
+5. Log a first body measurement in `Progress`.
 
 ## Today Screen
 

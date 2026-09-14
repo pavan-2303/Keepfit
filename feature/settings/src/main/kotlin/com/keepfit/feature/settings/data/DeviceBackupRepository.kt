@@ -2,11 +2,13 @@ package com.keepfit.feature.settings.data
 
 import android.content.Context
 import android.net.Uri
+import android.database.sqlite.SQLiteDatabase
 import androidx.sqlite.db.SimpleSQLiteQuery
 import com.keepfit.core.database.KeepfitDatabase
 import com.keepfit.core.database.KeepfitDatabaseFactory
 import com.keepfit.core.preferences.AppSettingsRepository
 import com.keepfit.core.preferences.MeasurementUnit
+import com.keepfit.core.preferences.NutritionTrackingDepth
 import com.keepfit.core.preferences.WeightUnit
 import java.io.File
 import java.util.UUID
@@ -102,25 +104,54 @@ class DeviceBackupRepository @Inject constructor(
         if (destination.exists()) {
             destination.delete()
         }
-        val supportDatabase = database.openHelper.writableDatabase
-        supportDatabase.execSQL("PRAGMA wal_checkpoint(FULL)")
-        supportDatabase.execSQL("VACUUM INTO '${destination.absolutePath.replace("'", "''")}'")
+        val liveDatabasePath = context.getDatabasePath(KeepfitDatabaseFactory.DATABASE_NAME)
+        val liveWalPath = File(liveDatabasePath.parentFile, "${liveDatabasePath.name}-wal")
+        val liveShmPath = File(liveDatabasePath.parentFile, "${liveDatabasePath.name}-shm")
+        val stagedDatabasePath = File(destination.parentFile, "snapshot-source.db")
+        val stagedWalPath = File(destination.parentFile, "${stagedDatabasePath.name}-wal")
+        val stagedShmPath = File(destination.parentFile, "${stagedDatabasePath.name}-shm")
+
+        liveDatabasePath.copyTo(stagedDatabasePath, overwrite = true)
+        if (liveWalPath.exists()) {
+            liveWalPath.copyTo(stagedWalPath, overwrite = true)
+        }
+        if (liveShmPath.exists()) {
+            liveShmPath.copyTo(stagedShmPath, overwrite = true)
+        }
+
+        val stagedDatabase = SQLiteDatabase.openDatabase(
+            stagedDatabasePath.absolutePath,
+            null,
+            SQLiteDatabase.OPEN_READWRITE,
+        )
+        try {
+            stagedDatabase.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", emptyArray()).close()
+        } finally {
+            stagedDatabase.close()
+        }
+
+        stagedDatabasePath.copyTo(destination, overwrite = true)
     }
 
     private fun collectRecordCounts(): Map<String, Int> {
         val supportDatabase = database.openHelper.writableDatabase
         return linkedMapOf(
-            "profiles" to supportDatabase.countRows("body_profile"),
-            "foods" to supportDatabase.countRows("food"),
-            "savedMeals" to supportDatabase.countRows("saved_meal"),
-            "diaryEntries" to supportDatabase.countRows("food_diary_entry"),
-            "exercises" to supportDatabase.countRows("exercise"),
-            "workoutTemplates" to supportDatabase.countRows("workout_template"),
-            "plannedWorkouts" to supportDatabase.countRows("planned_workout"),
-            "workoutSessions" to supportDatabase.countRows("workout_session"),
-            "measurements" to supportDatabase.countRows("body_measurement"),
-            "transformationWeeks" to supportDatabase.countRows("transformation_week"),
-            "transformationPhotos" to supportDatabase.countRows("transformation_photo"),
+            "profiles" to supportDatabase.countRows("body_profiles"),
+            "journeyProfiles" to supportDatabase.countRows("journey_profiles"),
+            "foods" to supportDatabase.countRows("foods"),
+            "savedMeals" to supportDatabase.countRows("saved_meals"),
+            "diaryEntries" to supportDatabase.countRows("food_diary_entries"),
+            "mealQualityCheckIns" to supportDatabase.countRows("meal_quality_check_ins"),
+            "exercises" to supportDatabase.countRows("exercises"),
+            "workoutTemplates" to supportDatabase.countRows("workout_templates"),
+            "plannedWorkouts" to supportDatabase.countRows("planned_workouts"),
+            "workoutOccurrences" to supportDatabase.countRows("workout_occurrences"),
+            "workoutOccurrenceExercises" to supportDatabase.countRows("workout_occurrence_exercises"),
+            "workoutSessions" to supportDatabase.countRows("workout_sessions"),
+            "weeklyReviewOutcomes" to supportDatabase.countRows("weekly_review_outcomes"),
+            "measurements" to supportDatabase.countRows("body_measurements"),
+            "transformationCycles" to supportDatabase.countRows("transformation_cycles"),
+            "transformationPhotos" to supportDatabase.countRows("transformation_photos"),
         )
     }
 
@@ -130,6 +161,12 @@ class DeviceBackupRepository @Inject constructor(
             measurementUnit = MeasurementUnit.valueOf(snapshot.measurementUnit),
         )
         settingsRepository.updateRestTimerSeconds(snapshot.restTimerSeconds)
+        settingsRepository.updateWeeklyReviewPaused(snapshot.weeklyReviewPaused)
+        settingsRepository.updateNutritionTracking(
+            depth = runCatching { NutritionTrackingDepth.valueOf(snapshot.nutritionTrackingDepth) }
+                .getOrDefault(NutritionTrackingDepth.DETAILED_MACROS),
+            targetRangePercent = snapshot.nutritionTargetRangePercent,
+        )
         settingsRepository.updateWorkoutReminder(
             enabled = snapshot.workoutReminderEnabled,
             hour = snapshot.workoutReminderHour,
@@ -214,6 +251,9 @@ class DeviceBackupRepository @Inject constructor(
             weightUnit = weightUnit.name,
             measurementUnit = measurementUnit.name,
             restTimerSeconds = restTimerSeconds,
+            weeklyReviewPaused = weeklyReviewPaused,
+            nutritionTrackingDepth = nutritionTrackingDepth.name,
+            nutritionTargetRangePercent = nutritionTargetRangePercent,
             workoutReminderEnabled = workoutReminder.enabled,
             workoutReminderHour = workoutReminder.hour,
             workoutReminderMinute = workoutReminder.minute,

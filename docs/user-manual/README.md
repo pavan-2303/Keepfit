@@ -7,6 +7,7 @@ Keepfit.
 
 - [Getting Started](getting-started.md)
 - [Workouts](workouts.md)
+- [Weekly Review](weekly-review.md)
 - [Nutrition](nutrition.md)
 - [Progress](progress.md)
 - [Settings, Reminders, Backup, and Restore](settings-backup-and-restore.md)
@@ -17,11 +18,16 @@ Keepfit.
 Keepfit is a private Android fitness tracker for one local user. Core features
 work without an account, subscription, or backend.
 
-- Workouts: exercise library, templates, weekly plan, active logging, history.
-- Nutrition: personal food library, saved meals, daily diary, macro totals.
+- Workouts: personal library, 40-item offline guide, optional live demos,
+  templates, weekly plan, active logging, and history.
+- Weekly review: local evidence, flexible motivation, and one optional
+  coming-week adjustment.
+- Nutrition: selectable depth, target ranges, neutral meal check-ins, personal
+  foods, saved meals, fast repeats, and daily totals.
 - Progress: measurements, BMI, transformation cycles, and comparison.
 - Settings: goals, units, reminders, rest timer, backup and restore.
-- Optional integrations: Health Connect steps and Ollama assistant.
+- Optional integrations: view-only ExerciseDB demos, Health Connect steps, and
+  OpenRouter assistant.
 
 ## Privacy Notes
 
@@ -29,4 +35,5 @@ work without an account, subscription, or backend.
 - Imported exercise media and transformation photos stay in app-private
   storage.
 - Backup export is explicit and encrypted with a passphrase you choose.
-- The assistant is optional and must be enabled manually.
+- Coach is optional and sends data only after you connect OpenRouter and submit
+  a question.

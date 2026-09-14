@@ -31,12 +31,7 @@ class HomeShellViewModel @Inject constructor(
     private val assistantRepository: AssistantRepository,
 ) : ViewModel() {
     val assistantLaunchState: StateFlow<AssistantLaunchState> = settingsRepository.observeSettings()
-        .mapLatest { settings ->
-            val assistantSettings = settings.assistant
-            if (!assistantSettings.enabled) {
-                return@mapLatest AssistantLaunchState()
-            }
-
+        .mapLatest {
             validateAssistantRuntimeConfig(
                 baseUrl = buildTimeConfig.baseUrl,
                 generalChatModelName = buildTimeConfig.generalChatModelName,
@@ -60,7 +55,7 @@ class HomeShellViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = AssistantLaunchState(),
+            initialValue = AssistantLaunchState(isEnabled = true),
         )
 
     private val _assistantConnectionMessage = MutableStateFlow<String?>(null)
@@ -68,10 +63,6 @@ class HomeShellViewModel @Inject constructor(
 
     fun testAssistantConnection() {
         val launchState = assistantLaunchState.value
-        if (!launchState.isEnabled) {
-            _assistantConnectionMessage.value = "Enable assistant before testing the connection."
-            return
-        }
         val config = launchState.config
         if (config == null) {
             _assistantConnectionMessage.value = launchState.validationMessage ?: "Assistant settings are invalid."

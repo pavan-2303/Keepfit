@@ -10,6 +10,44 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NutritionDao {
+    @Insert
+    suspend fun insertMealQualityCheckIn(checkIn: MealQualityCheckInEntity)
+
+    @Query("DELETE FROM meal_quality_check_ins WHERE diaryDate = :date AND mealType = :mealType")
+    suspend fun deleteMealQualityCheckIn(date: LocalDate, mealType: MealType)
+
+    @Transaction
+    suspend fun upsertMealQualityCheckIn(checkIn: MealQualityCheckInEntity) {
+        deleteMealQualityCheckIn(checkIn.diaryDate, checkIn.mealType)
+        insertMealQualityCheckIn(checkIn)
+    }
+
+    @Query(
+        """
+        SELECT * FROM meal_quality_check_ins
+        WHERE diaryDate = :date
+        ORDER BY CASE mealType
+            WHEN 'BREAKFAST' THEN 0
+            WHEN 'LUNCH' THEN 1
+            WHEN 'DINNER' THEN 2
+            ELSE 3
+        END
+        """,
+    )
+    fun observeMealQualityCheckIns(date: LocalDate): Flow<List<MealQualityCheckInEntity>>
+
+    @Query(
+        """
+        SELECT * FROM meal_quality_check_ins
+        WHERE diaryDate BETWEEN :startDate AND :endDate
+        ORDER BY diaryDate, loggedAt
+        """,
+    )
+    suspend fun getMealQualityCheckIns(
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ): List<MealQualityCheckInEntity>
+
     @Upsert
     suspend fun upsertFood(food: FoodEntity)
 
@@ -96,6 +134,9 @@ interface NutritionDao {
     )
     fun observeDiaryEntries(date: LocalDate): Flow<List<FoodDiaryEntryDetails>>
 
+    @Query("SELECT DISTINCT mealType FROM food_diary_entries WHERE diaryDate = :date")
+    fun observeLoggedMealTypes(date: LocalDate): Flow<List<MealType>>
+
     @Query(
         """
         SELECT
@@ -163,5 +204,48 @@ interface NutritionDao {
     suspend fun duplicateDiaryEntries(sourceDate: LocalDate, targetDate: LocalDate, loggedAt: Long) {
         deleteDiaryEntriesForDate(targetDate)
         copyDiaryEntries(sourceDate, targetDate, loggedAt)
+    }
+
+    @Query("DELETE FROM food_diary_entries WHERE diaryDate = :date AND mealType = :mealType")
+    suspend fun deleteDiaryMeal(date: LocalDate, mealType: MealType)
+
+    @Query(
+        """
+        INSERT INTO food_diary_entries (
+            id, diaryDate, mealType, foodId, savedMealId, servings, loggedAt
+        )
+        SELECT
+            lower(hex(randomblob(16))),
+            :targetDate,
+            mealType,
+            foodId,
+            savedMealId,
+            servings,
+            :loggedAt
+        FROM food_diary_entries
+        WHERE diaryDate = :sourceDate AND mealType = :mealType
+        ORDER BY loggedAt, id
+        """,
+    )
+    suspend fun copyDiaryMeal(
+        sourceDate: LocalDate,
+        targetDate: LocalDate,
+        mealType: MealType,
+        loggedAt: Long,
+    )
+
+    @Query("SELECT COUNT(*) FROM food_diary_entries WHERE diaryDate = :date AND mealType = :mealType")
+    suspend fun countDiaryMeal(date: LocalDate, mealType: MealType): Int
+
+    @Transaction
+    suspend fun repeatDiaryMeal(
+        sourceDate: LocalDate,
+        targetDate: LocalDate,
+        mealType: MealType,
+        loggedAt: Long,
+    ) {
+        if (countDiaryMeal(sourceDate, mealType) == 0) return
+        deleteDiaryMeal(targetDate, mealType)
+        copyDiaryMeal(sourceDate, targetDate, mealType, loggedAt)
     }
 }
