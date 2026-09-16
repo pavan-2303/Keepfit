@@ -36,7 +36,14 @@ fun KeepfitApp(viewModel: ProfileViewModel = hiltViewModel()) {
                 )
                 is ProfileUiState.Ready -> HomeShell(
                     profile = state.profile,
+                    profiles = state.profiles,
                     startInGuidedSetup = state.continueGuidedSetup,
+                    profileValidationMessage = validationMessage,
+                    onAddProfile = viewModel::addProfile,
+                    onEditProfile = viewModel::editProfile,
+                    onSelectProfile = viewModel::selectProfile,
+                    onArchiveProfile = viewModel::archiveProfile,
+                    onDismissProfileMessage = viewModel::dismissValidationMessage,
                 )
             }
         }

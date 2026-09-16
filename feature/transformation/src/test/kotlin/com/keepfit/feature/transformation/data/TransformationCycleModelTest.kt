@@ -2,8 +2,8 @@ package com.keepfit.feature.transformation.data
 
 import com.keepfit.core.database.transformation.TransformationCycleDetails
 import com.keepfit.core.database.transformation.TransformationCycleEntity
-import com.keepfit.core.database.transformation.TransformationPhotoAngle
 import com.keepfit.core.database.transformation.TransformationPhotoEntity
+import com.keepfit.core.model.TransformationPose
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -25,19 +25,19 @@ class TransformationCycleModelTest {
                     id = "front-day-0",
                     cycleId = cycle.id,
                     captureDate = LocalDate.parse("2026-05-01"),
-                    angle = TransformationPhotoAngle.FRONT,
+                    poseKey = TransformationPose.FRONT_RELAXED.key,
                 ),
                 samplePhoto(
                     id = "back-day-0",
                     cycleId = cycle.id,
                     captureDate = LocalDate.parse("2026-05-01"),
-                    angle = TransformationPhotoAngle.BACK,
+                    poseKey = TransformationPose.BACK_RELAXED.key,
                 ),
                 samplePhoto(
                     id = "front-day-12",
                     cycleId = cycle.id,
                     captureDate = LocalDate.parse("2026-05-13"),
-                    angle = TransformationPhotoAngle.FRONT,
+                    poseKey = TransformationPose.FRONT_RELAXED.key,
                 ),
             ),
         )
@@ -56,7 +56,7 @@ class TransformationCycleModelTest {
         assertEquals(LocalDate.parse("2026-05-13"), model.latestCaptureDate)
         assertEquals(listOf(0, 12), model.days.map(TransformationCycleDay::dayNumber))
         assertEquals(2, model.days.first().photos.size)
-        assertEquals(TransformationPhotoAngle.FRONT, model.defaultComparison.leftDay.photos.first().angle)
+        assertEquals(TransformationPose.FRONT_RELAXED, model.defaultComparison.leftDay.photos.first().pose)
         assertEquals(12, model.defaultComparison.rightDay.dayNumber)
     }
 
@@ -120,15 +120,49 @@ class TransformationCycleModelTest {
         id: String,
         cycleId: String,
         captureDate: LocalDate,
-        angle: TransformationPhotoAngle,
+        poseKey: String,
     ) = TransformationPhotoEntity(
         id = id,
         transformationCycleId = cycleId,
         captureDate = captureDate,
-        angle = angle,
+        poseKey = poseKey,
         relativePath = "media/transformation/$cycleId/$id.jpg",
         mimeType = "image/jpeg",
         sizeBytes = 100L,
         createdAt = 10L,
     )
+
+    @Test
+    fun enabledPosesAlwaysIncludeFourBasicsAndOnlyStoredOptionalChoices() {
+        val enabled = resolveEnabledPoses(
+            listOf(
+                TransformationPose.FRONT_DOUBLE_BICEPS.key,
+                TransformationPose.BACK_LAT_SPREAD.key,
+                "unknown",
+            ),
+        )
+
+        assertEquals(
+            TransformationPose.defaultPoses + listOf(
+                TransformationPose.FRONT_DOUBLE_BICEPS,
+                TransformationPose.BACK_LAT_SPREAD,
+            ),
+            enabled,
+        )
+    }
+
+    @Test
+    fun captureProgressCountsOnlyEnabledPosesAndAllowsIncompleteDays() {
+        val cycle = sampleCycle("cycle-progress", LocalDate.parse("2026-09-14"), null)
+        val day = TransformationCycleDetails(
+            cycle = cycle,
+            photos = listOf(
+                samplePhoto("front", cycle.id, cycle.startDate, TransformationPose.FRONT_RELAXED.key),
+                samplePhoto("disabled", cycle.id, cycle.startDate, TransformationPose.BACK_LAT_SPREAD.key),
+            ),
+        ).toCycleModel(false, { it }).days.single()
+        val enabled = TransformationPose.defaultPoses + TransformationPose.FRONT_DOUBLE_BICEPS
+
+        assertEquals(PoseCaptureProgress(captured = 1, enabled = 5), calculatePoseCaptureProgress(day, enabled))
+    }
 }

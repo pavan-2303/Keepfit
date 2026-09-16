@@ -33,27 +33,41 @@ private val KeepfitColors = lightColorScheme(
     surfaceVariant = Color(0xFFE7ECE8),
     onSurfaceVariant = Color(0xFF59635D),
     outline = Color(0xFFB7C0BA),
+    outlineVariant = Color(0xFFD6DDD8),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF1F4EF),
+    surfaceContainer = Color(0xFFEBEFE9),
+    surfaceContainerHigh = Color(0xFFE4EAE4),
     error = Color(0xFFB23A35),
 )
 
 private val KeepfitTypography = Typography(
     displaySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 36.sp,
+        fontWeight = FontWeight.Black,
+        fontSize = 38.sp,
         lineHeight = 40.sp,
+        letterSpacing = (-0.7).sp,
+    ),
+    headlineLarge = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 30.sp,
+        lineHeight = 34.sp,
+        letterSpacing = (-0.35).sp,
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
-        lineHeight = 30.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        lineHeight = 31.sp,
+        letterSpacing = (-0.2).sp,
     ),
     headlineSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 26.sp,
-        lineHeight = 30.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        lineHeight = 27.sp,
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
@@ -86,19 +100,24 @@ private val KeepfitTypography = Typography(
 )
 
 private val KeepfitShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(6.dp),
-    medium = RoundedCornerShape(8.dp),
-    large = RoundedCornerShape(8.dp),
-    extraLarge = RoundedCornerShape(8.dp),
+    extraSmall = RoundedCornerShape(6.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(18.dp),
+    extraLarge = RoundedCornerShape(24.dp),
 )
 
 @Composable
-fun KeepfitTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = KeepfitColors,
-        typography = KeepfitTypography,
-        shapes = KeepfitShapes,
-        content = content,
-    )
+fun KeepfitTheme(
+    reduceMotion: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    KeepfitMotionProvider(reduceMotion = reduceMotion) {
+        MaterialTheme(
+            colorScheme = KeepfitColors,
+            typography = KeepfitTypography,
+            shapes = KeepfitShapes,
+            content = content,
+        )
+    }
 }

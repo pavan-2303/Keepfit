@@ -2,6 +2,8 @@ package com.keepfit.feature.assistant
 
 import com.keepfit.feature.assistant.access.AssistantAccessStatus
 import com.keepfit.feature.assistant.access.AssistantCredentialStore
+import com.keepfit.feature.assistant.access.AssistantCredentialRecoveryController
+import com.keepfit.feature.assistant.access.CredentialRecoveryOutcome
 import com.keepfit.feature.assistant.access.AssistantHttpRequest
 import com.keepfit.feature.assistant.access.AssistantHttpResponse
 import com.keepfit.feature.assistant.access.AssistantHttpTransport
@@ -20,7 +22,8 @@ class OpenRouterAccessManagerTest {
     fun disclosureAuthorizationExchangeAndDisconnectOwnCredentialLifecycle() = runTest {
         val store = MemoryCredentialStore()
         val callbackServer = FakeCallbackServer()
-        val manager = manager(store, callbackServer)
+        val recovery = RecordingCredentialRecovery()
+        val manager = manager(store, callbackServer, recovery)
 
         assertTrue(manager.beginAuthorization().isFailure)
 
@@ -34,10 +37,12 @@ class OpenRouterAccessManagerTest {
         assertEquals("user-controlled-key", store.token)
         assertNull(store.pending)
         assertEquals(AssistantAccessStatus.CONNECTED, manager.state.value.status)
+        assertEquals(1, recovery.backupCalls)
 
         manager.disconnect()
         assertNull(store.token)
         assertEquals(AssistantAccessStatus.DISCONNECTED, manager.state.value.status)
+        assertEquals(1, recovery.clearCalls)
     }
 
     @Test
@@ -70,9 +75,22 @@ class OpenRouterAccessManagerTest {
         assertEquals(AssistantAccessStatus.CONNECTED, manager.state.value.status)
     }
 
+    @Test
+    fun restoredCredentialCanSynchronizeAnAlreadyCreatedManager() {
+        val store = MemoryCredentialStore()
+        val manager = manager(store, FakeCallbackServer())
+
+        store.writeToken("restored-token")
+        manager.synchronizeCredentialState()
+
+        assertEquals(AssistantAccessStatus.CONNECTED, manager.state.value.status)
+        assertTrue(manager.state.value.hasCredential)
+    }
+
     private fun manager(
         store: MemoryCredentialStore,
         callbackServer: FakeCallbackServer,
+        recovery: AssistantCredentialRecoveryController = NoOpCredentialRecovery,
     ) = OpenRouterAccessManager(
         credentialStore = store,
         api = OpenRouterApi(
@@ -86,7 +104,33 @@ class OpenRouterAccessManagerTest {
             },
         ),
         callbackServer = callbackServer,
+        credentialRecovery = recovery,
     )
+
+    private class RecordingCredentialRecovery : AssistantCredentialRecoveryController {
+        var backupCalls = 0
+        var clearCalls = 0
+
+        override suspend fun isAvailable() = true
+        override suspend fun setEnabled(enabled: Boolean) = Result.success(Unit)
+        override suspend fun recoverIfNeeded() = CredentialRecoveryOutcome.NOTHING_TO_RECOVER
+        override suspend fun backUpCurrentCredentialIfEnabled(): Result<Unit> {
+            backupCalls += 1
+            return Result.success(Unit)
+        }
+        override suspend fun clearForDisconnect(): Result<Unit> {
+            clearCalls += 1
+            return Result.success(Unit)
+        }
+    }
+
+    private object NoOpCredentialRecovery : AssistantCredentialRecoveryController {
+        override suspend fun isAvailable() = false
+        override suspend fun setEnabled(enabled: Boolean) = Result.success(Unit)
+        override suspend fun recoverIfNeeded() = CredentialRecoveryOutcome.DISABLED
+        override suspend fun backUpCurrentCredentialIfEnabled() = Result.success(Unit)
+        override suspend fun clearForDisconnect() = Result.success(Unit)
+    }
 
     private class MemoryCredentialStore(
         var accepted: Boolean = false,

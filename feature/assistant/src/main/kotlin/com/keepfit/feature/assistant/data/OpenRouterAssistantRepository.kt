@@ -13,6 +13,10 @@ import com.keepfit.feature.assistant.coaching.CoachingSafetyGate
 import com.keepfit.feature.assistant.coaching.CoachingSafetyRefusalException
 import com.keepfit.feature.assistant.coaching.CoachingToolContract
 import java.time.Clock
+import com.keepfit.feature.assistant.planning.AssistantPlanContextDataSource
+import com.keepfit.feature.assistant.planning.AssistantPlanPromptBuilder
+import com.keepfit.feature.assistant.planning.AssistantPlanToolContract
+import com.keepfit.feature.assistant.planning.AssistantPlanValidator
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,8 +30,11 @@ class OpenRouterAssistantRepository @Inject constructor(
     private val coachingContextDataSource: CoachingContextDataSource,
     private val safetyGate: CoachingSafetyGate,
     private val proposalValidator: CoachingProposalValidator,
+    private val planContextDataSource: AssistantPlanContextDataSource,
+    private val planValidator: AssistantPlanValidator,
     private val clock: Clock,
     private val coachingPromptBuilder: CoachingPromptBuilder = CoachingPromptBuilder(),
+    private val planPromptBuilder: AssistantPlanPromptBuilder = AssistantPlanPromptBuilder(),
 ) : AssistantRepository {
     override suspend fun testConnection(config: AssistantRuntimeConfig): Result<Unit> =
         accessManager.inspectConnection().map { Unit }
@@ -62,10 +69,28 @@ class OpenRouterAssistantRepository @Inject constructor(
         config: AssistantRuntimeConfig,
         input: AssistantDraftInput,
     ): Result<AssistantDraftWorkoutPlan> {
-        val prompt = promptAssembler.buildDraftPlanPrompt(summaryRepository.loadProgressSummary(), input)
-        return execute(emptyList(), prompt).fold(
-            onSuccess = { parseOllamaDraftPlanResponse(it.content) },
-            onFailure = { Result.failure(it) },
+        safetyFailure(listOfNotNull(input.goal, input.notes).joinToString(" "))?.let { return Result.failure(it) }
+        val context = runCatching { planContextDataSource.loadContext() }.getOrElse { return Result.failure(it) }
+        if (context.exercises.isEmpty()) return Result.failure(IllegalStateException("No suitable catalogue exercises are available."))
+        if (context.preferredDays.isEmpty()) return Result.failure(IllegalStateException("Choose at least one training day first."))
+        val prompts = planPromptBuilder.build(input, context)
+        val token = accessManager.reserveInferenceRequest().getOrElse { return Result.failure(it) }
+        return api.requestToolCall(
+            token = token,
+            systemPrompt = prompts.system,
+            userPrompt = prompts.user,
+            contract = AssistantPlanToolContract.create(),
+        ).fold(
+            onSuccess = { call ->
+                val result = planValidator.validate(call, context)
+                if (result.isSuccess) accessManager.recordProviderSuccess()
+                else accessManager.recordProviderFailure(result.exceptionOrNull()!!)
+                result
+            },
+            onFailure = { exception ->
+                accessManager.recordProviderFailure(exception)
+                Result.failure(exception)
+            },
         )
     }
 

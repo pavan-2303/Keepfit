@@ -4,22 +4,22 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Archive
@@ -27,7 +27,6 @@ import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FitnessCenter
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -57,19 +56,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.keepfit.feature.workouts.WorkoutViewModel
-import com.keepfit.feature.workouts.ExerciseCatalogViewModel
+import com.keepfit.core.designsystem.KeepfitSectionHeader
 import com.keepfit.feature.workouts.data.Exercise
 import com.keepfit.feature.workouts.data.PlannedWorkout
 import com.keepfit.feature.workouts.data.WorkoutTemplate
 import com.keepfit.feature.workouts.today.TodayChangeRequest
 import com.keepfit.feature.workouts.today.TodayChangeType
+import java.text.NumberFormat
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 
@@ -78,7 +76,6 @@ fun WorkoutsScreen(
     modifier: Modifier = Modifier,
     onOpenStarterPlan: () -> Unit = {},
     viewModel: WorkoutViewModel = hiltViewModel(),
-    catalogViewModel: ExerciseCatalogViewModel = hiltViewModel(),
 ) {
     val exercises by viewModel.exercises.collectAsStateWithLifecycle()
     val templates by viewModel.templates.collectAsStateWithLifecycle()
@@ -89,8 +86,6 @@ fun WorkoutsScreen(
     val message by viewModel.message.collectAsStateWithLifecycle()
     val timerSeconds by viewModel.timerSeconds.collectAsStateWithLifecycle()
     val workoutWriteInProgress by viewModel.workoutWriteInProgress.collectAsStateWithLifecycle()
-    val liveCatalogState by catalogViewModel.liveState.collectAsStateWithLifecycle()
-    val catalogMessage by catalogViewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(message) {
@@ -99,13 +94,6 @@ fun WorkoutsScreen(
             viewModel.dismissMessage()
         }
     }
-    LaunchedEffect(catalogMessage) {
-        catalogMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            catalogViewModel.dismissMessage()
-        }
-    }
-
     if (activeWorkout != null) {
         ActiveWorkoutScreen(
             workout = requireNotNull(activeWorkout),
@@ -126,13 +114,12 @@ fun WorkoutsScreen(
     }
 
     var selectedTab by rememberSaveable { mutableStateOf(WorkoutTab.EXERCISES) }
-    var selectedExerciseSource by rememberSaveable { mutableStateOf(ExerciseSource.PERSONAL) }
     var showExerciseEditor by remember { mutableStateOf(false) }
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (selectedTab == WorkoutTab.EXERCISES && selectedExerciseSource == ExerciseSource.PERSONAL) {
+            if (selectedTab == WorkoutTab.EXERCISES) {
                 FloatingActionButton(onClick = { showExerciseEditor = true }) {
                     Icon(Icons.Outlined.Add, contentDescription = "Add exercise")
                 }
@@ -146,10 +133,9 @@ fun WorkoutsScreen(
                 .padding(padding),
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
-                SectionHero(
-                    label = "TRAINING",
+                KeepfitSectionHeader(
                     title = "Workouts",
-                    description = "Build your exercise library, reusable templates, and a weekly rhythm that is easy to maintain.",
+                    supportingText = "Build your exercise library, reusable templates, and a weekly rhythm that is easy to maintain.",
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 FilledTonalButton(
@@ -171,36 +157,13 @@ fun WorkoutsScreen(
                 }
             }
             when (selectedTab) {
-                WorkoutTab.EXERCISES -> Column(modifier = Modifier.fillMaxSize()) {
-                    ExerciseSourceRail(
-                        selected = selectedExerciseSource,
-                        personalCount = exercises.size,
-                        onSelect = { source ->
-                            viewModel.search("")
-                            selectedExerciseSource = source
-                        },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    )
-                    Box(modifier = Modifier.weight(1f)) {
-                        when (selectedExerciseSource) {
-                            ExerciseSource.PERSONAL -> ExerciseLibrary(
-                                exercises = exercises,
-                                onSearch = viewModel::search,
-                                onSave = viewModel::saveExercise,
-                                onArchive = viewModel::archiveExercise,
-                                onDelete = viewModel::deleteExercise,
-                            )
-                            ExerciseSource.OFFLINE -> OfflineExerciseGuide(
-                                personalExerciseNames = exercises.map { it.name }.toSet(),
-                                onAdd = catalogViewModel::addOfflineGuide,
-                            )
-                            ExerciseSource.LIVE -> LiveExerciseCatalogue(
-                                state = liveCatalogState,
-                                onSearch = catalogViewModel::searchLive,
-                            )
-                        }
-                    }
-                }
+                WorkoutTab.EXERCISES -> ExerciseLibrary(
+                    exercises = exercises,
+                    onSearch = viewModel::search,
+                    onSave = viewModel::saveExercise,
+                    onArchive = viewModel::archiveExercise,
+                    onDelete = viewModel::deleteExercise,
+                )
                 WorkoutTab.TEMPLATES -> TemplateLibrary(
                     exercises = exercises,
                     templates = templates,
@@ -270,7 +233,7 @@ fun TodayWorkoutSection(
 }
 
 @Composable
-private fun ExerciseLibrary(
+internal fun ExerciseLibrary(
     exercises: List<Exercise>,
     onSearch: (String) -> Unit,
     onSave: (String?, String, String, String, String, Boolean, Uri?) -> Unit,
@@ -281,31 +244,44 @@ private fun ExerciseLibrary(
     var editingExercise by remember { mutableStateOf<Exercise?>(null) }
     var deletingExercise by remember { mutableStateOf<Exercise?>(null) }
     var viewingExercise by remember { mutableStateOf<Exercise?>(null) }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = {
-                query = it
-                onSearch(it)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Search exercises") },
-            singleLine = true,
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-        if (exercises.isEmpty()) {
-            EmptyMessage("No exercises yet", "Add your first exercise with the + button.")
+        item(key = "exercise-search") {
+            Column {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        onSearch(it)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Search 1,316 exercises") },
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = NumberFormat.getIntegerInstance().format(exercises.size) +
+                        if (exercises.size == 1) " exercise" else " exercises",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
-        exercises.forEach { exercise ->
+        if (exercises.isEmpty()) {
+            item(key = "exercise-empty") {
+                EmptyMessage(
+                    if (query.isBlank()) "No exercises yet" else "No exercise matches",
+                    if (query.isBlank()) "Add your first exercise with the + button." else "Try a broader name, muscle, or equipment search.",
+                )
+            }
+        }
+        items(exercises, key = Exercise::id) { exercise ->
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp)
                     .animateContentSize()
                     .clickable { viewingExercise = exercise },
                 color = MaterialTheme.colorScheme.surface,
@@ -318,6 +294,14 @@ private fun ExerciseLibrary(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(exercise.name, style = MaterialTheme.typography.titleMedium)
                         Text(exercise.muscleGroup, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val metadata = listOfNotNull(exercise.equipment, exercise.targetMuscle)
+                        if (metadata.isNotEmpty()) {
+                            Text(
+                                metadata.joinToString(" • ") { it.catalogueLabel() },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         if (exercise.demo != null) {
                             Text(
                                 "Private demo attached",
@@ -484,15 +468,39 @@ private fun TemplateEditor(
     onSave: (String, List<String>) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
+    var exerciseQuery by remember { mutableStateOf("") }
     val selectedIds = remember { mutableStateListOf<String>() }
+    val filteredExercises = remember(exercises, exerciseQuery) {
+        exercises.filter { exercise ->
+            exerciseQuery.isBlank() || listOfNotNull(
+                exercise.name,
+                exercise.muscleGroup,
+                exercise.equipment,
+                exercise.targetMuscle,
+            ).any { it.contains(exerciseQuery, ignoreCase = true) }
+        }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("New workout template") },
         text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                OutlinedTextField(name, { name = it }, label = { Text("Template name") }, singleLine = true)
-                Spacer(modifier = Modifier.height(10.dp))
-                exercises.forEach { exercise ->
+            LazyColumn(modifier = Modifier.heightIn(max = 520.dp)) {
+                item(key = "template-name") {
+                    OutlinedTextField(name, { name = it }, label = { Text("Template name") }, singleLine = true)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = exerciseQuery,
+                        onValueChange = { exerciseQuery = it },
+                        label = { Text("Find exercises") },
+                        singleLine = true,
+                    )
+                    Text(
+                        "${selectedIds.size} selected",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                items(filteredExercises, key = Exercise::id) { exercise ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = exercise.id in selectedIds,
@@ -503,7 +511,9 @@ private fun TemplateEditor(
                         Text(exercise.name)
                     }
                 }
-                Text("Selected exercises start at 3 sets of 8-10 reps.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                item(key = "template-help") {
+                    Text("Selected exercises start at 3 sets of 8-10 reps.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         },
         confirmButton = { Button(onClick = { onSave(name, selectedIds.toList()) }) { Text("Save") } },
@@ -643,57 +653,8 @@ private fun ConfirmDeleteDialog(
     )
 }
 
-@Composable
-private fun SectionHero(
-    label: String,
-    title: String,
-    description: String,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.large,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer,
-                                MaterialTheme.colorScheme.secondaryContainer,
-                            ),
-                        ),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.FitnessCenter,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                AssistChip(onClick = {}, label = { Text(label) })
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = title, style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
+internal fun String.catalogueLabel(): String = replaceFirstChar { character ->
+    if (character.isLowerCase()) character.titlecase() else character.toString()
 }
 
 private enum class WorkoutTab(val label: String) {

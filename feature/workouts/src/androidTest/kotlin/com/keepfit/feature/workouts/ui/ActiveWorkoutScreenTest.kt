@@ -124,6 +124,46 @@ class ActiveWorkoutScreenTest {
         }
     }
 
+    @Test
+    fun supportedExerciseGuideOpensAndClosesWithoutChangingWorkoutState() {
+        val guidedWorkout = workout.copy(
+            exercises = workout.exercises.mapIndexed { index, exercise ->
+                if (index == 0) {
+                    exercise.copy(
+                        exerciseId = "5ca9f46f-1ae9-5ff8-9627-32cd73c56a13",
+                        exerciseName = "Barbell bench press",
+                    )
+                } else {
+                    exercise
+                }
+            },
+        )
+        composeRule.setContent {
+            KeepfitTheme {
+                ActiveWorkoutScreen(
+                    workout = guidedWorkout,
+                    exercises = library,
+                    timerSeconds = null,
+                    snackbarHostState = SnackbarHostState(),
+                    isWriting = false,
+                    onAddSet = { _, _, _ -> },
+                    onRepeatPrevious = {},
+                    onSaveNotes = { _, _ -> },
+                    onStartTimer = {},
+                    onSubstitute = { _, _ -> },
+                    onMinimum = {},
+                    onComplete = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("View guide").performScrollTo().performClick()
+        composeRule.onNodeWithText("Barbell bench press guide").assertIsDisplayed()
+        composeRule.onNodeWithText("Close guide").performClick()
+        composeRule.onNodeWithText("1 of 6 sets complete").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Set 1  ·  20 kg × 10")[0].assertIsDisplayed()
+    }
+
     private val workout = ActiveWorkout(
         sessionId = "active-session",
         templateName = "Foundation A",

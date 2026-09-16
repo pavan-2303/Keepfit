@@ -45,10 +45,14 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.keepfit.core.designsystem.KeepfitPaceCard
+import com.keepfit.core.designsystem.KeepfitStatusMark
 import com.keepfit.feature.workouts.data.ActiveExercise
 import com.keepfit.feature.workouts.data.ActiveWorkout
 import com.keepfit.feature.workouts.data.Exercise
 import com.keepfit.feature.workouts.data.WorkoutFeedback
+import com.keepfit.core.media.CoreExerciseGuidanceCatalog
+import com.keepfit.core.media.ExerciseGuidance
 
 @Composable
 fun ActiveWorkoutScreen(
@@ -71,6 +75,7 @@ fun ActiveWorkoutScreen(
     var substitutionSourceId by rememberSaveable { mutableStateOf<String?>(null) }
     var substitutionReplacementId by rememberSaveable { mutableStateOf<String?>(null) }
     var showCompletion by rememberSaveable { mutableStateOf(false) }
+    var visibleGuidanceId by rememberSaveable { mutableStateOf<String?>(null) }
 
     Scaffold(
         modifier = modifier,
@@ -106,6 +111,8 @@ fun ActiveWorkoutScreen(
                     exercise = exercise,
                     index = index,
                     enabled = !isWriting,
+                    guidance = CoreExerciseGuidanceCatalog.find(exercise.exerciseId),
+                    onViewGuide = { visibleGuidanceId = exercise.exerciseId },
                     onAddSet = onAddSet,
                     onRepeatPrevious = onRepeatPrevious,
                     onSaveNotes = onSaveNotes,
@@ -212,6 +219,14 @@ fun ActiveWorkoutScreen(
             },
         )
     }
+    visibleGuidanceId?.let { exerciseId ->
+        CoreExerciseGuidanceCatalog.find(exerciseId)?.let { guidance ->
+            ExerciseGuidanceDialog(
+                guidance = guidance,
+                onDismiss = { visibleGuidanceId = null },
+            )
+        }
+    }
 }
 
 @Composable
@@ -226,29 +241,34 @@ private fun SessionHeader(
         exercise.targetSets ?: exercise.sets.size.coerceAtLeast(1)
     }.coerceAtLeast(1)
     val progress = (completed.toFloat() / target).coerceIn(0f, 1f)
-    Text(
-        if (workout.sessionVariant == "FULL") "ACTIVE WORKOUT" else "${workout.sessionVariant} SESSION",
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-    )
-    Text(workout.templateName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-    Spacer(modifier = Modifier.height(10.dp))
-    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-    Spacer(modifier = Modifier.height(6.dp))
-    Text(
-        "$completed of $target sets complete",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Spacer(modifier = Modifier.height(10.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalButton(onClick = onStartTimer, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Outlined.Timer, contentDescription = null)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(timerSeconds?.toTimerLabel() ?: "Start rest")
-        }
-        OutlinedButton(onClick = onAdapt, modifier = Modifier.weight(1f)) {
-            Text("Adapt session")
+    KeepfitPaceCard {
+        KeepfitStatusMark(
+            label = if (workout.sessionVariant == "FULL") {
+                "Active workout"
+            } else {
+                "${workout.sessionVariant.lowercase().replaceFirstChar(Char::titlecase)} session"
+            },
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(workout.templateName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(10.dp))
+        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "$completed of $target sets complete",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(onClick = onStartTimer, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Outlined.Timer, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(timerSeconds?.toTimerLabel() ?: "Start rest")
+            }
+            OutlinedButton(onClick = onAdapt, modifier = Modifier.weight(1f)) {
+                Text("Adapt session")
+            }
         }
     }
 }
@@ -258,6 +278,8 @@ private fun ActiveExerciseCard(
     exercise: ActiveExercise,
     index: Int,
     enabled: Boolean,
+    guidance: ExerciseGuidance?,
+    onViewGuide: () -> Unit,
     onAddSet: (String, String, String) -> Unit,
     onRepeatPrevious: (String) -> Unit,
     onSaveNotes: (String, String) -> Unit,
@@ -288,6 +310,10 @@ private fun ActiveExerciseCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+
+            if (guidance != null) {
+                TextButton(onClick = onViewGuide) { Text("View guide") }
             }
 
             if (exercise.previousSets.isEmpty()) {

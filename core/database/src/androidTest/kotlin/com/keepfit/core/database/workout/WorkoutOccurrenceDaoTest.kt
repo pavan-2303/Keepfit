@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.keepfit.core.database.KeepfitDatabase
+import com.keepfit.core.database.profile.BodyProfileEntity
 import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
@@ -22,12 +23,15 @@ class WorkoutOccurrenceDaoTest {
     private lateinit var dao: WorkoutDao
 
     @Before
-    fun createDatabase() {
+    fun createDatabase() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, KeepfitDatabase::class.java)
             .allowMainThreadQueries()
             .build()
         dao = database.workoutDao()
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("", "Test", null, null, createdAt = 1L, updatedAt = 1L),
+        )
     }
 
     @After

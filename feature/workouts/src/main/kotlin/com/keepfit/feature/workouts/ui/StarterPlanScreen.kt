@@ -19,6 +19,9 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.QuestionAnswer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -69,6 +72,8 @@ const val starterPlanRoute = "starter-plan"
 @Composable
 fun StarterPlanRoute(
     onBack: () -> Unit,
+    onPlanManually: () -> Unit,
+    onAskCoach: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: StarterPlanViewModel = hiltViewModel(),
 ) {
@@ -82,7 +87,10 @@ fun StarterPlanRoute(
         onEquipmentToggled = viewModel::toggleEquipment,
         onAvoidToggled = viewModel::toggleAvoidedExercise,
         onNutritionDepthSelected = viewModel::selectNutritionDepth,
+        onChoosePlanningRoute = viewModel::showRouteChoice,
         onCreateDraft = viewModel::createDraft,
+        onPlanManually = onPlanManually,
+        onAskCoach = onAskCoach,
         onEditSetup = viewModel::editSetup,
         onTemplateNameChanged = viewModel::renameDay,
         onRemoveExercise = viewModel::removeExercise,
@@ -107,7 +115,10 @@ fun StarterPlanScreen(
     onEquipmentToggled: (EquipmentOption) -> Unit = {},
     onAvoidToggled: (String) -> Unit = {},
     onNutritionDepthSelected: (NutritionTrackingDepth) -> Unit = {},
+    onChoosePlanningRoute: () -> Unit = {},
     onCreateDraft: () -> Unit = {},
+    onPlanManually: () -> Unit = {},
+    onAskCoach: () -> Unit = {},
     onEditSetup: () -> Unit = {},
     onTemplateNameChanged: (Int, String) -> Unit = { _, _ -> },
     onRemoveExercise: (Int, String) -> Unit = { _, _ -> },
@@ -126,9 +137,21 @@ fun StarterPlanScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(if (state.stage == StarterPlanStage.PREVIEW) "Review your week" else "Starter week") },
+                title = {
+                    Text(
+                        when (state.stage) {
+                            StarterPlanStage.PREVIEW -> "Review your week"
+                            StarterPlanStage.ROUTE_CHOICE -> "Choose your path"
+                            else -> "Plan your start"
+                        },
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = if (state.stage == StarterPlanStage.PREVIEW) onEditSetup else onBack) {
+                    IconButton(
+                        onClick = if (
+                            state.stage == StarterPlanStage.PREVIEW || state.stage == StarterPlanStage.ROUTE_CHOICE
+                        ) onEditSetup else onBack,
+                    ) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -146,7 +169,13 @@ fun StarterPlanScreen(
                 onEquipmentToggled = onEquipmentToggled,
                 onAvoidToggled = onAvoidToggled,
                 onNutritionDepthSelected = onNutritionDepthSelected,
+                onChoosePlanningRoute = onChoosePlanningRoute,
+                modifier = Modifier.padding(padding),
+            )
+            StarterPlanStage.ROUTE_CHOICE -> PlanningRouteContent(
                 onCreateDraft = onCreateDraft,
+                onPlanManually = onPlanManually,
+                onAskCoach = onAskCoach,
                 modifier = Modifier.padding(padding),
             )
             StarterPlanStage.PREVIEW -> PreviewContent(
@@ -173,7 +202,7 @@ private fun SetupContent(
     onEquipmentToggled: (EquipmentOption) -> Unit,
     onAvoidToggled: (String) -> Unit,
     onNutritionDepthSelected: (NutritionTrackingDepth) -> Unit,
-    onCreateDraft: () -> Unit,
+    onChoosePlanningRoute: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalConfiguration.current.locales[0]
@@ -183,7 +212,11 @@ private fun SetupContent(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Text("Step ${step + 2} of 8", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text(
+            "Training setup · ${step + 1} of $stepCount",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
         LinearProgressIndicator(progress = { (step + 1f) / stepCount }, modifier = Modifier.fillMaxWidth())
         when (step) {
             0 -> {
@@ -233,18 +266,10 @@ private fun SetupContent(
             }
             5 -> {
                 SectionLabel("Anything you prefer not to do?", "Optional. This is a planning preference, not injury treatment.")
-                StarterExerciseCatalog.exercises.forEach { exercise ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = exercise.key in state.input.avoidedExerciseKeys,
-                            onCheckedChange = { onAvoidToggled(exercise.key) },
-                        )
-                        Column {
-                            Text(exercise.name, style = MaterialTheme.typography.titleMedium)
-                            Text(exercise.muscleGroup, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
+                MovementConstraintPicker(
+                    selectedKeys = state.input.avoidedExerciseKeys,
+                    onToggle = onAvoidToggled,
+                )
             }
             else -> {
                 SectionLabel(
@@ -270,16 +295,142 @@ private fun SetupContent(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (step > 0) OutlinedButton(onClick = { step-- }, modifier = Modifier.weight(1f)) { Text("Back") }
             Button(
-                onClick = { if (step == stepCount - 1) onCreateDraft() else step++ },
+                onClick = { if (step == stepCount - 1) onChoosePlanningRoute() else step++ },
                 enabled = step != 2 || state.input.preferredDays.isNotEmpty(),
                 modifier = Modifier.weight(1f),
-            ) { Text(if (step == stepCount - 1) "Review my week" else "Continue") }
+            ) { Text(if (step == stepCount - 1) "Choose how to plan" else "Continue") }
         }
         Text(
             "Your answers stay on this device. The starter week is created offline and remains editable.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MovementConstraintPicker(
+    selectedKeys: Set<String>,
+    onToggle: (String) -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val selected = StarterExerciseCatalog.exercises.filter { it.key in selectedKeys }
+
+    if (selected.isNotEmpty()) {
+        Text("Avoiding ${selected.size}", style = MaterialTheme.typography.labelLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            selected.forEach { exercise ->
+                FilterChip(
+                    selected = true,
+                    onClick = { onToggle(exercise.key) },
+                    label = { Text(exercise.name) },
+                )
+            }
+        }
+    }
+    OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+        Text(if (expanded) "Hide exercise list" else "Choose exercises to avoid")
+    }
+    if (expanded) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Search exercises") },
+            singleLine = true,
+        )
+        val matches = StarterExerciseCatalog.exercises.filter { exercise ->
+            query.isBlank() || exercise.name.contains(query, ignoreCase = true) ||
+                exercise.muscleGroup.contains(query, ignoreCase = true)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            matches.forEach { exercise ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = exercise.key in selectedKeys,
+                        onCheckedChange = { onToggle(exercise.key) },
+                    )
+                    Column {
+                        Text(exercise.name, style = MaterialTheme.typography.titleMedium)
+                        Text(exercise.muscleGroup, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (matches.isEmpty()) {
+                Text("No matching starter exercises.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlanningRouteContent(
+    onCreateDraft: () -> Unit,
+    onPlanManually: () -> Unit,
+    onAskCoach: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text("Choose your next step", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "Your answers are saved. Pick the amount of help you want right now.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        PlanningRouteButton(
+            title = "Build an offline starter week",
+            supporting = "Preview a simple, editable week created entirely on this device.",
+            icon = { Icon(Icons.Outlined.FitnessCenter, contentDescription = null) },
+            onClick = onCreateDraft,
+        )
+        PlanningRouteButton(
+            title = "Plan it myself",
+            supporting = "Go straight to Plan and build your own exercises, templates, and week.",
+            icon = { Icon(Icons.Outlined.EditNote, contentDescription = null) },
+            onClick = onPlanManually,
+        )
+        PlanningRouteButton(
+            title = "Let AI personalize a draft",
+            supporting = "Open Coach to create a catalogue-backed plan from your saved answers. OpenRouter connection is required.",
+            icon = { Icon(Icons.Outlined.QuestionAnswer, contentDescription = null) },
+            onClick = onAskCoach,
+        )
+        Text(
+            "The AI draft is only a preview. Your current plan stays unchanged until you review and apply it.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun PlanningRouteButton(
+    title: String,
+    supporting: String,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            icon()
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    supporting,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

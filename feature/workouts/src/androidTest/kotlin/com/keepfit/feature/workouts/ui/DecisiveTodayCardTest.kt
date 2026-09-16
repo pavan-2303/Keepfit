@@ -1,6 +1,14 @@
 package com.keepfit.feature.workouts.ui
 
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -55,7 +63,7 @@ class DecisiveTodayCardTest {
             }
         }
 
-        composeRule.onNodeWithText("TODAY'S MOVE").assertIsDisplayed()
+        composeRule.onNodeWithText("Today's move").assertIsDisplayed()
         composeRule.onNodeWithText("Foundation A").assertIsDisplayed()
         composeRule.onNodeWithText("Start now").performClick()
         composeRule.runOnIdle { assertTrue(started) }
@@ -193,5 +201,47 @@ class DecisiveTodayCardTest {
         }
         composeRule.onNodeWithText("Recovery day").assertIsDisplayed()
         composeRule.onNodeWithText("Adjust plan").assertIsDisplayed()
+    }
+
+    @Test
+    fun plannedStateKeepsItsDecisionAndActionsReachableAtCompactWidthAndLargeText() {
+        composeRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                KeepfitTheme(reduceMotion = true) {
+                    Box(Modifier.width(360.dp).height(640.dp)) {
+                        DecisiveTodayCard(
+                            state = TodayWorkoutState(TodayWorkoutStatus.PLANNED, primary = action),
+                            today = today,
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Today's move").assertIsDisplayed()
+        composeRule.onNodeWithText("Foundation A").assertIsDisplayed()
+        composeRule.onNodeWithText("Start now").assertIsDisplayed()
+        composeRule.onNodeWithText("Adapt today").assertIsDisplayed()
+    }
+
+    @Test
+    fun recoveryCopyStacksTheExplanationBelowTheTitle() {
+        composeRule.setContent {
+            KeepfitTheme {
+                DecisiveTodayCard(
+                    state = TodayWorkoutState(TodayWorkoutStatus.REST_DAY),
+                    today = today,
+                )
+            }
+        }
+
+        val titleBounds = composeRule.onNodeWithText("Recovery day").fetchSemanticsNode().boundsInRoot
+        val descriptionBounds = composeRule
+            .onNodeWithText("No workout planned. Adjust the week if needed.")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        assertTrue(descriptionBounds.top >= titleBounds.bottom)
     }
 }

@@ -50,6 +50,24 @@ class AssistantSettingsRepositoryTest {
         )
     }
 
+    @Test
+    fun credentialRecoveryConsentDefaultsOffAndPersistsExplicitOptIn() = runBlocking {
+        assertFalse(repository.observeSettings().first().credentialRecoveryEnabled)
+
+        repository.updateCredentialRecoveryEnabled(true)
+
+        assertEquals(true, repository.observeSettings().first().credentialRecoveryEnabled)
+    }
+
+    @Test
+    fun reducedMotionDefaultsOffAndPersistsExplicitPreference() = runBlocking {
+        assertFalse(repository.observeSettings().first().reduceMotion)
+
+        repository.updateReduceMotion(true)
+
+        assertEquals(true, repository.observeSettings().first().reduceMotion)
+    }
+
     private fun dataStoreFile(): File =
         context.filesDir.parentFile
             ?.resolve("datastore/keepfit_settings.preferences_pb")

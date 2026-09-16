@@ -1,6 +1,10 @@
 package com.keepfit.feature.workouts.ui
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,14 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -31,18 +32,22 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keepfit.feature.workouts.data.Exercise
+import com.keepfit.core.designsystem.KeepfitPaceCard
+import com.keepfit.core.designsystem.KeepfitStatusMark
+import com.keepfit.core.designsystem.LocalKeepfitMotionSettings
 import com.keepfit.feature.workouts.today.TodayChangeRequest
 import com.keepfit.feature.workouts.today.TodayChangeType
 import com.keepfit.feature.workouts.today.TodayWorkoutAction
@@ -74,95 +79,106 @@ fun DecisiveTodayCard(
     var dialog by rememberSaveable { mutableStateOf<TodayActionDialog?>(null) }
     val primary = state.primary
     val largeText = LocalDensity.current.fontScale >= 1.5f
+    val motionSettings = LocalKeepfitMotionSettings.current
+    val hapticFeedback = LocalHapticFeedback.current
+    var previousStatus by rememberSaveable { mutableStateOf(state.status) }
 
-    Surface(
+    LaunchedEffect(state.status) {
+        if (previousStatus != TodayWorkoutStatus.COMPLETED && state.status == TodayWorkoutStatus.COMPLETED) {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+        }
+        previousStatus = state.status
+    }
+
+    KeepfitPaceCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.primaryContainer,
+        accentColor = when (state.status) {
+            TodayWorkoutStatus.COMPLETED -> MaterialTheme.colorScheme.secondary
+            TodayWorkoutStatus.RESUME -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.primary
+        },
     ) {
-        Column(
-            modifier = Modifier
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.78f),
-                        ),
-                    ),
-                )
-                .padding(if (largeText) 14.dp else 20.dp),
-        ) {
-            TodayCardHeader(status = state.status)
-            Spacer(modifier = Modifier.height(if (largeText) 10.dp else 18.dp))
+        TodayCardHeader(status = state.status)
+        Spacer(modifier = Modifier.height(if (largeText) 10.dp else 18.dp))
+        if (motionSettings.reduceMotion) {
             TodayCardCopy(state = state, largeText = largeText)
-            Spacer(modifier = Modifier.height(if (largeText) 10.dp else 18.dp))
-            TodayPrimaryAction(
-                state = state,
-                isWorking = isWorking,
-                onStart = onStart,
-                onResume = onResume,
-                onRestore = onRestore,
-                onOpenWorkouts = onOpenWorkouts,
-            )
-            if (state.status == TodayWorkoutStatus.PLANNED && primary != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(
-                    onClick = { dialog = TodayActionDialog.ADAPT },
-                    enabled = !isWorking,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Adapt today")
-                }
+        } else {
+            AnimatedContent(
+                targetState = state,
+                transitionSpec = {
+                    fadeIn(tween(160)) togetherWith fadeOut(tween(100))
+                },
+                label = "Today workout state",
+            ) { animatedState ->
+                TodayCardCopy(state = animatedState, largeText = largeText)
             }
-            state.missed?.let { missed ->
-                Spacer(modifier = Modifier.height(14.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = MaterialTheme.shapes.medium,
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(
-                            text = "MISSED, NOT LOST",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = missed.originalDate.format(dayFormatter),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(
-                            onClick = {
-                                onPreviewChange(
-                                    missed.request(
-                                        type = TodayChangeType.RESCHEDULE,
-                                        targetDate = today,
-                                    ),
-                                )
-                            },
-                            enabled = !isWorking,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Icon(Icons.Outlined.Refresh, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Recover ${missed.title}")
-                        }
+        }
+        Spacer(modifier = Modifier.height(if (largeText) 10.dp else 18.dp))
+        TodayPrimaryAction(
+            state = state,
+            isWorking = isWorking,
+            onStart = onStart,
+            onResume = onResume,
+            onRestore = onRestore,
+            onOpenWorkouts = onOpenWorkouts,
+        )
+        if (state.status == TodayWorkoutStatus.PLANNED && primary != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
+                onClick = { dialog = TodayActionDialog.ADAPT },
+                enabled = !isWorking,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Adapt today")
+            }
+        }
+        state.missed?.let { missed ->
+            Spacer(modifier = Modifier.height(14.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "A session to recover",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = missed.originalDate.format(dayFormatter),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            onPreviewChange(
+                                missed.request(
+                                    type = TodayChangeType.RESCHEDULE,
+                                    targetDate = today,
+                                ),
+                            )
+                        },
+                        enabled = !isWorking,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Outlined.Refresh, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Recover ${missed.title}")
                     }
                 }
             }
-            message?.let {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                TextButton(onClick = onDismissMessage) {
-                    Text("Dismiss")
-                }
+        }
+        message?.let {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+            TextButton(onClick = onDismissMessage) {
+                Text("Dismiss")
             }
         }
     }
@@ -216,34 +232,17 @@ fun DecisiveTodayCard(
 
 @Composable
 private fun TodayCardHeader(status: TodayWorkoutStatus) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(
-            shape = CircleShape,
+    Column {
+        KeepfitStatusMark(
+            label = "Today's move",
             color = MaterialTheme.colorScheme.primary,
-        ) {
-            Icon(
-                imageVector = status.icon(),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .padding(9.dp)
-                    .size(22.dp),
-            )
-        }
-        Spacer(modifier = Modifier.width(10.dp))
-        Column {
-            Text(
-                text = "TODAY'S MOVE",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = status.label(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        }
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = status.label(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -268,17 +267,19 @@ private fun TodayCardCopy(state: TodayWorkoutState, largeText: Boolean) {
         TodayWorkoutStatus.SKIPPED -> "Skipped for today"
         TodayWorkoutStatus.REST_DAY -> "No workout planned. Adjust the week if needed."
     }
-    Text(
-        text = title,
-        style = if (largeText) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
-    )
-    Spacer(modifier = Modifier.height(if (largeText) 2.dp else 6.dp))
-    Text(
-        text = description,
-        style = if (largeText) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onPrimaryContainer,
-    )
+    Column {
+        Text(
+            text = title,
+            style = if (largeText) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.height(if (largeText) 2.dp else 6.dp))
+        Text(
+            text = description,
+            style = if (largeText) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -490,7 +491,7 @@ private fun TodayChangePreviewDialog(
 @Composable
 private fun PreviewLine(label: String, value: String) {
     Column {
-        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         Text(value, style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -524,25 +525,13 @@ private fun TodayWorkoutAction.plannedDescription(): String {
 }
 
 private fun TodayWorkoutStatus.label(): String = when (this) {
-    TodayWorkoutStatus.LOADING -> "CHECKING PLAN"
-    TodayWorkoutStatus.RESUME -> "IN PROGRESS"
-    TodayWorkoutStatus.COMPLETED -> "DONE"
-    TodayWorkoutStatus.PLANNED -> "READY"
-    TodayWorkoutStatus.RESCHEDULED -> "MOVED"
-    TodayWorkoutStatus.SKIPPED -> "SKIPPED"
-    TodayWorkoutStatus.REST_DAY -> "RECOVERY"
-}
-
-private fun TodayWorkoutStatus.icon(): ImageVector = when (this) {
-    TodayWorkoutStatus.COMPLETED -> Icons.Outlined.CheckCircle
-    TodayWorkoutStatus.RESCHEDULED -> Icons.Outlined.EditCalendar
-    TodayWorkoutStatus.RESUME,
-    TodayWorkoutStatus.PLANNED,
-    -> Icons.Outlined.Bolt
-    TodayWorkoutStatus.LOADING,
-    TodayWorkoutStatus.SKIPPED,
-    TodayWorkoutStatus.REST_DAY,
-    -> Icons.Outlined.FitnessCenter
+    TodayWorkoutStatus.LOADING -> "Checking plan"
+    TodayWorkoutStatus.RESUME -> "In progress"
+    TodayWorkoutStatus.COMPLETED -> "Done"
+    TodayWorkoutStatus.PLANNED -> "Ready"
+    TodayWorkoutStatus.RESCHEDULED -> "Moved"
+    TodayWorkoutStatus.SKIPPED -> "Skipped"
+    TodayWorkoutStatus.REST_DAY -> "Recovery"
 }
 
 private enum class TodayActionDialog {

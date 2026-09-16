@@ -104,7 +104,7 @@ class BackupArchiveCodec(
         } catch (error: JsonSyntaxException) {
             throw IllegalArgumentException("The backup manifest is invalid.", error)
         }
-        require(manifest.formatVersion == BACKUP_MANIFEST_VERSION) {
+        require(manifest.formatVersion in 1..BACKUP_MANIFEST_VERSION) {
             "This backup format version is not supported."
         }
 
@@ -254,7 +254,7 @@ class BackupArchiveCodec(
         )
 
     companion object {
-        internal const val BACKUP_MANIFEST_VERSION = 1
+        internal const val BACKUP_MANIFEST_VERSION = 3
         internal const val MANIFEST_ENTRY = "manifest.json"
         internal const val DATABASE_ENTRY = "database.sqlite"
         internal const val SETTINGS_ENTRY = "settings.json"

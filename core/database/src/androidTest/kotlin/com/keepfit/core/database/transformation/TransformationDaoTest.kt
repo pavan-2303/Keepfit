@@ -36,6 +36,16 @@ class TransformationDaoTest {
                 updatedAt = 1L,
             ),
         )
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity(
+                id = "profile-two",
+                displayName = "Second",
+                heightCm = null,
+                birthDate = null,
+                createdAt = 2L,
+                updatedAt = 2L,
+            ),
+        )
         dao = database.transformationDao()
     }
 
@@ -99,7 +109,7 @@ class TransformationDaoTest {
                 id = "photo-1",
                 transformationCycleId = "cycle-1",
                 captureDate = LocalDate.parse("2026-05-25"),
-                angle = TransformationPhotoAngle.FRONT,
+                poseKey = "front_relaxed",
                 relativePath = "media/transformation/cycle-1/front.jpg",
                 mimeType = "image/jpeg",
                 sizeBytes = 123L,
@@ -110,7 +120,7 @@ class TransformationDaoTest {
         val cycles = dao.observeCycles("profile-id").first()
         assertEquals(1, cycles.size)
         assertEquals("Cycle one", cycles.single().cycle.notes)
-        assertEquals(listOf(TransformationPhotoAngle.FRONT), cycles.single().photos.map { it.angle })
+        assertEquals(listOf("front_relaxed"), cycles.single().photos.map { it.poseKey })
     }
 
     @Test
@@ -131,7 +141,7 @@ class TransformationDaoTest {
                 id = "photo-1",
                 transformationCycleId = "cycle-1",
                 captureDate = LocalDate.parse("2026-05-25"),
-                angle = TransformationPhotoAngle.FRONT,
+                poseKey = "front_relaxed",
                 relativePath = "media/transformation/cycle-1/front.jpg",
                 mimeType = "image/jpeg",
                 sizeBytes = 123L,
@@ -139,7 +149,33 @@ class TransformationDaoTest {
             ),
         )
 
-        val photo = dao.findPhoto("cycle-1", LocalDate.parse("2026-05-25"), TransformationPhotoAngle.FRONT)
+        val photo = dao.findPhoto("cycle-1", LocalDate.parse("2026-05-25"), "front_relaxed")
         assertEquals("photo-1", photo?.id)
+    }
+
+    @Test
+    fun optionalPosePreferencesAreIsolatedByProfile() = runBlocking {
+        dao.upsertPosePreference(
+            TransformationPosePreferenceEntity(
+                bodyProfileId = "profile-id",
+                poseKey = "front_double_biceps",
+                updatedAt = 10L,
+            ),
+        )
+        dao.upsertPosePreference(
+            TransformationPosePreferenceEntity(
+                bodyProfileId = "profile-two",
+                poseKey = "back_lat_spread",
+                updatedAt = 11L,
+            ),
+        )
+
+        assertEquals(listOf("front_double_biceps"), dao.observeOptionalPoseKeys("profile-id").first())
+        assertEquals(listOf("back_lat_spread"), dao.observeOptionalPoseKeys("profile-two").first())
+
+        dao.deletePosePreference("profile-id", "front_double_biceps")
+
+        assertEquals(emptyList<String>(), dao.observeOptionalPoseKeys("profile-id").first())
+        assertEquals(listOf("back_lat_spread"), dao.observeOptionalPoseKeys("profile-two").first())
     }
 }

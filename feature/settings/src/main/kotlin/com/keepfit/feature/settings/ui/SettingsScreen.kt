@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +61,9 @@ fun SettingsScreen(
     externalMessage: String? = null,
     onExternalMessageShown: () -> Unit = {},
     onTestAssistantConnection: () -> Unit = {},
+    credentialRecoveryEnabled: Boolean = false,
+    credentialRecoveryAvailable: Boolean = false,
+    onCredentialRecoveryChanged: (Boolean) -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -156,6 +162,13 @@ fun SettingsScreen(
             Text(text = selectedSection!!.title, style = MaterialTheme.typography.headlineSmall)
             Text(selectedSection!!.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(18.dp))
+            if (selectedSection == SettingsSection.APPEARANCE) SettingsCard("Motion") {
+                MotionPreferenceRow(
+                    reduceMotion = appSettings.reduceMotion,
+                    onReduceMotionChanged = viewModel::saveReduceMotion,
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             if (selectedSection == SettingsSection.GOALS) SettingsCard("Nutrition goals") {
                 OutlinedTextField(calorieGoal, { calorieGoal = it }, label = { Text("Calories") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -266,9 +279,14 @@ fun SettingsScreen(
             if (selectedSection == SettingsSection.INTEGRATIONS) AssistantSettingsCard(
                 onTestAssistantConnection = onTestAssistantConnection,
                 onOpenAssistant = onOpenAssistant,
+                credentialRecoveryEnabled = credentialRecoveryEnabled,
+                credentialRecoveryAvailable = credentialRecoveryAvailable,
+                onCredentialRecoveryChanged = onCredentialRecoveryChanged,
             )
             Spacer(modifier = Modifier.height(12.dp))
             if (selectedSection == SettingsSection.DATA) SettingsCard("Backup and restore") {
+                BackupRecoveryOverview()
+                Spacer(modifier = Modifier.height(18.dp))
                 Text(
                     "Encrypted backup",
                     style = MaterialTheme.typography.titleSmall,
@@ -345,7 +363,40 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            if (selectedSection == SettingsSection.ABOUT) {
+                Spacer(modifier = Modifier.height(12.dp))
+                ExerciseCatalogueLegalNotice()
+            }
         }
+    }
+}
+
+@Composable
+internal fun ExerciseCatalogueLegalNotice() {
+    SettingsCard("Exercise catalogue") {
+        Text(
+            "Exercises Dataset by Hasan Emir Yıldırım. Metadata and English instructions are included under the MIT License.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "Pinned source revision: 7455efae41b3",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "Copyright (c) 2026 Hasan Emir Yıldırım. Gym visual images and GIFs are not included.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "25 original Keepfit movement figures are included as code-native artwork. They do not reuse the dataset's Gym visual media.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }
 
@@ -353,6 +404,9 @@ fun SettingsScreen(
 internal fun AssistantSettingsCard(
     onTestAssistantConnection: () -> Unit,
     onOpenAssistant: () -> Unit,
+    credentialRecoveryEnabled: Boolean = false,
+    credentialRecoveryAvailable: Boolean = false,
+    onCredentialRecoveryChanged: (Boolean) -> Unit = {},
 ) {
     SettingsCard("OpenRouter assistant") {
         Text(
@@ -373,6 +427,26 @@ internal fun AssistantSettingsCard(
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(modifier = Modifier.height(10.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Recover access after reinstall", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    if (credentialRecoveryAvailable) {
+                        "Optional. Google Block Store keeps the OpenRouter token separate from fitness backup and Keepfit verifies it before reuse."
+                    } else {
+                        "Unavailable on this device. You can always reconnect OpenRouter from Coach."
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = credentialRecoveryEnabled,
+                onCheckedChange = onCredentialRecoveryChanged,
+                enabled = credentialRecoveryAvailable || credentialRecoveryEnabled,
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
         FlowRow {
             FilledTonalButton(onClick = onTestAssistantConnection) {
                 Text("Check saved access")
@@ -391,11 +465,63 @@ private enum class SettingsSection(
     val title: String,
     val description: String,
 ) {
+    APPEARANCE("Appearance and accessibility", "Motion and visual comfort"),
     GOALS("Goals and nutrition", "Daily calorie and macro targets"),
     TRAINING("Training preferences", "Units, rest timer, and reminders"),
     INTEGRATIONS("Connections", "Coach and optional device services"),
-    DATA("Data and backup", "Export or restore your private local data"),
+    DATA("Data and backup", "Automatic recovery and complete encrypted backup"),
     ABOUT("About and safety", "Privacy and guidance boundaries"),
+}
+
+@Composable
+internal fun MotionPreferenceRow(
+    reduceMotion: Boolean,
+    onReduceMotionChanged: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
+            .toggleable(
+                value = reduceMotion,
+                role = Role.Switch,
+                onValueChange = onReduceMotionChanged,
+            )
+            .padding(vertical = 4.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("Reduce motion", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Keeps every state change visible while removing nonessential transitions and celebrations.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(checked = reduceMotion, onCheckedChange = null)
+    }
+}
+
+@Composable
+internal fun BackupRecoveryOverview() {
+    Text(
+        "Automatic recovery",
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+        "Android may restore your fitness records and ordinary settings after reinstall when device backup is available. Timing and restore are controlled by Android and are not guaranteed.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+        "Private photos, imported exercise media, and OpenRouter access are not included. Use an encrypted Keepfit backup for complete recovery.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable

@@ -1,9 +1,8 @@
 package com.keepfit.feature.transformation.data
 
-import com.keepfit.core.database.transformation.TransformationPhotoAngle
+import com.keepfit.core.model.TransformationPose
+import com.keepfit.core.model.calculateBodyMassIndex
 import java.time.LocalDate
-import kotlin.math.pow
-import kotlin.math.round
 
 data class BodyMeasurement(
     val id: String,
@@ -23,9 +22,9 @@ data class BodyMeasurement(
 data class TransformationPhoto(
     val id: String,
     val captureDate: LocalDate,
-    val angle: TransformationPhotoAngle,
+    val pose: TransformationPose,
     val relativePath: String,
-    val absolutePath: String,
+    val absolutePath: String?,
     val mimeType: String,
     val sizeBytes: Long,
     val createdAt: Long,
@@ -45,6 +44,22 @@ data class TransformationCycleDay(
     val dayNumber: Int,
     val photos: List<TransformationPhoto>,
 )
+
+data class PoseCaptureProgress(
+    val captured: Int,
+    val enabled: Int,
+)
+
+fun calculatePoseCaptureProgress(
+    day: TransformationCycleDay?,
+    enabledPoses: List<TransformationPose>,
+): PoseCaptureProgress {
+    val capturedPoses = day?.photos.orEmpty().map(TransformationPhoto::pose).toSet()
+    return PoseCaptureProgress(
+        captured = enabledPoses.count(capturedPoses::contains),
+        enabled = enabledPoses.size,
+    )
+}
 
 data class TransformationComparison(
     val leftDay: TransformationCycleDay,
@@ -75,10 +90,7 @@ data class CurrentProgressOverview(
 )
 
 fun calculateBmi(heightCm: Double?, weightKg: Double?): Double? {
-    val normalizedHeightCm = heightCm?.takeIf { it > 0.0 } ?: return null
-    val normalizedWeightKg = weightKg?.takeIf { it > 0.0 } ?: return null
-    val bmi = normalizedWeightKg / (normalizedHeightCm / 100.0).pow(2)
-    return round(bmi * 10.0) / 10.0
+    return calculateBodyMassIndex(heightCm, weightKg)
 }
 
 fun Double.formatMetric(): String =

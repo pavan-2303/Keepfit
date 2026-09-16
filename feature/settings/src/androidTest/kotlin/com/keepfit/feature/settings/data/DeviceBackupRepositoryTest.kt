@@ -16,8 +16,8 @@ import com.keepfit.core.database.profile.BodyProfileEntity
 import com.keepfit.core.database.review.WeeklyReviewOutcomeEntity
 import com.keepfit.core.database.transformation.BodyMeasurementEntity
 import com.keepfit.core.database.transformation.TransformationCycleEntity
-import com.keepfit.core.database.transformation.TransformationPhotoAngle
 import com.keepfit.core.database.transformation.TransformationPhotoEntity
+import com.keepfit.core.database.transformation.TransformationPosePreferenceEntity
 import com.keepfit.core.database.workout.ExerciseEntity
 import com.keepfit.core.database.workout.ExerciseLogEntity
 import com.keepfit.core.database.workout.ExerciseMediaEntity
@@ -31,6 +31,7 @@ import com.keepfit.core.database.workout.WorkoutOccurrenceEntity
 import com.keepfit.core.database.workout.WorkoutOccurrenceExerciseEntity
 import com.keepfit.core.preferences.AppSettingsRepository
 import com.keepfit.core.preferences.DataStoreAppSettingsRepository
+import com.keepfit.core.preferences.DataStoreActiveProfileStore
 import com.keepfit.core.preferences.MeasurementUnit
 import com.keepfit.core.preferences.NutritionTrackingDepth
 import com.keepfit.core.preferences.ReminderScheduler
@@ -66,6 +67,7 @@ class DeviceBackupRepositoryTest {
             context = context,
             reminderScheduler = NoOpReminderScheduler,
         )
+        DataStoreActiveProfileStore(context).clearSelection()
         repository = DeviceBackupRepository(context, database, settingsRepository)
     }
 
@@ -106,6 +108,7 @@ class DeviceBackupRepositoryTest {
             exerciseMediaBytes = exerciseMediaBytes,
             transformationPhotoBytes = transformationPhotoBytes,
         )
+        settingsRepository.updateReduceMotion(true)
         val assistantCredentialMarker = "assistant-credential-must-not-enter-backup"
         context.getSharedPreferences("keepfit_assistant_secure", Context.MODE_PRIVATE)
             .edit()
@@ -154,7 +157,8 @@ class DeviceBackupRepositoryTest {
         assertEquals(1, preview.recordCounts["foods"])
         assertEquals(1, preview.recordCounts["diaryEntries"])
         assertEquals(1, preview.recordCounts["mealQualityCheckIns"])
-        assertEquals(1, preview.recordCounts["exercises"])
+        assertEquals(1_317, preview.recordCounts["exercises"])
+        assertEquals(1, preview.recordCounts["catalogueImports"])
         assertEquals(1, preview.recordCounts["plannedWorkouts"])
         assertEquals(1, preview.recordCounts["workoutOccurrences"])
         assertEquals(1, preview.recordCounts["workoutOccurrenceExercises"])
@@ -162,6 +166,7 @@ class DeviceBackupRepositoryTest {
         assertEquals(1, preview.recordCounts["measurements"])
         assertEquals(1, preview.recordCounts["transformationCycles"])
         assertEquals(1, preview.recordCounts["transformationPhotos"])
+        assertEquals(1, preview.recordCounts["transformationPosePreferences"])
         assertEquals(
             (exerciseMediaBytes.size + transformationPhotoBytes.size).toLong(),
             preview.mediaSizeBytes,
@@ -196,12 +201,19 @@ class DeviceBackupRepositoryTest {
         val restoredPhoto = database.transformationDao().findPhoto(
             cycleId = cycleId,
             captureDate = frontPhotoDate,
-            angle = TransformationPhotoAngle.FRONT,
+            poseKey = "front_relaxed",
         )
         assertNotNull(restoredPhoto)
+        assertEquals(
+            listOf("front_double_biceps"),
+            database.transformationDao().observeOptionalPoseKeys(profileId).first(),
+        )
 
         val restoredExerciseMedia = database.workoutDao().findExerciseMedia(exerciseId)
         assertNotNull(restoredExerciseMedia)
+        val restoredBundledExercise = database.workoutDao().observeExercises("3/4 sit-up").first().single()
+        assertEquals("hasaneyldrm/exercises-dataset", restoredBundledExercise.source)
+        assertEquals("0001", restoredBundledExercise.sourceId)
         val restoredOccurrence = database.workoutDao().findOccurrenceDetails("occurrence-1")
         assertNotNull(restoredOccurrence)
         assertEquals("Barbell Row", restoredOccurrence?.exercises?.single()?.exerciseNameSnapshot)
@@ -237,11 +249,43 @@ class DeviceBackupRepositoryTest {
         assertEquals(45, restoredSettings.workoutReminder.minute)
         assertEquals(true, restoredSettings.transformationReminder.enabled)
         assertEquals(DayOfWeek.THURSDAY, restoredSettings.transformationReminder.dayOfWeek)
+        assertTrue(restoredSettings.reduceMotion)
 
         val restoredExerciseMediaFile = File(context.filesDir, restoredExerciseMedia!!.relativePath)
         val restoredTransformationPhotoFile = File(context.filesDir, restoredPhoto!!.relativePath)
         assertArrayEquals(exerciseMediaBytes, restoredExerciseMediaFile.readBytes())
         assertArrayEquals(transformationPhotoBytes, restoredTransformationPhotoFile.readBytes())
+    }
+
+    @Test
+    fun backupRestoresAllProfileSettingsAndTheActiveProfile() = runBlocking {
+        val activeStore = DataStoreActiveProfileStore(context)
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("profile-a", "Alex", 170.0, null, createdAt = 1L, updatedAt = 1L),
+        )
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("profile-b", "Sam", 165.0, null, createdAt = 2L, updatedAt = 2L),
+        )
+        settingsRepository.initializeProfileSettings("profile-a", inheritLegacy = false)
+        settingsRepository.initializeProfileSettings("profile-b", inheritLegacy = false)
+        activeStore.selectProfile("profile-a")
+        settingsRepository.updateUnits(WeightUnit.LB, MeasurementUnit.IN)
+        activeStore.selectProfile("profile-b")
+        settingsRepository.updateRestTimerSeconds(45)
+
+        val backupFile = File(context.cacheDir, "backup-profiles-test.kfit").apply { delete() }
+        repository.exportBackup(Uri.fromFile(backupFile), "long-secret")
+
+        activeStore.selectProfile("profile-a")
+        settingsRepository.updateUnits(WeightUnit.KG, MeasurementUnit.CM)
+        settingsRepository.restoreProfileSettings("profile-b", com.keepfit.core.preferences.AppSettings())
+        repository.restoreBackup(Uri.fromFile(backupFile), "long-secret")
+        database = KeepfitDatabaseFactory.create(context)
+
+        assertEquals("profile-b", activeStore.observeActiveProfileId().first())
+        assertEquals(WeightUnit.LB, settingsRepository.readProfileSettings("profile-a").weightUnit)
+        assertEquals(45, settingsRepository.readProfileSettings("profile-b").restTimerSeconds)
+        assertEquals(2, database.bodyProfileDao().findProfiles().size)
     }
 
     private suspend fun seedOriginalState(
@@ -318,6 +362,7 @@ class DeviceBackupRepositoryTest {
                 savedMealId = null,
                 servings = 1.0,
                 loggedAt = now,
+                bodyProfileId = profileId,
             ),
         )
         nutritionDao.upsertMealQualityCheckIn(
@@ -327,6 +372,7 @@ class DeviceBackupRepositoryTest {
                 mealType = MealType.LUNCH,
                 quality = MealQuality.BALANCED,
                 loggedAt = now,
+                bodyProfileId = profileId,
             ),
         )
 
@@ -365,11 +411,18 @@ class DeviceBackupRepositoryTest {
                 id = "photo-1",
                 transformationCycleId = cycleId,
                 captureDate = frontPhotoDate,
-                angle = TransformationPhotoAngle.FRONT,
+                poseKey = "front_relaxed",
                 relativePath = transformationPhotoPath,
                 mimeType = "image/jpeg",
                 sizeBytes = transformationPhotoBytes.size.toLong(),
                 createdAt = now,
+            ),
+        )
+        transformationDao.upsertPosePreference(
+            TransformationPosePreferenceEntity(
+                bodyProfileId = profileId,
+                poseKey = "front_double_biceps",
+                updatedAt = now,
             ),
         )
 
@@ -406,6 +459,7 @@ class DeviceBackupRepositoryTest {
                 notes = "Focus on back volume",
                 createdAt = now,
                 updatedAt = now,
+                bodyProfileId = profileId,
                 archivedAt = null,
             ),
         )
@@ -432,6 +486,7 @@ class DeviceBackupRepositoryTest {
                 isActive = true,
                 createdAt = now,
                 updatedAt = now,
+                bodyProfileId = profileId,
             ),
         )
         workoutDao.upsertPlannedWorkout(
@@ -454,6 +509,7 @@ class DeviceBackupRepositoryTest {
                 decisionType = "FULL",
                 createdAt = now,
                 updatedAt = now,
+                bodyProfileId = profileId,
             ),
             exercises = listOf(
                 WorkoutOccurrenceExerciseEntity(
@@ -481,6 +537,7 @@ class DeviceBackupRepositoryTest {
                 sessionVariant = "SHORTENED",
                 energyLevel = 4,
                 difficulty = 3,
+                bodyProfileId = profileId,
             ),
         )
         workoutDao.insertExerciseLog(
@@ -516,6 +573,7 @@ class DeviceBackupRepositoryTest {
                 targetDate = frontPhotoDate,
                 occurrenceId = "occurrence-1",
                 decidedAt = now,
+                bodyProfileId = profileId,
             ),
         )
 

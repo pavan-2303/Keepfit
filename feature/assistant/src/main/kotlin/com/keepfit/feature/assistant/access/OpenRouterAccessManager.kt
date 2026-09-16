@@ -29,12 +29,13 @@ data class AssistantAccessState(
 
 interface AssistantAccessController {
     val state: StateFlow<AssistantAccessState>
+    fun synchronizeCredentialState()
     fun acknowledgeDisclosure()
     suspend fun beginAuthorization(): Result<String>
     suspend fun resumePendingAuthorization()
     suspend fun inspectConnection(): Result<OpenRouterKeyMetadata>
     fun cancelAuthorization(message: String = "OpenRouter authorization was cancelled.")
-    fun disconnect()
+    suspend fun disconnect()
     fun reserveInferenceRequest(): Result<String>
     fun recordProviderSuccess()
     fun recordProviderFailure(exception: Throwable)
@@ -45,6 +46,7 @@ class OpenRouterAccessManager @Inject constructor(
     private val credentialStore: AssistantCredentialStore,
     private val api: OpenRouterApi,
     private val callbackServer: OAuthCallbackServer,
+    private val credentialRecovery: AssistantCredentialRecoveryController,
 ) : AssistantAccessController {
     private val _state = MutableStateFlow(
         AssistantAccessState(
@@ -58,6 +60,17 @@ class OpenRouterAccessManager @Inject constructor(
         ),
     )
     override val state: StateFlow<AssistantAccessState> = _state.asStateFlow()
+
+    override fun synchronizeCredentialState() {
+        _state.value = currentState(
+            status = if (credentialStore.readToken() == null) {
+                AssistantAccessStatus.DISCONNECTED
+            } else {
+                AssistantAccessStatus.CONNECTED
+            },
+            message = _state.value.message,
+        )
+    }
 
     override fun acknowledgeDisclosure() {
         credentialStore.setDisclosureAccepted(true)
@@ -135,12 +148,16 @@ class OpenRouterAccessManager @Inject constructor(
         )
     }
 
-    override fun disconnect() {
+    override suspend fun disconnect() {
         callbackServer.stop()
+        val recoveryResult = credentialRecovery.clearForDisconnect()
         credentialStore.clearCredentials()
         _state.value = currentState(
             AssistantAccessStatus.DISCONNECTED,
-            "OpenRouter access was removed from this device.",
+            recoveryResult.fold(
+                onSuccess = { "OpenRouter access and recovery were removed from this device." },
+                onFailure = { "OpenRouter access was removed locally, but recovery could not be cleared. Try again from Settings." },
+            ),
         ).copy(
             hasCredential = false,
             isFreeTier = null,
@@ -190,9 +207,13 @@ class OpenRouterAccessManager @Inject constructor(
                 api.exchangeCode(code, pending.codeVerifier)
                     .onSuccess { token ->
                         credentialStore.writeToken(token)
+                        val recoveryResult = credentialRecovery.backUpCurrentCredentialIfEnabled()
                         _state.value = currentState(
                             AssistantAccessStatus.CONNECTED,
-                            "OpenRouter is connected. Check access to inspect the account.",
+                            recoveryResult.fold(
+                                onSuccess = { "OpenRouter is connected. Check access to inspect the account." },
+                                onFailure = { "OpenRouter is connected, but access recovery could not be updated." },
+                            ),
                         )
                     }
                     .onFailure(::recordProviderFailure)

@@ -12,6 +12,11 @@ data class Exercise(
     val notes: String?,
     val isBodyweight: Boolean,
     val demo: ExerciseDemo? = null,
+    val source: String? = null,
+    val sourceId: String? = null,
+    val equipment: String? = null,
+    val targetMuscle: String? = null,
+    val secondaryMuscles: String? = null,
 )
 
 data class ExerciseDemo(

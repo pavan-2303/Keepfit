@@ -26,6 +26,7 @@ room {
 dependencies {
     implementation(project(":core:model"))
     api(libs.androidx.room.runtime)
+    implementation(libs.gson)
 
     ksp(libs.androidx.room.compiler)
 

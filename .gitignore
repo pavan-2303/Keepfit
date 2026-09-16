@@ -17,8 +17,8 @@ keystore.properties
 secrets.properties
 
 # Local app data
-backups/
-media/
+/backups/
+/media/
 
 # Operating system
 .DS_Store

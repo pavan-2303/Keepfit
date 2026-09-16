@@ -85,16 +85,36 @@ interface TransformationDao {
         SELECT * FROM transformation_photos
         WHERE transformationCycleId = :cycleId
             AND captureDate = :captureDate
-            AND angle = :angle
+            AND poseKey = :poseKey
         LIMIT 1
         """,
     )
     suspend fun findPhoto(
         cycleId: String,
         captureDate: LocalDate,
-        angle: TransformationPhotoAngle,
+        poseKey: String,
     ): TransformationPhotoEntity?
 
     @Upsert
     suspend fun upsertPhoto(photo: TransformationPhotoEntity)
+
+    @Query(
+        """
+        SELECT poseKey FROM transformation_pose_preferences
+        WHERE bodyProfileId = :profileId
+        ORDER BY poseKey
+        """,
+    )
+    fun observeOptionalPoseKeys(profileId: String): Flow<List<String>>
+
+    @Upsert
+    suspend fun upsertPosePreference(preference: TransformationPosePreferenceEntity)
+
+    @Query(
+        """
+        DELETE FROM transformation_pose_preferences
+        WHERE bodyProfileId = :profileId AND poseKey = :poseKey
+        """,
+    )
+    suspend fun deletePosePreference(profileId: String, poseKey: String)
 }

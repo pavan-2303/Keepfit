@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.keepfit.core.database.KeepfitDatabase
+import com.keepfit.core.database.profile.BodyProfileEntity
 import com.keepfit.core.database.workout.ExerciseEntity
 import com.keepfit.core.database.workout.PlannedWorkoutEntity
 import com.keepfit.core.database.workout.WeeklyPlanEntity
@@ -16,6 +17,7 @@ import com.keepfit.core.preferences.AppSettingsRepository
 import com.keepfit.core.preferences.MeasurementUnit
 import com.keepfit.core.preferences.WeightUnit
 import com.keepfit.feature.workouts.data.RoomWorkoutRepository
+import com.keepfit.feature.workouts.TestActiveProfileStore
 import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +36,7 @@ class RoomTodayWorkoutRepositoryTest {
     private val today = LocalDate.parse("2026-09-12")
     private lateinit var database: KeepfitDatabase
     private lateinit var repository: RoomWorkoutRepository
+    private lateinit var activeProfileStore: TestActiveProfileStore
     private var nextId = 0
 
     @Before
@@ -42,10 +45,15 @@ class RoomTodayWorkoutRepositoryTest {
         database = Room.inMemoryDatabaseBuilder(context, KeepfitDatabase::class.java)
             .allowMainThreadQueries()
             .build()
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("profile", "Alex", 170.0, null, createdAt = 1L, updatedAt = 1L),
+        )
+        activeProfileStore = TestActiveProfileStore()
         repository = RoomWorkoutRepository(
             dao = database.workoutDao(),
             mediaStore = ExerciseMediaStore(context),
             settingsRepository = FixedSettingsRepository,
+            activeProfileStore = activeProfileStore,
             idFactory = { "generated-${++nextId}" },
             clock = { 100L + nextId },
             today = { today },
@@ -77,6 +85,20 @@ class RoomTodayWorkoutRepositoryTest {
         assertEquals("SHORTENED", occurrence.occurrence.decisionType)
         assertEquals(4, occurrence.exercises.size)
         assertEquals(5, database.workoutDao().findTemplateDetails("template")?.exercises?.size)
+    }
+
+    @Test
+    fun switchingProfilesHidesPlansAndRejectsAnotherProfilesWorkout() = runBlocking {
+        val planned = repository.observeWeeklySchedule().first().single()
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("profile-b", "Sam", 165.0, null, createdAt = 2L, updatedAt = 2L),
+        )
+
+        activeProfileStore.selectProfile("profile-b")
+
+        assertTrue(repository.observeWeeklySchedule().first().isEmpty())
+        assertTrue(repository.observeExercises("").first().isNotEmpty())
+        assertTrue(runCatching { repository.startOrResume(planned) }.isFailure)
     }
 
     @Test
@@ -241,7 +263,7 @@ class RoomTodayWorkoutRepositoryTest {
         }
         exercises.forEach { dao.upsertExercise(it) }
         dao.upsertTemplate(
-            WorkoutTemplateEntity("template", "Foundation A", null, 10L, 10L, null),
+            WorkoutTemplateEntity("template", "Foundation A", null, 10L, 10L, null, bodyProfileId = "profile"),
         )
         dao.replaceTemplateExercises(
             "template",
@@ -265,6 +287,7 @@ class RoomTodayWorkoutRepositoryTest {
                 isActive = true,
                 createdAt = 20L,
                 updatedAt = 20L,
+                bodyProfileId = "profile",
             ),
         )
         dao.upsertPlannedWorkout(

@@ -6,6 +6,7 @@ import java.time.LocalDate
 import com.keepfit.feature.assistant.access.AssistantAccessState
 import com.keepfit.feature.assistant.coaching.CoachingIntent
 import com.keepfit.feature.assistant.coaching.CoachingProposal
+import com.keepfit.feature.assistant.conversation.AssistantConversation
 
 enum class AssistantConnectionStatus {
     DISABLED,
@@ -39,6 +40,7 @@ data class AssistantChatMessage(
     val content: String,
     val createdAtUtcEpochMillis: Long,
     val isError: Boolean = false,
+    val includedLocalContext: Boolean = false,
 )
 
 data class AssistantUiState(
@@ -55,7 +57,13 @@ data class AssistantUiState(
     val selectedCoachingIntent: CoachingIntent = CoachingIntent.WEEKLY_SUMMARY,
     val pendingCoachingProposal: CoachingProposal? = null,
     val safetyMessage: String? = null,
-)
+    val conversations: List<AssistantConversation> = emptyList(),
+    val activeConversationId: String? = null,
+    val showCoachPicker: Boolean = false,
+) {
+    val activeConversation: AssistantConversation?
+        get() = conversations.firstOrNull { it.id == activeConversationId }
+}
 
 data class AssistantDraftInput(
     val goal: String,
@@ -133,6 +141,7 @@ data class AssistantLocalSummary(
 )
 
 data class AssistantDraftWorkoutExercise(
+    val exerciseId: String = "",
     val name: String,
     val targetSets: Int? = null,
     val targetReps: String? = null,

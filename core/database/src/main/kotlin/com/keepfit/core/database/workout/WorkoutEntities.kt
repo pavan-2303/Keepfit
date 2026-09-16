@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import com.keepfit.core.database.profile.BodyProfileEntity
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -20,6 +21,11 @@ data class ExerciseEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val archivedAt: Long?,
+    val source: String? = null,
+    val sourceId: String? = null,
+    val equipment: String? = null,
+    val targetMuscle: String? = null,
+    val secondaryMuscles: String? = null,
 )
 
 @Entity(
@@ -50,7 +56,17 @@ data class ExerciseDetails(
     val media: ExerciseMediaEntity?,
 )
 
-@Entity(tableName = "workout_templates")
+@Entity(
+    tableName = "workout_templates",
+    foreignKeys = [
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
+    ],
+    indices = [Index("bodyProfileId")],
+)
 data class WorkoutTemplateEntity(
     @PrimaryKey val id: String,
     val name: String,
@@ -59,6 +75,7 @@ data class WorkoutTemplateEntity(
     val updatedAt: Long,
     val archivedAt: Long?,
     val origin: String = "CUSTOM",
+    val bodyProfileId: String = "",
 )
 
 @Entity(
@@ -88,7 +105,17 @@ data class WorkoutTemplateExerciseEntity(
     val notes: String?,
 )
 
-@Entity(tableName = "weekly_plans")
+@Entity(
+    tableName = "weekly_plans",
+    foreignKeys = [
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
+    ],
+    indices = [Index("bodyProfileId")],
+)
 data class WeeklyPlanEntity(
     @PrimaryKey val id: String,
     val name: String,
@@ -96,6 +123,7 @@ data class WeeklyPlanEntity(
     val isActive: Boolean,
     val createdAt: Long,
     val updatedAt: Long,
+    val bodyProfileId: String = "",
 )
 
 @Entity(
@@ -132,12 +160,18 @@ data class PlannedWorkoutEntity(
             childColumns = ["sourcePlannedWorkoutId"],
             onDelete = ForeignKey.SET_NULL,
         ),
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
     ],
     indices = [
         Index("sourcePlannedWorkoutId"),
         Index("originalDate"),
         Index("scheduledDate"),
-        Index(value = ["sourcePlannedWorkoutId", "originalDate"], unique = true),
+        Index("bodyProfileId"),
+        Index(value = ["bodyProfileId", "sourcePlannedWorkoutId", "originalDate"], unique = true),
     ],
 )
 data class WorkoutOccurrenceEntity(
@@ -150,6 +184,7 @@ data class WorkoutOccurrenceEntity(
     val decisionType: String,
     val createdAt: Long,
     val updatedAt: Long,
+    val bodyProfileId: String = "",
 )
 
 @Entity(
@@ -193,11 +228,17 @@ data class WorkoutOccurrenceExerciseEntity(
             parentColumns = ["id"],
             childColumns = ["plannedWorkoutId"],
         ),
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
     ],
     indices = [
         Index("workoutTemplateId"),
         Index("plannedWorkoutId"),
         Index("workoutOccurrenceId"),
+        Index("bodyProfileId"),
     ],
 )
 data class WorkoutSessionEntity(
@@ -212,6 +253,7 @@ data class WorkoutSessionEntity(
     val sessionVariant: String = "FULL",
     val energyLevel: Int? = null,
     val difficulty: Int? = null,
+    val bodyProfileId: String = "",
 )
 
 @Entity(

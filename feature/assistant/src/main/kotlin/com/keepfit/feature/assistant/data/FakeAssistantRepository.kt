@@ -1,6 +1,7 @@
 package com.keepfit.feature.assistant.data
 
 class FakeAssistantRepository : AssistantRepository {
+    var lastChatHistory: List<AssistantChatMessage>? = null
     var coachingResult: Result<com.keepfit.feature.assistant.coaching.CoachingProposal> =
         Result.failure(UnsupportedOperationException("No coaching fixture configured."))
     var connectionResult: Result<Unit> = Result.success(Unit)
@@ -34,7 +35,10 @@ class FakeAssistantRepository : AssistantRepository {
         config: AssistantRuntimeConfig,
         history: List<AssistantChatMessage>,
         userMessage: String,
-    ): Result<AssistantChatMessage> = chatResult
+    ): Result<AssistantChatMessage> {
+        lastChatHistory = history
+        return chatResult
+    }
 
     override suspend fun generateProgressSummary(
         config: AssistantRuntimeConfig,

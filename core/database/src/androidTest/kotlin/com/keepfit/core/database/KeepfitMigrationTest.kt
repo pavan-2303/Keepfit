@@ -446,6 +446,265 @@ class KeepfitMigrationTest {
         }
     }
 
+    @Test
+    fun migrateTenToElevenAssignsEveryPersonalRootToTheExistingProfile() {
+        helper.createDatabase(TEST_DATABASE, 10).use { database ->
+            database.execSQL(
+                """
+                INSERT INTO body_profiles (
+                    id, displayName, heightCm, birthDate, dailyCalorieGoal,
+                    dailyProteinGoalGrams, dailyCarbohydrateGoalGrams,
+                    dailyFatGoalGrams, createdAt, updatedAt
+                ) VALUES ('owner', 'Owner', 175.0, NULL, NULL, NULL, NULL, NULL, 1, 1)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO workout_templates (id, name, notes, createdAt, updatedAt, archivedAt, origin)
+                VALUES ('template', 'Full body', NULL, 1, 1, NULL, 'CUSTOM')
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO weekly_plans (id, name, startsOn, isActive, createdAt, updatedAt)
+                VALUES ('plan', 'Week', '2026-09-14', 1, 1, 1)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO workout_occurrences (
+                    id, sourcePlannedWorkoutId, sourceTemplateId,
+                    templateNameSnapshot, originalDate, scheduledDate,
+                    decisionType, createdAt, updatedAt
+                ) VALUES ('occurrence', NULL, 'template', 'Full body', '2026-09-14', '2026-09-14', 'FULL', 1, 1)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO workout_sessions (
+                    id, workoutTemplateId, plannedWorkoutId, workoutDate,
+                    startedAt, completedAt, notes, workoutOccurrenceId,
+                    sessionVariant, energyLevel, difficulty
+                ) VALUES ('session', 'template', NULL, '2026-09-14', 1, NULL, NULL, NULL, 'FULL', NULL, NULL)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO foods (
+                    id, name, servingLabel, servingAmount, calories, proteinGrams,
+                    carbohydrateGrams, fatGrams, isFavorite, createdAt, updatedAt, archivedAt
+                ) VALUES ('food', 'Dal', '1 bowl', 1.0, 220.0, 14.0, 34.0, 4.0, 0, 1, 1, NULL)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "INSERT INTO saved_meals (id, name, createdAt, updatedAt) VALUES ('meal', 'Lunch', 1, 1)",
+            )
+            database.execSQL(
+                """
+                INSERT INTO food_diary_entries (id, diaryDate, mealType, foodId, savedMealId, servings, loggedAt)
+                VALUES ('entry', '2026-09-14', 'LUNCH', 'food', 'meal', 1.0, 1)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO meal_quality_check_ins (id, diaryDate, mealType, quality, loggedAt)
+                VALUES ('quality', '2026-09-14', 'LUNCH', 'BALANCED', 1)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO weekly_review_outcomes (
+                    id, weekStart, status, draftType, sourcePlannedWorkoutId,
+                    sourceDate, targetDate, occurrenceId, decidedAt
+                ) VALUES ('review', '2026-09-14', 'DISMISSED', NULL, NULL, NULL, NULL, NULL, 1)
+                """.trimIndent(),
+            )
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DATABASE,
+            11,
+            true,
+            KeepfitMigrations.TEN_TO_ELEVEN,
+        ).use { database ->
+            assertEquals("owner", database.stringFor("SELECT bodyProfileId FROM workout_templates WHERE id = 'template'"))
+            assertEquals("owner", database.stringFor("SELECT bodyProfileId FROM weekly_plans WHERE id = 'plan'"))
+            assertEquals("owner", database.stringFor("SELECT bodyProfileId FROM workout_occurrences WHERE id = 'occurrence'"))
+            assertEquals("owner", database.stringFor("SELECT bodyProfileId FROM workout_sessions WHERE id = 'session'"))
+            assertEquals("owner", database.stringFor("SELECT bodyProfileId FROM saved_meals WHERE id = 'meal'"))
+            assertEquals("owner", database.stringFor("SELECT bodyProfileId FROM food_diary_entries WHERE id = 'entry'"))
+            assertEquals("owner", database.stringFor("SELECT bodyProfileId FROM meal_quality_check_ins WHERE id = 'quality'"))
+            assertEquals("owner", database.stringFor("SELECT bodyProfileId FROM weekly_review_outcomes WHERE id = 'review'"))
+            assertEquals(null, database.stringFor("SELECT archivedAt FROM body_profiles WHERE id = 'owner'"))
+        }
+    }
+
+    @Test
+    fun migrateElevenToTwelveMapsLegacyAnglesToStablePoseKeys() {
+        helper.createDatabase(TEST_DATABASE, 11).use { database ->
+            database.execSQL(
+                """
+                INSERT INTO body_profiles (
+                    id, displayName, heightCm, birthDate, dailyCalorieGoal,
+                    dailyProteinGoalGrams, dailyCarbohydrateGoalGrams,
+                    dailyFatGoalGrams, createdAt, updatedAt, archivedAt
+                ) VALUES ('owner', 'Owner', 175.0, NULL, NULL, NULL, NULL, NULL, 1, 1, NULL)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO transformation_cycles (
+                    id, bodyProfileId, startDate, notes, closedAt, createdAt, updatedAt
+                ) VALUES ('cycle', 'owner', '2026-09-14', 'Keep me', NULL, 2, 3)
+                """.trimIndent(),
+            )
+            listOf("FRONT", "RIGHT", "BACK", "LEFT").forEachIndexed { index, angle ->
+                database.execSQL(
+                    """
+                    INSERT INTO transformation_photos (
+                        id, transformationCycleId, captureDate, angle,
+                        relativePath, mimeType, sizeBytes, createdAt
+                    ) VALUES (
+                        'photo-$index', 'cycle', '2026-09-14', '$angle',
+                        'media/transformation/cycle/$index.jpg', 'image/jpeg', ${100 + index}, ${10 + index}
+                    )
+                    """.trimIndent(),
+                )
+            }
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DATABASE,
+            12,
+            true,
+            KeepfitMigrations.ELEVEN_TO_TWELVE,
+        ).use { database ->
+            database.query(
+                """
+                SELECT poseKey, relativePath, sizeBytes, createdAt
+                FROM transformation_photos
+                ORDER BY id
+                """.trimIndent(),
+            ).use { cursor ->
+                val rows = buildList {
+                    while (cursor.moveToNext()) {
+                        add(listOf(cursor.getString(0), cursor.getString(1), cursor.getLong(2), cursor.getLong(3)))
+                    }
+                }
+                assertEquals(
+                    listOf("front_relaxed", "right_side_relaxed", "back_relaxed", "left_side_relaxed"),
+                    rows.map { it[0] },
+                )
+                assertEquals((0..3).map { "media/transformation/cycle/$it.jpg" }, rows.map { it[1] })
+                assertEquals(listOf(100L, 101L, 102L, 103L), rows.map { it[2] })
+                assertEquals(listOf(10L, 11L, 12L, 13L), rows.map { it[3] })
+            }
+            database.query(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'transformation_pose_preferences'",
+            ).use { cursor ->
+                assertEquals(true, cursor.moveToFirst())
+            }
+        }
+    }
+
+    @Test
+    fun migrateTwelveToThirteenAddsCatalogueMetadataWithoutChangingExercises() {
+        helper.createDatabase(TEST_DATABASE, 12).use { database ->
+            database.execSQL(
+                """
+                INSERT INTO exercises (
+                    id, name, muscleGroup, instructions, notes, isBodyweight,
+                    createdAt, updatedAt, archivedAt
+                ) VALUES (
+                    'personal', 'My row', 'Back', 'Pull with control.', 'Keep this',
+                    0, 10, 11, NULL
+                )
+                """.trimIndent(),
+            )
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DATABASE,
+            13,
+            true,
+            KeepfitMigrations.TWELVE_TO_THIRTEEN,
+        ).use { database ->
+            database.query(
+                """
+                SELECT name, notes, source, sourceId, equipment, targetMuscle, secondaryMuscles
+                FROM exercises WHERE id = 'personal'
+                """.trimIndent(),
+            ).use { cursor ->
+                assertEquals(true, cursor.moveToFirst())
+                assertEquals("My row", cursor.getString(0))
+                assertEquals("Keep this", cursor.getString(1))
+                assertEquals(null, cursor.getString(2))
+                assertEquals(null, cursor.getString(3))
+                assertEquals(null, cursor.getString(4))
+                assertEquals(null, cursor.getString(5))
+                assertEquals(null, cursor.getString(6))
+            }
+            database.query(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'catalogue_imports'",
+            ).use { cursor ->
+                assertEquals(true, cursor.moveToFirst())
+            }
+        }
+    }
+
+    @Test
+    fun migrateThirteenToFourteenAddsProfileOwnedCoachHistory() {
+        helper.createDatabase(TEST_DATABASE, 13).use { database ->
+            database.execSQL(
+                """
+                INSERT INTO body_profiles (
+                    id, displayName, heightCm, birthDate, dailyCalorieGoal,
+                    dailyProteinGoalGrams, dailyCarbohydrateGoalGrams,
+                    dailyFatGoalGrams, createdAt, updatedAt, archivedAt
+                ) VALUES ('owner', 'Owner', 175.0, NULL, NULL, NULL, NULL, NULL, 1, 1, NULL)
+                """.trimIndent(),
+            )
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DATABASE,
+            14,
+            true,
+            KeepfitMigrations.THIRTEEN_TO_FOURTEEN,
+        ).use { database ->
+            database.execSQL(
+                """
+                INSERT INTO assistant_conversations (
+                    id, bodyProfileId, coachId, title, memorySummary,
+                    memoryClearedAt, createdAt, updatedAt
+                ) VALUES ('conversation', 'owner', 'mira', 'First chat', NULL, NULL, 2, 2)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO assistant_messages (
+                    id, assistantConversationId, role, content,
+                    includedLocalContext, createdAt
+                ) VALUES ('message', 'conversation', 'USER', 'Hello', 0, 3)
+                """.trimIndent(),
+            )
+            assertEquals(
+                "owner",
+                database.stringFor("SELECT bodyProfileId FROM assistant_conversations WHERE id = 'conversation'"),
+            )
+            assertEquals(
+                "Hello",
+                database.stringFor("SELECT content FROM assistant_messages WHERE id = 'message'"),
+            )
+        }
+    }
+
+    private fun androidx.sqlite.db.SupportSQLiteDatabase.stringFor(query: String): String? =
+        query(query).use { cursor ->
+            check(cursor.moveToFirst())
+            if (cursor.isNull(0)) null else cursor.getString(0)
+        }
+
     private companion object {
         const val TEST_DATABASE = "keepfit-migration-test"
     }

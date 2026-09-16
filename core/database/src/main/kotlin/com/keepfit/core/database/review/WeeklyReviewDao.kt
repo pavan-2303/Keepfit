@@ -8,6 +8,12 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WeeklyReviewDao {
+    @Query("SELECT * FROM weekly_review_outcomes WHERE bodyProfileId = :profileId AND weekStart = :weekStart LIMIT 1")
+    fun observeForProfileAndWeek(profileId: String, weekStart: LocalDate): Flow<WeeklyReviewOutcomeEntity?>
+
+    @Query("SELECT * FROM weekly_review_outcomes WHERE bodyProfileId = :profileId AND weekStart = :weekStart LIMIT 1")
+    suspend fun findForProfileAndWeek(profileId: String, weekStart: LocalDate): WeeklyReviewOutcomeEntity?
+
     @Query("SELECT * FROM weekly_review_outcomes WHERE weekStart = :weekStart LIMIT 1")
     fun observeForWeek(weekStart: LocalDate): Flow<WeeklyReviewOutcomeEntity?>
 

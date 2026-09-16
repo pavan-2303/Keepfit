@@ -18,6 +18,9 @@ import com.keepfit.feature.assistant.coaching.CoachingIntent
 import com.keepfit.feature.assistant.coaching.CoachingProposal
 import com.keepfit.feature.assistant.coaching.CoachingProposalApplier
 import com.keepfit.feature.assistant.coaching.CoachingProposalOperation
+import com.keepfit.feature.assistant.conversation.AssistantConversation
+import com.keepfit.feature.assistant.conversation.AssistantConversationRepository
+import com.keepfit.feature.assistant.conversation.CoachPersona
 import java.time.DayOfWeek
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,6 +30,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -39,12 +43,14 @@ class AssistantViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repository: FakeAssistantRepository
     private lateinit var planApplier: FakeAssistantPlanApplier
+    private lateinit var conversationRepository: FakeConversationRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         repository = FakeAssistantRepository()
         planApplier = FakeAssistantPlanApplier()
+        conversationRepository = FakeConversationRepository()
     }
 
     @After
@@ -135,6 +141,58 @@ class AssistantViewModelTest {
         assertEquals("", viewModel.uiState.value.draftMessage)
         assertEquals(2, viewModel.uiState.value.messages.size)
         assertNull(viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun choosingCoachCreatesAndActivatesNamedConversation() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.chooseCoach(CoachPersona.ROOK)
+        advanceUntilIdle()
+
+        assertEquals(CoachPersona.ROOK, viewModel.uiState.value.activeConversation?.coach)
+        assertEquals(false, viewModel.uiState.value.showCoachPicker)
+        assertEquals(CoachPersona.ROOK, conversationRepository.createdCoaches.single())
+    }
+
+    @Test
+    fun successfulSendUsesBoundedRepositoryHistoryAndPersistsCompletedTurn() = runTest(dispatcher) {
+        conversationRepository.requestHistory = listOf(
+            AssistantChatMessage("system-rook", AssistantMessageRole.SYSTEM, "Rook persona", 0L),
+        )
+        repository.chatResult = Result.success(
+            AssistantChatMessage("coach-1", AssistantMessageRole.ASSISTANT, "Do the next useful thing.", 2L),
+        )
+        val viewModel = viewModel()
+        viewModel.chooseCoach(CoachPersona.ROOK)
+        advanceUntilIdle()
+
+        viewModel.updateDraftMessage("What should I do today?")
+        viewModel.sendDraftMessage(sampleConfig())
+        advanceUntilIdle()
+
+        assertEquals(conversationRepository.requestHistory, repository.lastChatHistory)
+        assertEquals(1, conversationRepository.savedTurns.size)
+        assertEquals("What should I do today?", conversationRepository.savedTurns.single().second.content)
+    }
+
+    @Test
+    fun managesConversationTitleMemoryAndDeletionThroughRepository() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.chooseCoach(CoachPersona.ATLAS)
+        advanceUntilIdle()
+        val conversationId = requireNotNull(viewModel.uiState.value.activeConversationId)
+
+        viewModel.renameConversation(conversationId, "Strength block")
+        viewModel.clearConversationMemory(conversationId)
+        viewModel.deleteConversation(conversationId)
+        advanceUntilIdle()
+
+        assertEquals(listOf(conversationId to "Strength block"), conversationRepository.renamed)
+        assertEquals(listOf(conversationId), conversationRepository.cleared)
+        assertEquals(listOf(conversationId), conversationRepository.deleted)
+        assertTrue(viewModel.uiState.value.showCoachPicker)
     }
 
     @Test
@@ -266,6 +324,7 @@ class AssistantViewModelTest {
         draftStore: AssistantDraftStore = FakeDraftStore(),
     ) = AssistantViewModel(
         repository = repository,
+        conversationRepository = conversationRepository,
         planApplier = planApplier,
         accessController = FakeAccessController(),
         coachingProposalApplier = coachingApplier,
@@ -322,6 +381,69 @@ class AssistantViewModelTest {
         }
     }
 
+    private class FakeConversationRepository : AssistantConversationRepository {
+        private val conversations = MutableStateFlow<List<AssistantConversation>>(emptyList())
+        private val messages = mutableMapOf<String, MutableStateFlow<List<AssistantChatMessage>>>()
+        val createdCoaches = mutableListOf<CoachPersona>()
+        val savedTurns = mutableListOf<Triple<String, AssistantChatMessage, AssistantChatMessage>>()
+        val renamed = mutableListOf<Pair<String, String>>()
+        val cleared = mutableListOf<String>()
+        val deleted = mutableListOf<String>()
+        var requestHistory: List<AssistantChatMessage> = emptyList()
+
+        override fun observeConversations(): Flow<List<AssistantConversation>> = conversations
+
+        override fun observeMessages(conversationId: String): Flow<List<AssistantChatMessage>> =
+            messages.getOrPut(conversationId) { MutableStateFlow(emptyList()) }
+
+        override suspend fun createConversation(coach: CoachPersona): AssistantConversation {
+            createdCoaches += coach
+            val conversation = AssistantConversation(
+                id = "conversation-${createdCoaches.size}",
+                coach = coach,
+                title = "New conversation",
+                createdAtUtcEpochMillis = createdCoaches.size.toLong(),
+                updatedAtUtcEpochMillis = createdCoaches.size.toLong(),
+            )
+            messages[conversation.id] = MutableStateFlow(emptyList())
+            conversations.value = listOf(conversation) + conversations.value
+            return conversation
+        }
+
+        override suspend fun loadRequestHistory(conversationId: String): Result<List<AssistantChatMessage>> =
+            Result.success(requestHistory)
+
+        override suspend fun appendCompletedTurn(
+            conversationId: String,
+            userMessage: AssistantChatMessage,
+            assistantMessage: AssistantChatMessage,
+        ): Result<Unit> {
+            savedTurns += Triple(conversationId, userMessage, assistantMessage)
+            messages.getValue(conversationId).value += listOf(userMessage, assistantMessage)
+            return Result.success(Unit)
+        }
+
+        override suspend fun renameConversation(conversationId: String, title: String): Result<Unit> {
+            renamed += conversationId to title
+            conversations.value = conversations.value.map {
+                if (it.id == conversationId) it.copy(title = title) else it
+            }
+            return Result.success(Unit)
+        }
+
+        override suspend fun clearMemory(conversationId: String): Result<Unit> {
+            cleared += conversationId
+            return Result.success(Unit)
+        }
+
+        override suspend fun deleteConversation(conversationId: String): Result<Unit> {
+            deleted += conversationId
+            conversations.value = conversations.value.filterNot { it.id == conversationId }
+            messages.remove(conversationId)
+            return Result.success(Unit)
+        }
+    }
+
     private class FakeCoachingProposalApplier : CoachingProposalApplier {
         val applied = mutableListOf<CoachingProposal>()
         var applyResult: Result<Unit> = Result.success(Unit)
@@ -344,6 +466,7 @@ class AssistantViewModelTest {
     }
 
     private class FakeAccessController : AssistantAccessController {
+        override fun synchronizeCredentialState() = Unit
         override val state = MutableStateFlow(
             AssistantAccessState(),
         )
@@ -354,7 +477,7 @@ class AssistantViewModelTest {
         override suspend fun inspectConnection(): Result<OpenRouterKeyMetadata> =
             Result.success(OpenRouterKeyMetadata(null, true, null))
         override fun cancelAuthorization(message: String) = Unit
-        override fun disconnect() = Unit
+        override suspend fun disconnect() = Unit
         override fun reserveInferenceRequest(): Result<String> = Result.success("test-token")
         override fun recordProviderSuccess() = Unit
         override fun recordProviderFailure(exception: Throwable) = Unit

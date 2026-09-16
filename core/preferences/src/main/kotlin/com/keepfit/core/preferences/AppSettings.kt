@@ -37,6 +37,8 @@ data class AppSettings(
     val measurementUnit: MeasurementUnit = MeasurementUnit.CM,
     val restTimerSeconds: Int = 90,
     val weeklyReviewPaused: Boolean = false,
+    val reduceMotion: Boolean = false,
+    val credentialRecoveryEnabled: Boolean = false,
     val nutritionTrackingDepth: NutritionTrackingDepth = NutritionTrackingDepth.DETAILED_MACROS,
     val nutritionTargetRangePercent: Int = 10,
     val workoutReminder: ReminderTime = ReminderTime(enabled = false, hour = 18, minute = 0),

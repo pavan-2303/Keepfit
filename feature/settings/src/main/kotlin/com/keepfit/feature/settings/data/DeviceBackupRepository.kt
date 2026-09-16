@@ -7,6 +7,8 @@ import androidx.sqlite.db.SimpleSQLiteQuery
 import com.keepfit.core.database.KeepfitDatabase
 import com.keepfit.core.database.KeepfitDatabaseFactory
 import com.keepfit.core.preferences.AppSettingsRepository
+import com.keepfit.core.preferences.ActiveProfileStore
+import com.keepfit.core.preferences.DataStoreActiveProfileStore
 import com.keepfit.core.preferences.MeasurementUnit
 import com.keepfit.core.preferences.NutritionTrackingDepth
 import com.keepfit.core.preferences.WeightUnit
@@ -22,13 +24,14 @@ class DeviceBackupRepository @Inject constructor(
     private val database: KeepfitDatabase,
     private val settingsRepository: AppSettingsRepository,
     private val codec: BackupArchiveCodec = BackupArchiveCodec(),
+    private val activeProfileStore: ActiveProfileStore = DataStoreActiveProfileStore(context),
 ) : BackupRepository {
     override suspend fun exportBackup(destinationUri: Uri, passphrase: String) = withContext(Dispatchers.IO) {
         val workingDirectory = createWorkingDirectory("export")
         try {
             val databaseFile = File(workingDirectory, BackupArchiveCodec.DATABASE_ENTRY)
             exportDatabaseSnapshot(databaseFile)
-            val settingsSnapshot = settingsRepository.observeSettings().first().toBackupSnapshot()
+            val settingsSnapshot = createSettingsSnapshot()
             val source = BackupArchiveSource(
                 databaseFile = databaseFile,
                 settingsSnapshot = settingsSnapshot,
@@ -58,7 +61,7 @@ class DeviceBackupRepository @Inject constructor(
 
     override suspend fun restoreBackup(sourceUri: Uri, passphrase: String) = withContext(Dispatchers.IO) {
         val workingDirectory = createWorkingDirectory("restore")
-        val previousSettings = settingsRepository.observeSettings().first().toBackupSnapshot()
+        val previousSettings = createSettingsSnapshot()
         try {
             val extracted = context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
                 codec.extractValidatedArchive(passphrase, inputStream, workingDirectory)
@@ -143,6 +146,7 @@ class DeviceBackupRepository @Inject constructor(
             "diaryEntries" to supportDatabase.countRows("food_diary_entries"),
             "mealQualityCheckIns" to supportDatabase.countRows("meal_quality_check_ins"),
             "exercises" to supportDatabase.countRows("exercises"),
+            "catalogueImports" to supportDatabase.countRows("catalogue_imports"),
             "workoutTemplates" to supportDatabase.countRows("workout_templates"),
             "plannedWorkouts" to supportDatabase.countRows("planned_workouts"),
             "workoutOccurrences" to supportDatabase.countRows("workout_occurrences"),
@@ -152,10 +156,20 @@ class DeviceBackupRepository @Inject constructor(
             "measurements" to supportDatabase.countRows("body_measurements"),
             "transformationCycles" to supportDatabase.countRows("transformation_cycles"),
             "transformationPhotos" to supportDatabase.countRows("transformation_photos"),
+            "transformationPosePreferences" to supportDatabase.countRows("transformation_pose_preferences"),
         )
     }
 
     private suspend fun applySettingsSnapshot(snapshot: BackupSettingsSnapshot) {
+        settingsRepository.updateReduceMotion(snapshot.reduceMotion)
+        snapshot.profileSettings.orEmpty().forEach { (profileId, profileSettings) ->
+            settingsRepository.restoreProfileSettings(profileId, profileSettings.toAppSettings())
+        }
+        snapshot.activeProfileId?.let { activeProfileStore.selectProfile(it) }
+        if (!snapshot.profileSettings.isNullOrEmpty()) {
+            settingsRepository.refreshReminders()
+            return
+        }
         settingsRepository.updateUnits(
             weightUnit = WeightUnit.valueOf(snapshot.weightUnit),
             measurementUnit = MeasurementUnit.valueOf(snapshot.measurementUnit),
@@ -252,6 +266,7 @@ class DeviceBackupRepository @Inject constructor(
             measurementUnit = measurementUnit.name,
             restTimerSeconds = restTimerSeconds,
             weeklyReviewPaused = weeklyReviewPaused,
+            reduceMotion = reduceMotion,
             nutritionTrackingDepth = nutritionTrackingDepth.name,
             nutritionTargetRangePercent = nutritionTargetRangePercent,
             workoutReminderEnabled = workoutReminder.enabled,
@@ -262,4 +277,60 @@ class DeviceBackupRepository @Inject constructor(
             transformationReminderHour = transformationReminder.hour,
             transformationReminderMinute = transformationReminder.minute,
         )
+
+    private suspend fun createSettingsSnapshot(): BackupSettingsSnapshot {
+        val storedActiveProfileId = activeProfileStore.observeActiveProfileId().first()
+        val activeSettings = settingsRepository.observeSettings().first()
+        val profileEntities = database.bodyProfileDao().findProfiles()
+        val activeProfileId = storedActiveProfileId ?: profileEntities.firstOrNull()?.id
+        val profiles = profileEntities.associate { profile ->
+            val settings = if (storedActiveProfileId == null && profile.id == activeProfileId) {
+                activeSettings
+            } else {
+                settingsRepository.readProfileSettings(profile.id)
+            }
+            profile.id to settings.toProfileBackupSnapshot()
+        }
+        return activeSettings.toBackupSnapshot().copy(
+            activeProfileId = activeProfileId,
+            profileSettings = profiles,
+        )
+    }
+
+    private fun com.keepfit.core.preferences.AppSettings.toProfileBackupSnapshot() = BackupProfileSettingsSnapshot(
+        weightUnit = weightUnit.name,
+        measurementUnit = measurementUnit.name,
+        restTimerSeconds = restTimerSeconds,
+        weeklyReviewPaused = weeklyReviewPaused,
+        nutritionTrackingDepth = nutritionTrackingDepth.name,
+        nutritionTargetRangePercent = nutritionTargetRangePercent,
+        workoutReminderEnabled = workoutReminder.enabled,
+        workoutReminderHour = workoutReminder.hour,
+        workoutReminderMinute = workoutReminder.minute,
+        transformationReminderEnabled = transformationReminder.enabled,
+        transformationReminderDayOfWeek = transformationReminder.dayOfWeek.value,
+        transformationReminderHour = transformationReminder.hour,
+        transformationReminderMinute = transformationReminder.minute,
+    )
+
+    private fun BackupProfileSettingsSnapshot.toAppSettings() = com.keepfit.core.preferences.AppSettings(
+        weightUnit = WeightUnit.valueOf(weightUnit),
+        measurementUnit = MeasurementUnit.valueOf(measurementUnit),
+        restTimerSeconds = restTimerSeconds,
+        weeklyReviewPaused = weeklyReviewPaused,
+        nutritionTrackingDepth = runCatching { NutritionTrackingDepth.valueOf(nutritionTrackingDepth) }
+            .getOrDefault(NutritionTrackingDepth.DETAILED_MACROS),
+        nutritionTargetRangePercent = nutritionTargetRangePercent,
+        workoutReminder = com.keepfit.core.preferences.ReminderTime(
+            workoutReminderEnabled,
+            workoutReminderHour,
+            workoutReminderMinute,
+        ),
+        transformationReminder = com.keepfit.core.preferences.WeeklyReminderTime(
+            transformationReminderEnabled,
+            java.time.DayOfWeek.of(transformationReminderDayOfWeek.coerceIn(1, 7)),
+            transformationReminderHour,
+            transformationReminderMinute,
+        ),
+    )
 }

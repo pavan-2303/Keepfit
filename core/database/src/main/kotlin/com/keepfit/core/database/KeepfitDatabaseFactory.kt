@@ -2,15 +2,19 @@ package com.keepfit.core.database
 
 import android.content.Context
 import androidx.room.Room
+import com.keepfit.core.database.catalogue.BundledExerciseCatalogueCallback
 
 object KeepfitDatabaseFactory {
     const val DATABASE_NAME = "keepfit.db"
 
-    fun create(context: Context): KeepfitDatabase =
+    fun create(
+        context: Context,
+        databaseName: String = DATABASE_NAME,
+    ): KeepfitDatabase =
         Room.databaseBuilder(
             context,
             KeepfitDatabase::class.java,
-            DATABASE_NAME,
+            databaseName,
         )
             .addMigrations(KeepfitMigrations.ONE_TO_TWO)
             .addMigrations(KeepfitMigrations.TWO_TO_THREE)
@@ -21,5 +25,10 @@ object KeepfitDatabaseFactory {
             .addMigrations(KeepfitMigrations.SEVEN_TO_EIGHT)
             .addMigrations(KeepfitMigrations.EIGHT_TO_NINE)
             .addMigrations(KeepfitMigrations.NINE_TO_TEN)
+            .addMigrations(KeepfitMigrations.TEN_TO_ELEVEN)
+            .addMigrations(KeepfitMigrations.ELEVEN_TO_TWELVE)
+            .addMigrations(KeepfitMigrations.TWELVE_TO_THIRTEEN)
+            .addMigrations(KeepfitMigrations.THIRTEEN_TO_FOURTEEN)
+            .addCallback(BundledExerciseCatalogueCallback(context))
             .build()
 }

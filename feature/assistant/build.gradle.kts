@@ -26,6 +26,8 @@ android {
 
 dependencies {
     implementation(project(":core:designsystem"))
+    implementation(project(":core:database"))
+    implementation(project(":core:preferences"))
 
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -39,6 +41,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.hilt.android)
     implementation(libs.gson)
+    implementation(libs.markdown.renderer.m3)
+    implementation(libs.play.services.auth.blockstore)
 
     ksp(libs.hilt.compiler)
 

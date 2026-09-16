@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-enum class StarterPlanStage { SETUP, PREVIEW, APPLIED }
+enum class StarterPlanStage { SETUP, ROUTE_CHOICE, PREVIEW, APPLIED }
 
 data class StarterPlanUiState(
     val input: StarterPlanInput = StarterPlanInput(
@@ -91,6 +91,8 @@ class StarterPlanViewModel @Inject constructor(
             .onSuccess { draft -> _state.update { it.copy(stage = StarterPlanStage.PREVIEW, draft = draft, message = null) } }
             .onFailure { error -> _state.update { it.copy(message = error.userMessage()) } }
     }
+
+    fun showRouteChoice() = _state.update { it.copy(stage = StarterPlanStage.ROUTE_CHOICE, message = null) }
 
     fun editSetup() = _state.update { it.copy(stage = StarterPlanStage.SETUP, message = null) }
 

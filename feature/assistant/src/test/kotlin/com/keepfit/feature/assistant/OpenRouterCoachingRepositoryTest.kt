@@ -23,6 +23,10 @@ import com.keepfit.feature.assistant.data.AssistantPromptAssembler
 import com.keepfit.feature.assistant.data.AssistantSummaryDataSource
 import com.keepfit.feature.assistant.data.AssistantSummaryRepository
 import com.keepfit.feature.assistant.data.OpenRouterAssistantRepository
+import com.keepfit.feature.assistant.planning.AssistantPlanContext
+import com.keepfit.feature.assistant.planning.AssistantPlanContextDataSource
+import com.keepfit.feature.assistant.planning.AssistantPlanExerciseOption
+import com.keepfit.feature.assistant.planning.AssistantPlanValidator
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -100,6 +104,41 @@ class OpenRouterCoachingRepositoryTest {
         assertFalse(body.contains("Recent workouts"))
     }
 
+    @Test
+    fun workoutDraftUsesStrictToolContractAndSuppliedExerciseIds() = runBlocking {
+        val transport = RecordingTransport(validPlanResponse())
+        val access = FakeAccessController()
+        val repository = repository(transport, access)
+
+        val plan = repository.requestDraftPlan(
+            sampleConfig(),
+            com.keepfit.feature.assistant.data.AssistantDraftInput("Build a manageable starter week"),
+        ).getOrThrow()
+
+        assertEquals("Strong start", plan.name)
+        assertEquals("11111111-1111-1111-1111-111111111111", plan.days.single().exercises.single().exerciseId)
+        val body = transport.requests.single().body.orEmpty()
+        assertTrue(body.contains("create_workout_plan"))
+        assertTrue(body.contains("11111111-1111-1111-1111-111111111111"))
+        assertTrue(body.contains("tool_choice"))
+    }
+
+    @Test
+    fun unsafeWorkoutDraftIsRefusedBeforeQuotaOrNetwork() = runBlocking {
+        val transport = RecordingTransport(validPlanResponse())
+        val access = FakeAccessController()
+        val repository = repository(transport, access)
+
+        val result = repository.requestDraftPlan(
+            sampleConfig(),
+            com.keepfit.feature.assistant.data.AssistantDraftInput("Build a plan to train through sharp knee pain"),
+        )
+
+        assertTrue(result.exceptionOrNull() is CoachingSafetyRefusalException)
+        assertEquals(0, access.reservations)
+        assertTrue(transport.requests.isEmpty())
+    }
+
     private fun repository(transport: RecordingTransport, access: FakeAccessController) =
         OpenRouterAssistantRepository(
             summaryRepository = AssistantSummaryRepository(EmptySummarySource(), clock),
@@ -110,8 +149,26 @@ class OpenRouterCoachingRepositoryTest {
             coachingContextDataSource = CoachingContextDataSource { context() },
             safetyGate = CoachingSafetyGate(),
             proposalValidator = CoachingProposalValidator(),
+            planContextDataSource = AssistantPlanContextDataSource { planContext() },
+            planValidator = AssistantPlanValidator(),
             clock = clock,
         )
+
+    private fun planContext() = AssistantPlanContext(
+        goal = "Build muscle",
+        experience = "Beginner",
+        sessionMinutes = 30,
+        preferredDays = setOf(java.time.DayOfWeek.MONDAY),
+        equipment = setOf("Dumbbells"),
+        exercises = listOf(
+            AssistantPlanExerciseOption(
+                id = "11111111-1111-1111-1111-111111111111",
+                name = "Goblet squat",
+                equipment = "Dumbbell",
+                targetMuscle = "Quads",
+            ),
+        ),
+    )
 
     private fun context() = CoachingContext(
         generatedOn = LocalDate.of(2026, 9, 13),
@@ -142,6 +199,11 @@ class OpenRouterCoachingRepositoryTest {
         """{"model":"inclusionai/ling-3.0-flash-sante:free","choices":[{"message":{"role":"assistant","content":"A useful answer."}}]}""",
     )
 
+    private fun validPlanResponse() = AssistantHttpResponse(
+        200,
+        """{"choices":[{"message":{"role":"assistant","tool_calls":[{"id":"call-plan","type":"function","function":{"name":"create_workout_plan","arguments":"{\"plan_name\":\"Strong start\",\"overview\":\"A manageable week.\",\"days\":[{\"day_of_week\":\"MONDAY\",\"template_name\":\"Full body A\",\"notes\":\"Move with control.\",\"exercises\":[{\"exercise_id\":\"11111111-1111-1111-1111-111111111111\",\"target_sets\":3,\"target_reps\":\"8-12\",\"notes\":\"Leave two reps in reserve.\"}]}]}"}}]}}]}""",
+    )
+
     private fun sampleConfig() = com.keepfit.feature.assistant.data.AssistantRuntimeConfig(
         baseUrl = "https://openrouter.ai/api/v1",
         generalChatModelName = OpenRouterApi.MODEL,
@@ -157,6 +219,7 @@ class OpenRouterCoachingRepositoryTest {
     }
 
     private class FakeAccessController : AssistantAccessController {
+        override fun synchronizeCredentialState() = Unit
         var reservations = 0
         override val state = MutableStateFlow(
             AssistantAccessState(),
@@ -166,7 +229,7 @@ class OpenRouterCoachingRepositoryTest {
         override suspend fun resumePendingAuthorization() = Unit
         override suspend fun inspectConnection() = Result.success(OpenRouterKeyMetadata(null, true, null))
         override fun cancelAuthorization(message: String) = Unit
-        override fun disconnect() = Unit
+        override suspend fun disconnect() = Unit
         override fun reserveInferenceRequest(): Result<String> {
             reservations++
             return Result.success("token")

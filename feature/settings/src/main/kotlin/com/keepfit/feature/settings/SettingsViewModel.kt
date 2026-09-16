@@ -60,6 +60,10 @@ class SettingsViewModel @Inject constructor(
             .onFailure { _message.value = it.message }
     }
 
+    fun saveReduceMotion(enabled: Boolean) = launchWrite(null) {
+        settingsRepository.updateReduceMotion(enabled)
+    }
+
     fun saveWorkoutReminder(enabled: Boolean, hour: String, minute: String) {
         SettingsInputValidator.validateReminder(enabled, hour, minute)
             .onSuccess { reminder ->

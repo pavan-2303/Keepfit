@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.keepfit.core.database.KeepfitDatabase
 import com.keepfit.core.database.profile.BodyProfileEntity
 import com.keepfit.core.database.workout.WorkoutTemplateEntity
+import com.keepfit.feature.workouts.TestActiveProfileStore
 import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
@@ -36,6 +37,7 @@ class RoomStarterPlanRepositoryTest {
         )
         repository = RoomStarterPlanRepository(
             database = database,
+            activeProfileStore = TestActiveProfileStore(),
             idFactory = { "id-${++id}" },
             clock = { 10L },
             today = { LocalDate.parse("2026-09-12") },
@@ -65,7 +67,7 @@ class RoomStarterPlanRepositoryTest {
     @Test
     fun savesPreferencesAndAppliesReviewedWeekWithoutArchivingCustomTemplates() = runBlocking {
         database.workoutDao().upsertTemplate(
-            WorkoutTemplateEntity("custom", "My routine", null, 1L, 1L, null),
+            WorkoutTemplateEntity("custom", "My routine", null, 1L, 1L, null, bodyProfileId = "profile"),
         )
         val input = StarterPlanInput(
             goal = JourneyGoal.CONSISTENCY,

@@ -22,8 +22,8 @@ android {
         applicationId = "com.keepfit.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.10.0"
+        versionCode = 19
+        versionName = "0.19.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

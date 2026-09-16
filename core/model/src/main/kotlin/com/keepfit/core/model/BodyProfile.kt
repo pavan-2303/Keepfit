@@ -13,4 +13,5 @@ data class BodyProfile(
     val dailyFatGoalGrams: Double? = null,
     val createdAt: Long,
     val updatedAt: Long,
+    val archivedAt: Long? = null,
 )

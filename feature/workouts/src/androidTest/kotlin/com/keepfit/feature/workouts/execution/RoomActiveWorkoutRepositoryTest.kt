@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.keepfit.core.database.KeepfitDatabase
+import com.keepfit.core.database.profile.BodyProfileEntity
 import com.keepfit.core.database.workout.ExerciseEntity
 import com.keepfit.core.database.workout.ExerciseLogEntity
 import com.keepfit.core.database.workout.SetLogEntity
@@ -18,6 +19,7 @@ import com.keepfit.core.preferences.MeasurementUnit
 import com.keepfit.core.preferences.WeightUnit
 import com.keepfit.feature.workouts.CompletedSetInput
 import com.keepfit.feature.workouts.data.RoomWorkoutRepository
+import com.keepfit.feature.workouts.TestActiveProfileStore
 import com.keepfit.feature.workouts.data.WorkoutFeedback
 import java.time.LocalDate
 import kotlinx.coroutines.async
@@ -48,6 +50,9 @@ class RoomActiveWorkoutRepositoryTest {
         database = Room.inMemoryDatabaseBuilder(context, KeepfitDatabase::class.java)
             .allowMainThreadQueries()
             .build()
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("profile", "Alex", 170.0, null, createdAt = 1L, updatedAt = 1L),
+        )
         repository = newRepository(context)
         seedExercisesAndTemplate()
         seedCompletedPerformance()
@@ -185,6 +190,7 @@ class RoomActiveWorkoutRepositoryTest {
         dao = database.workoutDao(),
         mediaStore = ExerciseMediaStore(context),
         settingsRepository = FixedSettingsRepository,
+        activeProfileStore = TestActiveProfileStore(),
         idFactory = { "generated-${++nextId}" },
         clock = { 1_000L + nextId },
         today = { today },
@@ -207,7 +213,9 @@ class RoomActiveWorkoutRepositoryTest {
                 ),
             )
         }
-        dao.upsertTemplate(WorkoutTemplateEntity("template", "Foundation A", null, 10, 10, null))
+        dao.upsertTemplate(
+            WorkoutTemplateEntity("template", "Foundation A", null, 10, 10, null, bodyProfileId = "profile"),
+        )
         dao.replaceTemplateExercises(
             "template",
             (1..4).map { position ->
@@ -235,6 +243,7 @@ class RoomActiveWorkoutRepositoryTest {
                 startedAt = 20,
                 completedAt = 30,
                 notes = null,
+                bodyProfileId = "profile",
             ),
         )
         dao.insertExerciseLog(
@@ -264,6 +273,7 @@ class RoomActiveWorkoutRepositoryTest {
                 startedAt = 100,
                 completedAt = null,
                 notes = null,
+                bodyProfileId = "profile",
             ),
         )
         (1..4).forEach { position ->

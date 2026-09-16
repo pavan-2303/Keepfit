@@ -18,6 +18,7 @@ import com.keepfit.core.database.workout.WorkoutTemplateEntity
 import com.keepfit.core.database.workout.WorkoutTemplateExerciseEntity
 import com.keepfit.core.media.ExerciseMediaStore
 import com.keepfit.core.preferences.AppSettingsRepository
+import com.keepfit.core.preferences.ActiveProfileStore
 import com.keepfit.feature.workouts.CompletedSetInput
 import com.keepfit.feature.workouts.ExerciseInput
 import com.keepfit.feature.workouts.execution.WorkoutExecutionRules
@@ -38,6 +39,9 @@ import java.util.UUID
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.sync.Mutex
@@ -48,6 +52,7 @@ class RoomWorkoutRepository(
     private val dao: WorkoutDao,
     private val mediaStore: ExerciseMediaStore,
     private val settingsRepository: AppSettingsRepository,
+    private val activeProfileStore: ActiveProfileStore,
     private val idFactory: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Long = System::currentTimeMillis,
     private val today: () -> LocalDate = LocalDate::now,
@@ -65,7 +70,9 @@ class RoomWorkoutRepository(
         dao.observeExerciseDetails(query).map { details -> details.map { it.toModel(mediaStore) } }
 
     override fun observeTemplates(): Flow<List<WorkoutTemplate>> =
-        dao.observeTemplateDetails().map { details ->
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observeTemplateDetailsForProfile(profileId)
+        }.map { details ->
             details.map { template ->
                 WorkoutTemplate(
                     id = template.template.id,
@@ -88,10 +95,14 @@ class RoomWorkoutRepository(
         }
 
     override fun observeWeeklySchedule(): Flow<List<PlannedWorkout>> =
-        dao.observeWeeklySchedule().map { rows -> rows.map { it.toModel() } }
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observeWeeklyScheduleForProfile(profileId)
+        }.map { rows -> rows.map { it.toModel() } }
 
     override fun observeTodayPlan(): Flow<List<PlannedWorkout>> =
-        dao.observePlannedWorkouts(today().dayOfWeek).map { rows -> rows.map { it.toModel() } }
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observePlannedWorkoutsForProfile(profileId, today().dayOfWeek)
+        }.map { rows -> rows.map { it.toModel() } }
 
     override fun observeTodayWorkout(): Flow<TodayWorkoutState> {
         val todayDate = today()
@@ -100,8 +111,12 @@ class RoomWorkoutRepository(
         return combine(
             observeWeeklySchedule(),
             observeTemplates(),
-            dao.observeOccurrenceDetails(recoveryStart, occurrenceEnd),
-            dao.observeSessionsBetween(recoveryStart, todayDate),
+            activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+                dao.observeOccurrenceDetailsForProfile(profileId, recoveryStart, occurrenceEnd)
+            },
+            activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+                dao.observeSessionsBetweenForProfile(profileId, recoveryStart, todayDate)
+            },
             observeActiveWorkout(),
         ) { schedule, templates, occurrences, sessions, activeWorkout ->
             val templatesById = templates.associateBy(WorkoutTemplate::id)
@@ -133,12 +148,14 @@ class RoomWorkoutRepository(
     }
 
     override fun observeActiveWorkout(): Flow<ActiveWorkout?> =
-        dao.observeActiveSession().mapLatest { details ->
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observeActiveSessionForProfile(profileId).mapLatest { details -> profileId to details }
+        }.mapLatest { (profileId, details) ->
             details?.let {
                 ActiveWorkout(
                     sessionId = it.session.id,
                     templateName = it.session.workoutTemplateId
-                        ?.let { templateId -> dao.findTemplateDetails(templateId) }
+                        ?.let { templateId -> dao.findTemplateDetailsForProfile(templateId, profileId) }
                         ?.template
                         ?.name
                         ?: "Workout",
@@ -147,7 +164,7 @@ class RoomWorkoutRepository(
                     exercises = it.exercises
                         .sortedBy { log -> log.exerciseLog.position }
                         .map { log ->
-                            val previousSets = dao.findPreviousSets(log.exerciseLog.exerciseId)
+                            val previousSets = dao.findPreviousSetsForProfile(profileId, log.exerciseLog.exerciseId)
                                 .mapIndexed { index, set ->
                                     LoggedSet(
                                         id = "previous-$index",
@@ -179,7 +196,9 @@ class RoomWorkoutRepository(
         }
 
     override fun observeHistory(): Flow<List<WorkoutHistory>> =
-        dao.observeSessionHistory().map { sessions ->
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observeSessionHistoryForProfile(profileId)
+        }.map { sessions ->
             sessions.map {
                 WorkoutHistory(
                     sessionId = it.session.id,
@@ -193,7 +212,9 @@ class RoomWorkoutRepository(
         }
 
     override fun observeRecords(): Flow<List<PersonalRecord>> =
-        dao.observePersonalRecords().map { records ->
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observePersonalRecordsForProfile(profileId)
+        }.map { records ->
             records.map {
                 PersonalRecord(
                     exerciseName = it.exerciseName,
@@ -206,6 +227,7 @@ class RoomWorkoutRepository(
     override suspend fun saveExercise(id: String?, input: ExerciseInput, mediaUri: Uri?) {
         val exerciseId = id ?: idFactory()
         val now = clock()
+        val existing = id?.let { dao.findActiveExercise(it) }
         val importedMedia = mediaUri?.let(mediaStore::import)
         dao.upsertExercise(
             ExerciseEntity(
@@ -215,9 +237,14 @@ class RoomWorkoutRepository(
                 instructions = input.instructions,
                 notes = input.notes,
                 isBodyweight = input.isBodyweight,
-                createdAt = now,
+                createdAt = existing?.createdAt ?: now,
                 updatedAt = now,
                 archivedAt = null,
+                source = existing?.source,
+                sourceId = existing?.sourceId,
+                equipment = existing?.equipment,
+                targetMuscle = existing?.targetMuscle,
+                secondaryMuscles = existing?.secondaryMuscles,
             ),
         )
         importedMedia?.let {
@@ -250,12 +277,13 @@ class RoomWorkoutRepository(
     }
 
     override suspend fun createTemplate(name: String, exerciseIds: List<String>) {
+        val profileId = requireProfileId()
         require(name.isNotBlank()) { "Enter a template name." }
         require(exerciseIds.isNotEmpty()) { "Choose at least one exercise." }
         val templateId = idFactory()
         val now = clock()
         dao.upsertTemplate(
-            WorkoutTemplateEntity(templateId, name.trim(), null, now, now, null),
+            WorkoutTemplateEntity(templateId, name.trim(), null, now, now, null, bodyProfileId = profileId),
         )
         dao.replaceTemplateExercises(
             templateId = templateId,
@@ -274,6 +302,7 @@ class RoomWorkoutRepository(
     }
 
     override suspend fun deleteTemplate(id: String) {
+        requireNotNull(dao.findTemplateForProfile(id, requireProfileId())) { "Workout template not found." }
         require(
             dao.countTemplateSessionUsage(id) == 0 && dao.countTemplateOccurrenceUsage(id) == 0,
         ) {
@@ -284,9 +313,11 @@ class RoomWorkoutRepository(
     }
 
     override suspend fun assignTemplate(dayOfWeek: DayOfWeek, templateId: String) {
+        val profileId = requireProfileId()
         val now = clock()
-        val planId = "default-weekly-plan"
-        dao.deactivateWeeklyPlans()
+        val planId = "default-weekly-plan-$profileId"
+        requireNotNull(dao.findTemplateForProfile(templateId, profileId)) { "Workout template not found." }
+        dao.deactivateWeeklyPlansForProfile(profileId)
         dao.upsertWeeklyPlan(
             WeeklyPlanEntity(
                 id = planId,
@@ -295,6 +326,7 @@ class RoomWorkoutRepository(
                 isActive = true,
                 createdAt = now,
                 updatedAt = now,
+                bodyProfileId = profileId,
             ),
         )
         dao.replacePlannedWorkout(
@@ -303,21 +335,23 @@ class RoomWorkoutRepository(
     }
 
     override suspend fun clearPlannedWorkout(dayOfWeek: DayOfWeek) {
-        val planId = "default-weekly-plan"
+        val planId = "default-weekly-plan-${requireProfileId()}"
         dao.deletePlannedWorkouts(planId, dayOfWeek)
     }
 
     override suspend fun replaceWeeklySchedule(assignments: List<Pair<DayOfWeek, String>>) {
+        val profileId = requireProfileId()
         require(assignments.isNotEmpty()) { "Choose at least one planned workout." }
         require(assignments.map { it.first }.distinct().size == assignments.size) {
             "A weekday can be assigned only once."
         }
         assignments.forEach { (_, templateId) ->
-            requireNotNull(dao.findTemplate(templateId)) { "Workout template not found." }
+            requireNotNull(dao.findTemplateForProfile(templateId, profileId)) { "Workout template not found." }
         }
         val now = clock()
-        val planId = "default-weekly-plan"
-        dao.replaceWeeklySchedule(
+        val planId = "default-weekly-plan-$profileId"
+        dao.replaceWeeklyScheduleForProfile(
+            profileId = profileId,
             plan = WeeklyPlanEntity(
                 id = planId,
                 name = "Default week",
@@ -325,6 +359,7 @@ class RoomWorkoutRepository(
                 isActive = true,
                 createdAt = now,
                 updatedAt = now,
+                bodyProfileId = profileId,
             ),
             workouts = assignments.mapIndexed { position, (day, templateId) ->
                 PlannedWorkoutEntity(idFactory(), planId, templateId, day, position)
@@ -333,9 +368,11 @@ class RoomWorkoutRepository(
     }
 
     override suspend fun startOrResume(plannedWorkout: PlannedWorkout): String {
-        val template = requireNotNull(dao.findTemplateDetails(plannedWorkout.templateId))
+        val profileId = requireProfileId()
+        val template = requireNotNull(dao.findTemplateDetailsForProfile(plannedWorkout.templateId, profileId))
         val sessionId = idFactory()
-        return dao.startSessionIfNoneActive(
+        return dao.startSessionIfNoneActiveForProfile(
+            profileId = profileId,
             session = WorkoutSessionEntity(
                 id = sessionId,
                 workoutTemplateId = template.template.id,
@@ -344,6 +381,7 @@ class RoomWorkoutRepository(
                 startedAt = clock(),
                 completedAt = null,
                 notes = null,
+                bodyProfileId = profileId,
             ),
             logs = template.exercises.sortedBy { it.templateExercise.position }.mapIndexed { index, item ->
                 ExerciseLogEntity(
@@ -393,11 +431,12 @@ class RoomWorkoutRepository(
     }
 
     override suspend fun confirmTodayChange(request: TodayChangeRequest) = todayWriteMutex.withLock {
-        require(dao.findActiveSession() == null) { "Finish the active workout before changing today's plan." }
+        val profileId = requireProfileId()
+        require(dao.findActiveSessionForProfile(profileId) == null) { "Finish the active workout before changing today's plan." }
         val action = loadTodayAction(request)
         if (request.type == TodayChangeType.RESTORE) {
             val occurrenceId = requireNotNull(action.occurrenceId) { "There is no dated change to restore." }
-            require(action.plannedWorkoutId != null && dao.findPlannedWorkout(action.plannedWorkoutId) != null) {
+            require(action.plannedWorkoutId != null && dao.findPlannedWorkoutForProfile(action.plannedWorkoutId, profileId) != null) {
                 "The original recurring workout is no longer available."
             }
             require(dao.countSessionsForOccurrence(occurrenceId) == 0) {
@@ -408,7 +447,7 @@ class RoomWorkoutRepository(
         }
 
         val preview = previewTodayChange(request)
-        val existing = action.occurrenceId?.let { occurrenceId -> dao.findOccurrence(occurrenceId) }
+        val existing = action.occurrenceId?.let { occurrenceId -> dao.findOccurrenceForProfile(occurrenceId, profileId) }
         val occurrenceId = existing?.id ?: idFactory()
         val timestamp = clock()
         val decision = request.type.toDecision()
@@ -428,6 +467,7 @@ class RoomWorkoutRepository(
                 decisionType = decision.name,
                 createdAt = existing?.createdAt ?: timestamp,
                 updatedAt = timestamp,
+                bodyProfileId = profileId,
             ),
             exercises = preview.exercises.mapIndexed { index, exercise ->
                 WorkoutOccurrenceExerciseEntity(
@@ -445,7 +485,8 @@ class RoomWorkoutRepository(
     }
 
     override suspend fun startOrResumeToday(action: TodayWorkoutAction): String = todayWriteMutex.withLock {
-        dao.findActiveSession()?.let { return@withLock it.id }
+        val profileId = requireProfileId()
+        dao.findActiveSessionForProfile(profileId)?.let { return@withLock it.id }
         require(action.decision != TodayWorkoutDecision.SKIPPED) {
             "Restore this skipped workout before starting it."
         }
@@ -454,20 +495,22 @@ class RoomWorkoutRepository(
             "This workout is scheduled for ${occurrence.occurrence.scheduledDate}."
         }
         occurrence.occurrence.id.let { occurrenceId ->
-            require(dao.findCompletedSessionForOccurrence(occurrenceId) == null) {
+            require(dao.findCompletedSessionForOccurrenceAndProfile(occurrenceId, profileId) == null) {
                 "This workout is already complete."
             }
         }
         occurrence.occurrence.sourcePlannedWorkoutId?.let { plannedWorkoutId ->
             require(
-                dao.findCompletedSessionForPlanAndDate(
+                dao.findCompletedSessionForPlanDateAndProfile(
                     plannedWorkoutId,
                     occurrence.occurrence.originalDate,
+                    profileId,
                 ) == null,
             ) { "This workout is already complete." }
         }
         val sessionId = idFactory()
-        dao.startSessionIfNoneActive(
+        dao.startSessionIfNoneActiveForProfile(
+            profileId = profileId,
             session = WorkoutSessionEntity(
                 id = sessionId,
                 workoutTemplateId = occurrence.occurrence.sourceTemplateId,
@@ -478,6 +521,7 @@ class RoomWorkoutRepository(
                 notes = null,
                 workoutOccurrenceId = occurrence.occurrence.id,
                 sessionVariant = occurrence.occurrence.decisionType,
+                bodyProfileId = profileId,
             ),
             logs = occurrence.exercises.sortedBy { it.position }.mapIndexed { index, exercise ->
                 ExerciseLogEntity(
@@ -494,20 +538,21 @@ class RoomWorkoutRepository(
     }
 
     private suspend fun loadTodayAction(request: TodayChangeRequest): TodayWorkoutAction {
+        val profileId = requireProfileId()
         val occurrenceDetails = request.occurrenceId
-            ?.let { occurrenceId -> dao.findOccurrenceDetails(occurrenceId) }
+            ?.let { occurrenceId -> dao.findOccurrenceDetailsForProfile(occurrenceId, profileId) }
             ?: request.plannedWorkoutId
-                ?.let { dao.findOccurrenceForSource(it, request.originalDate) }
-                ?.let { dao.findOccurrenceDetails(it.id) }
+                ?.let { dao.findOccurrenceForSourceAndProfile(it, request.originalDate, profileId) }
+                ?.let { dao.findOccurrenceDetailsForProfile(it.id, profileId) }
         if (occurrenceDetails != null) return occurrenceDetails.toTodayAction()
 
         val plannedWorkoutId = requireNotNull(request.plannedWorkoutId) {
             "The source workout is no longer available."
         }
-        val planned = requireNotNull(dao.findPlannedWorkout(plannedWorkoutId)) {
+        val planned = requireNotNull(dao.findPlannedWorkoutForProfile(plannedWorkoutId, profileId)) {
             "The source workout is no longer available."
         }.toModel()
-        val template = requireNotNull(dao.findTemplateDetails(planned.templateId)) {
+        val template = requireNotNull(dao.findTemplateDetailsForProfile(planned.templateId, profileId)) {
             "The workout template is no longer available."
         }.toModel()
         return planned.toTodayAction(request.originalDate, template)
@@ -555,20 +600,21 @@ class RoomWorkoutRepository(
 
     private suspend fun sourceTemplate(action: TodayWorkoutAction): WorkoutTemplate {
         val templateId = requireNotNull(action.templateId) { "The source template is no longer available." }
-        return requireNotNull(dao.findTemplateDetails(templateId)) {
+        return requireNotNull(dao.findTemplateDetailsForProfile(templateId, requireProfileId())) {
             "The source template is no longer available."
         }.toModel()
     }
 
     private suspend fun materializeOccurrence(action: TodayWorkoutAction): WorkoutOccurrenceDetails {
+        val profileId = requireProfileId()
         action.occurrenceId?.let { occurrenceId ->
-            return requireNotNull(dao.findOccurrenceDetails(occurrenceId)) {
+            return requireNotNull(dao.findOccurrenceDetailsForProfile(occurrenceId, profileId)) {
                 "This dated workout is no longer available."
             }
         }
         action.plannedWorkoutId?.let { plannedWorkoutId ->
-            dao.findOccurrenceForSource(plannedWorkoutId, action.originalDate)?.let { existing ->
-                return requireNotNull(dao.findOccurrenceDetails(existing.id))
+            dao.findOccurrenceForSourceAndProfile(plannedWorkoutId, action.originalDate, profileId)?.let { existing ->
+                return requireNotNull(dao.findOccurrenceDetailsForProfile(existing.id, profileId))
             }
         }
         val occurrenceId = idFactory()
@@ -584,6 +630,7 @@ class RoomWorkoutRepository(
                 decisionType = TodayWorkoutDecision.FULL.name,
                 createdAt = timestamp,
                 updatedAt = timestamp,
+                bodyProfileId = profileId,
             ),
             exercises = action.exercises.mapIndexed { index, exercise ->
                 WorkoutOccurrenceExerciseEntity(
@@ -598,7 +645,7 @@ class RoomWorkoutRepository(
                 )
             },
         )
-        return requireNotNull(dao.findOccurrenceDetails(occurrenceId))
+        return requireNotNull(dao.findOccurrenceDetailsForProfile(occurrenceId, profileId))
     }
 
     private fun validateTodayRequest(request: TodayChangeRequest) {
@@ -618,7 +665,8 @@ class RoomWorkoutRepository(
 
     override suspend fun addSet(exerciseLogId: String, input: CompletedSetInput) =
         executionWriteMutex.withLock {
-            dao.appendSetToActiveSession(
+            dao.appendSetToActiveSessionForProfile(
+                profileId = requireProfileId(),
                 setId = idFactory(),
                 exerciseLogId = exerciseLogId,
                 repetitions = input.repetitions,
@@ -627,33 +675,43 @@ class RoomWorkoutRepository(
         }
 
     override suspend fun repeatPreviousSet(exerciseLogId: String) = executionWriteMutex.withLock {
-        dao.repeatPreviousSetInActiveSession(idFactory(), exerciseLogId)
+        dao.repeatPreviousSetInActiveSessionForProfile(requireProfileId(), idFactory(), exerciseLogId)
     }
 
     override suspend fun substituteActiveExercise(
         exerciseLogId: String,
         replacementExerciseId: String,
     ) = executionWriteMutex.withLock {
-        dao.substituteExerciseInActiveSession(exerciseLogId, replacementExerciseId)
+        dao.substituteExerciseInActiveSessionForProfile(requireProfileId(), exerciseLogId, replacementExerciseId)
     }
 
     override suspend fun convertActiveWorkoutToMinimum() = executionWriteMutex.withLock {
-        dao.convertActiveSessionToMinimum()
+        dao.convertActiveSessionToMinimumForProfile(requireProfileId())
     }
 
     override suspend fun updateExerciseNotes(exerciseLogId: String, notes: String) =
-        dao.updateExerciseLogNotes(exerciseLogId, notes.trim().ifEmpty { null })
+        require(
+            dao.updateExerciseLogNotesForProfile(
+                requireProfileId(),
+                exerciseLogId,
+                notes.trim().ifEmpty { null },
+            ) == 1,
+        ) { "This exercise is not part of the active profile." }
 
     override suspend fun completeActiveWorkout(feedback: WorkoutFeedback?) =
         executionWriteMutex.withLock {
             feedback?.energyLevel?.let { require(it in 1..5) { "Energy must be between 1 and 5." } }
             feedback?.difficulty?.let { require(it in 1..5) { "Difficulty must be between 1 and 5." } }
-            dao.completeActiveSession(
+            dao.completeActiveSessionForProfile(
+                profileId = requireProfileId(),
                 completedAt = clock(),
                 energyLevel = feedback?.energyLevel,
                 difficulty = feedback?.difficulty,
             )
         }
+
+    private suspend fun requireProfileId(): String =
+        requireNotNull(activeProfileStore.observeActiveProfileId().first()) { "Profile missing." }
 }
 
 private fun ExerciseDetails.toModel(mediaStore: ExerciseMediaStore) = Exercise(
@@ -663,6 +721,11 @@ private fun ExerciseDetails.toModel(mediaStore: ExerciseMediaStore) = Exercise(
     instructions = exercise.instructions,
     notes = exercise.notes,
     isBodyweight = exercise.isBodyweight,
+    source = exercise.source,
+    sourceId = exercise.sourceId,
+    equipment = exercise.equipment,
+    targetMuscle = exercise.targetMuscle,
+    secondaryMuscles = exercise.secondaryMuscles,
     demo = media?.let { attached ->
         mediaStore.resolve(attached.relativePath)?.let { uri ->
             ExerciseDemo(

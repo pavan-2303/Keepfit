@@ -17,22 +17,32 @@ import com.keepfit.feature.assistant.coaching.CoachingIntent
 import com.keepfit.feature.assistant.coaching.CoachingProposalApplier
 import com.keepfit.feature.assistant.coaching.CoachingProposalOperation
 import com.keepfit.feature.assistant.coaching.CoachingSafetyRefusalException
+import com.keepfit.feature.assistant.conversation.AssistantConversationRepository
+import com.keepfit.feature.assistant.conversation.CoachPersona
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 @HiltViewModel
 class AssistantViewModel @Inject constructor(
     private val repository: AssistantRepository,
+    private val conversationRepository: AssistantConversationRepository,
     private val planApplier: AssistantPlanApplier,
     private val accessController: AssistantAccessController,
     private val coachingProposalApplier: CoachingProposalApplier,
     private val assistantDraftStore: AssistantDraftStore,
     private val contextPolicy: AssistantContextPolicy = AssistantContextPolicy(),
 ) : ViewModel() {
+    private val activeConversationId = MutableStateFlow<String?>(null)
+    private val supplementalMessages = mutableMapOf<String?, List<AssistantChatMessage>>()
+    private var coachPickerRequested = false
     private val restoredDraft = assistantDraftStore.read()
     private val _uiState = MutableStateFlow(
         AssistantUiState(
@@ -44,6 +54,8 @@ class AssistantViewModel @Inject constructor(
     val uiState: StateFlow<AssistantUiState> = _uiState.asStateFlow()
 
     init {
+        observeConversations()
+        observeActiveConversationMessages()
         viewModelScope.launch {
             accessController.state.collect { accessState ->
                 _uiState.value = _uiState.value.copy(accessState = accessState)
@@ -51,6 +63,130 @@ class AssistantViewModel @Inject constructor(
         }
         viewModelScope.launch {
             accessController.resumePendingAuthorization()
+        }
+    }
+
+    private fun observeConversations() {
+        viewModelScope.launch {
+            conversationRepository.observeConversations().collect { conversations ->
+                val state = _uiState.value
+                val currentId = activeConversationId.value
+                val nextId = currentId?.takeIf { id -> conversations.any { it.id == id } }
+                    ?: conversations.firstOrNull()?.id
+                activeConversationId.value = nextId
+                _uiState.value = state.copy(
+                    conversations = conversations,
+                    activeConversationId = nextId,
+                    showCoachPicker = conversations.isEmpty() || coachPickerRequested,
+                )
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeActiveConversationMessages() {
+        viewModelScope.launch {
+            activeConversationId.flatMapLatest { conversationId ->
+                if (conversationId == null) flowOf(emptyList())
+                else conversationRepository.observeMessages(conversationId)
+            }.collect { messages ->
+                val visibleMessages = messages + supplementalMessages[activeConversationId.value].orEmpty()
+                _uiState.value = _uiState.value.copy(
+                    messages = visibleMessages,
+                    lastResponseUsedLocalContext = visibleMessages.lastOrNull {
+                        it.role == AssistantMessageRole.ASSISTANT
+                    }?.includedLocalContext == true,
+                )
+            }
+        }
+    }
+
+    fun startNewConversation() {
+        coachPickerRequested = true
+        _uiState.value = _uiState.value.copy(showCoachPicker = true, errorMessage = null)
+    }
+
+    fun dismissCoachPicker() {
+        if (_uiState.value.conversations.isNotEmpty()) {
+            coachPickerRequested = false
+            _uiState.value = _uiState.value.copy(showCoachPicker = false)
+        }
+    }
+
+    fun chooseCoach(coach: CoachPersona) {
+        viewModelScope.launch {
+            runCatching { conversationRepository.createConversation(coach) }
+                .onSuccess { conversation ->
+                    coachPickerRequested = false
+                    activeConversationId.value = conversation.id
+                    _uiState.value = _uiState.value.copy(
+                        activeConversationId = conversation.id,
+                        showCoachPicker = false,
+                        errorMessage = null,
+                    )
+                }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = exception.message ?: "A Coach conversation could not be created.",
+                    )
+                }
+        }
+    }
+
+    fun selectConversation(conversationId: String) {
+        if (_uiState.value.conversations.none { it.id == conversationId }) return
+        activeConversationId.value = conversationId
+        _uiState.value = _uiState.value.copy(
+            activeConversationId = conversationId,
+            showCoachPicker = false,
+            errorMessage = null,
+        )
+        coachPickerRequested = false
+    }
+
+    fun renameConversation(conversationId: String, title: String) {
+        performConversationMutation("Conversation title could not be changed.") {
+            conversationRepository.renameConversation(conversationId, title)
+        }
+    }
+
+    fun clearConversationMemory(conversationId: String) {
+        performConversationMutation("Coach memory could not be cleared.") {
+            conversationRepository.clearMemory(conversationId)
+        }
+    }
+
+    fun deleteConversation(conversationId: String) {
+        viewModelScope.launch {
+            val wasActive = activeConversationId.value == conversationId
+            if (wasActive) {
+                activeConversationId.value = null
+                _uiState.value = _uiState.value.copy(activeConversationId = null)
+            }
+            conversationRepository.deleteConversation(conversationId)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(errorMessage = null)
+                }
+                .onFailure { exception ->
+                    if (wasActive) activeConversationId.value = conversationId
+                    _uiState.value = _uiState.value.copy(
+                        activeConversationId = activeConversationId.value,
+                        errorMessage = exception.message ?: "Conversation could not be deleted.",
+                    )
+                }
+        }
+    }
+
+    private fun performConversationMutation(
+        fallbackError: String,
+        mutation: suspend () -> Result<Unit>,
+    ) {
+        viewModelScope.launch {
+            mutation()
+                .onSuccess { _uiState.value = _uiState.value.copy(errorMessage = null) }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(errorMessage = exception.message ?: fallbackError)
+                }
         }
     }
 
@@ -97,7 +233,7 @@ class AssistantViewModel @Inject constructor(
     }
 
     fun disconnectOpenRouter() {
-        accessController.disconnect()
+        viewModelScope.launch { accessController.disconnect() }
     }
 
     fun updateDraftMessage(message: String) {
@@ -172,8 +308,8 @@ class AssistantViewModel @Inject constructor(
                         },
                         createdAtUtcEpochMillis = System.currentTimeMillis(),
                     )
+                    appendSupplementalMessage(confirmation)
                     _uiState.value = _uiState.value.copy(
-                        messages = _uiState.value.messages + confirmation,
                         pendingCoachingProposal = null,
                         isWorking = false,
                     )
@@ -224,30 +360,75 @@ class AssistantViewModel @Inject constructor(
                 isWorking = true,
                 errorMessage = null,
             )
+            val conversationId = ensureActiveConversation().getOrElse { exception ->
+                _uiState.value = _uiState.value.copy(
+                    isWorking = false,
+                    errorMessage = exception.message ?: "A Coach conversation could not be created.",
+                )
+                return@launch
+            }
+            val history = conversationRepository.loadRequestHistory(conversationId).getOrElse { exception ->
+                _uiState.value = _uiState.value.copy(
+                    isWorking = false,
+                    errorMessage = exception.message ?: "Coach memory could not be loaded.",
+                )
+                return@launch
+            }
+            val userMessage = AssistantChatMessage(
+                id = UUID.randomUUID().toString(),
+                role = AssistantMessageRole.USER,
+                content = draftMessage,
+                createdAtUtcEpochMillis = System.currentTimeMillis(),
+            )
             repository.sendChatTurn(
                 config = config,
-                history = _uiState.value.messages,
+                history = history,
                 userMessage = draftMessage,
             ).onSuccess { assistantReply ->
-                val userMessage = AssistantChatMessage(
-                    id = "user-${System.currentTimeMillis()}",
-                    role = AssistantMessageRole.USER,
-                    content = draftMessage,
-                    createdAtUtcEpochMillis = System.currentTimeMillis(),
+                val persistedReply = assistantReply.copy(
+                    id = UUID.randomUUID().toString(),
+                    createdAtUtcEpochMillis = maxOf(
+                        assistantReply.createdAtUtcEpochMillis,
+                        userMessage.createdAtUtcEpochMillis + 1,
+                    ),
+                    includedLocalContext = usesLocalContext,
                 )
-                _uiState.value = _uiState.value.copy(
-                    messages = _uiState.value.messages + userMessage + assistantReply,
-                    draftMessage = "",
-                    isWorking = false,
-                    errorMessage = null,
-                    lastResponseUsedLocalContext = usesLocalContext,
-                )
+                conversationRepository.appendCompletedTurn(conversationId, userMessage, persistedReply)
+                    .onSuccess {
+                        _uiState.value = _uiState.value.copy(
+                            draftMessage = "",
+                            isWorking = false,
+                            errorMessage = null,
+                            lastResponseUsedLocalContext = usesLocalContext,
+                        )
+                    }
+                    .onFailure { exception ->
+                        _uiState.value = _uiState.value.copy(
+                            isWorking = false,
+                            errorMessage = exception.message ?: "Coach response could not be saved.",
+                        )
+                    }
             }.onFailure {
                 _uiState.value = _uiState.value.copy(
                     isWorking = false,
                     errorMessage = it.message ?: "Assistant request failed.",
                 )
             }
+        }
+    }
+
+    private suspend fun ensureActiveConversation(): Result<String> {
+        activeConversationId.value?.let { return Result.success(it) }
+        return runCatching {
+            conversationRepository.createConversation(CoachPersona.MIRA)
+        }.map { conversation ->
+            coachPickerRequested = false
+            activeConversationId.value = conversation.id
+            _uiState.value = _uiState.value.copy(
+                activeConversationId = conversation.id,
+                showCoachPicker = false,
+            )
+            conversation.id
         }
     }
 
@@ -269,8 +450,8 @@ class AssistantViewModel @Inject constructor(
                         content = "${summary.title}\n\n${summary.summary}",
                         createdAtUtcEpochMillis = System.currentTimeMillis(),
                     )
+                    appendSupplementalMessage(assistantMessage)
                     _uiState.value = _uiState.value.copy(
-                        messages = _uiState.value.messages + assistantMessage,
                         isWorking = false,
                         errorMessage = null,
                     )
@@ -331,8 +512,8 @@ class AssistantViewModel @Inject constructor(
                         content = "Draft weekly plan applied to Workouts > Plan.",
                         createdAtUtcEpochMillis = System.currentTimeMillis(),
                     )
+                    appendSupplementalMessage(assistantMessage)
                     _uiState.value = _uiState.value.copy(
-                        messages = _uiState.value.messages + assistantMessage,
                         pendingDraftPlan = null,
                         isWorking = false,
                         errorMessage = null,
@@ -356,5 +537,11 @@ class AssistantViewModel @Inject constructor(
                 proposal = state.pendingCoachingProposal,
             ),
         )
+    }
+
+    private fun appendSupplementalMessage(message: AssistantChatMessage) {
+        val conversationId = activeConversationId.value
+        supplementalMessages[conversationId] = supplementalMessages[conversationId].orEmpty() + message
+        _uiState.value = _uiState.value.copy(messages = _uiState.value.messages + message)
     }
 }

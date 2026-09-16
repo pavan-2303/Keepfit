@@ -9,13 +9,6 @@ import androidx.room.Relation
 import com.keepfit.core.database.profile.BodyProfileEntity
 import java.time.LocalDate
 
-enum class TransformationPhotoAngle {
-    FRONT,
-    LEFT,
-    RIGHT,
-    BACK,
-}
-
 @Entity(
     tableName = "body_measurements",
     foreignKeys = [
@@ -79,18 +72,36 @@ data class TransformationCycleEntity(
     indices = [
         Index("transformationCycleId"),
         Index("captureDate"),
-        Index(value = ["transformationCycleId", "captureDate", "angle"], unique = true),
+        Index(value = ["transformationCycleId", "captureDate", "poseKey"], unique = true),
     ],
 )
 data class TransformationPhotoEntity(
     @PrimaryKey val id: String,
     val transformationCycleId: String,
     val captureDate: LocalDate,
-    val angle: TransformationPhotoAngle,
+    val poseKey: String,
     val relativePath: String,
     val mimeType: String,
     val sizeBytes: Long,
     val createdAt: Long,
+)
+
+@Entity(
+    tableName = "transformation_pose_preferences",
+    primaryKeys = ["bodyProfileId", "poseKey"],
+    foreignKeys = [
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class TransformationPosePreferenceEntity(
+    val bodyProfileId: String,
+    val poseKey: String,
+    val updatedAt: Long,
 )
 
 data class TransformationCycleDetails(

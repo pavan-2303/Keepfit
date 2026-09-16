@@ -13,6 +13,7 @@ import com.keepfit.core.database.workout.PlannedWorkoutEntity
 import com.keepfit.core.database.workout.WeeklyPlanEntity
 import com.keepfit.core.database.workout.WorkoutTemplateEntity
 import com.keepfit.core.database.workout.WorkoutTemplateExerciseEntity
+import com.keepfit.core.database.profile.BodyProfileEntity
 import com.keepfit.core.preferences.AppSettings
 import com.keepfit.core.preferences.AppSettingsRepository
 import com.keepfit.core.preferences.MeasurementUnit
@@ -36,17 +37,23 @@ class RoomWeeklyReviewRepositoryTest {
     private lateinit var database: KeepfitDatabase
     private lateinit var settings: FakeSettingsRepository
     private lateinit var repository: RoomWeeklyReviewRepository
+    private lateinit var activeProfileStore: TestActiveProfileStore
 
     @Before
     fun setUp() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, KeepfitDatabase::class.java).build()
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("profile", "Alex", 170.0, null, createdAt = 1L, updatedAt = 1L),
+        )
         settings = FakeSettingsRepository()
+        activeProfileStore = TestActiveProfileStore()
         repository = RoomWeeklyReviewRepository(
             database = database,
             workoutDao = database.workoutDao(),
             nutritionDao = database.nutritionDao(),
             settingsRepository = settings,
+            activeProfileStore = activeProfileStore,
             activityProvider = object : WeeklyActivityProvider {
                 override suspend fun loadSteps(window: WeeklyReviewWindow) = null
             },
@@ -124,6 +131,21 @@ class RoomWeeklyReviewRepositoryTest {
     }
 
     @Test
+    fun reviewDecisionForOneProfileDoesNotDecideTheOtherProfilesWeek() = runBlocking {
+        repository.dismiss()
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("profile-b", "Sam", 165.0, null, createdAt = 2L, updatedAt = 2L),
+        )
+        activeProfileStore.selectProfile("profile-b")
+
+        val weekStart = LocalDate.of(2026, 8, 31)
+        assertNull(database.weeklyReviewDao().findForProfileAndWeek("profile-b", weekStart))
+        repository.dismiss()
+        assertEquals("DISMISSED", database.weeklyReviewDao().findForProfileAndWeek("profile", weekStart)?.status)
+        assertEquals("DISMISSED", database.weeklyReviewDao().findForProfileAndWeek("profile-b", weekStart)?.status)
+    }
+
+    @Test
     fun mealQualityModeUsesCheckInsAndDisabledModeOmitsThem() = runBlocking {
         database.nutritionDao().upsertMealQualityCheckIn(
             MealQualityCheckInEntity(
@@ -132,6 +154,7 @@ class RoomWeeklyReviewRepositoryTest {
                 mealType = MealType.LUNCH,
                 quality = MealQuality.BALANCED,
                 loggedAt = 1L,
+                bodyProfileId = "profile",
             ),
         )
         settings.updateNutritionTracking(NutritionTrackingDepth.MEAL_QUALITY, 10)
@@ -148,11 +171,15 @@ class RoomWeeklyReviewRepositoryTest {
         dao.upsertExercise(
             ExerciseEntity("exercise", "Goblet squat", "Legs", null, null, false, 1, 1, null),
         )
-        dao.upsertTemplate(WorkoutTemplateEntity("template", "Foundation", null, 1, 1, null))
+        dao.upsertTemplate(
+            WorkoutTemplateEntity("template", "Foundation", null, 1, 1, null, bodyProfileId = "profile"),
+        )
         dao.insertTemplateExercises(
             listOf(WorkoutTemplateExerciseEntity("template-exercise", "template", "exercise", 0, 3, "8-10", null)),
         )
-        dao.upsertWeeklyPlan(WeeklyPlanEntity("plan", "My week", LocalDate.of(2026, 8, 1), true, 1, 1))
+        dao.upsertWeeklyPlan(
+            WeeklyPlanEntity("plan", "My week", LocalDate.of(2026, 8, 1), true, 1, 1, "profile"),
+        )
         listOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY).forEach { day ->
             dao.upsertPlannedWorkout(
                 PlannedWorkoutEntity("planned-${day.name.lowercase()}", "plan", "template", day, day.value),

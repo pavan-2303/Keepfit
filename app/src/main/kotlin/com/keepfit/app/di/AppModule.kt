@@ -1,19 +1,25 @@
 package com.keepfit.app.di
 
 import android.content.Context
+import com.keepfit.app.assistant.KeepfitAssistantPlanContextDataSource
+import com.keepfit.app.assistant.RoomAssistantPlanApplier
 import com.keepfit.app.profile.ProfileRepository
 import com.keepfit.app.profile.RoomProfileRepository
 import com.keepfit.core.database.KeepfitDatabase
 import com.keepfit.core.database.KeepfitDatabaseFactory
+import com.keepfit.core.database.assistant.AssistantConversationDao
 import com.keepfit.core.database.journey.JourneyDao
 import com.keepfit.core.database.nutrition.NutritionDao
 import com.keepfit.core.database.profile.BodyProfileDao
+import com.keepfit.core.database.profile.ProfileSetupDao
 import com.keepfit.core.database.transformation.TransformationDao
 import com.keepfit.core.database.workout.WorkoutDao
 import com.keepfit.core.media.ExerciseMediaStore
 import com.keepfit.core.media.TransformationPhotoStore
 import com.keepfit.core.preferences.AppSettingsRepository
+import com.keepfit.core.preferences.ActiveProfileStore
 import com.keepfit.core.preferences.DataStoreAppSettingsRepository
+import com.keepfit.core.preferences.DataStoreActiveProfileStore
 import com.keepfit.core.preferences.ReminderScheduler
 import com.keepfit.core.preferences.WorkManagerReminderScheduler
 import com.keepfit.feature.assistant.data.AssistantRepository
@@ -27,9 +33,15 @@ import com.keepfit.feature.assistant.data.AssistantStepsSnapshotSummary
 import com.keepfit.feature.assistant.data.AssistantSummaryDataSource
 import com.keepfit.feature.assistant.data.AssistantTransformationCycleSnapshot
 import com.keepfit.feature.assistant.data.OpenRouterAssistantRepository
+import com.keepfit.feature.assistant.conversation.AssistantConversationRepository
+import com.keepfit.feature.assistant.conversation.RoomAssistantConversationRepository
 import com.keepfit.feature.assistant.access.AndroidKeystoreAssistantCredentialStore
 import com.keepfit.feature.assistant.access.AssistantAccessController
 import com.keepfit.feature.assistant.access.AssistantCredentialStore
+import com.keepfit.feature.assistant.access.AssistantCredentialRecoveryStore
+import com.keepfit.feature.assistant.access.AssistantCredentialRecoveryController
+import com.keepfit.feature.assistant.access.AssistantCredentialRecoveryCoordinator
+import com.keepfit.feature.assistant.access.GoogleBlockStoreCredentialRecoveryStore
 import com.keepfit.feature.assistant.access.AssistantHttpTransport
 import com.keepfit.feature.assistant.access.LoopbackOAuthCallbackServer
 import com.keepfit.feature.assistant.access.OAuthCallbackServer
@@ -49,6 +61,7 @@ import com.keepfit.feature.assistant.coaching.TodayAdjustmentType
 import com.keepfit.feature.assistant.coaching.ValidatedCoachingProposalApplier
 import com.keepfit.feature.assistant.coaching.AssistantDraftStore
 import com.keepfit.feature.assistant.access.EncryptedAssistantDraftStore
+import com.keepfit.feature.assistant.planning.AssistantPlanContextDataSource
 import com.keepfit.feature.settings.data.BackupRepository
 import com.keepfit.feature.settings.data.DeviceBackupRepository
 import com.keepfit.feature.settings.data.RoomSettingsGoalsRepository
@@ -65,13 +78,6 @@ import com.keepfit.feature.review.WeeklyReviewRepository
 import com.keepfit.feature.review.WeeklyReviewWindow
 import com.keepfit.feature.transformation.data.RoomTransformationRepository
 import com.keepfit.feature.transformation.data.TransformationRepository
-import com.keepfit.feature.workouts.ExerciseInput
-import com.keepfit.feature.workouts.catalog.CatalogLibraryService
-import com.keepfit.feature.workouts.catalog.ExerciseCatalogProvider
-import com.keepfit.feature.workouts.catalog.ExerciseDbCatalogProvider
-import com.keepfit.feature.workouts.catalog.ExerciseLibraryGateway
-import com.keepfit.feature.workouts.catalog.UrlConnectionCatalogHttpClient
-import com.keepfit.feature.workouts.catalog.WorkoutExerciseLibraryGateway
 import com.keepfit.feature.workouts.data.RoomWorkoutRepository
 import com.keepfit.feature.workouts.data.WorkoutRepository
 import com.keepfit.feature.workouts.planning.RoomStarterPlanRepository
@@ -101,12 +107,29 @@ object AppModule {
         database.bodyProfileDao()
 
     @Provides
+    fun provideProfileSetupDao(database: KeepfitDatabase): ProfileSetupDao =
+        database.profileSetupDao()
+
+    @Provides
+    fun provideAssistantConversationDao(database: KeepfitDatabase): AssistantConversationDao =
+        database.assistantConversationDao()
+
+    @Provides
     fun provideJourneyDao(database: KeepfitDatabase): JourneyDao = database.journeyDao()
 
     @Provides
     @Singleton
-    fun provideProfileRepository(dao: BodyProfileDao): ProfileRepository =
-        RoomProfileRepository(dao)
+    fun provideProfileRepository(
+        dao: BodyProfileDao,
+        setupDao: ProfileSetupDao,
+        activeProfileStore: ActiveProfileStore,
+        settingsRepository: AppSettingsRepository,
+    ): ProfileRepository = RoomProfileRepository(dao, setupDao, activeProfileStore, settingsRepository)
+
+    @Provides
+    @Singleton
+    fun provideActiveProfileStore(@ApplicationContext context: Context): ActiveProfileStore =
+        DataStoreActiveProfileStore(context)
 
     @Provides
     @Singleton
@@ -118,13 +141,20 @@ object AppModule {
     fun provideAppSettingsRepository(
         @ApplicationContext context: Context,
         scheduler: ReminderScheduler,
-    ): AppSettingsRepository = DataStoreAppSettingsRepository(context, scheduler)
+        activeProfileStore: ActiveProfileStore,
+    ): AppSettingsRepository = DataStoreAppSettingsRepository(context, scheduler, activeProfileStore)
 
     @Provides
     @Singleton
     fun provideAssistantRepository(
         repository: OpenRouterAssistantRepository,
     ): AssistantRepository = repository
+
+    @Provides
+    @Singleton
+    fun provideAssistantConversationRepository(
+        repository: RoomAssistantConversationRepository,
+    ): AssistantConversationRepository = repository
 
     @Provides
     @Singleton
@@ -140,6 +170,18 @@ object AppModule {
     fun provideAssistantCredentialStore(
         store: AndroidKeystoreAssistantCredentialStore,
     ): AssistantCredentialStore = store
+
+    @Provides
+    @Singleton
+    fun provideAssistantCredentialRecoveryStore(
+        store: GoogleBlockStoreCredentialRecoveryStore,
+    ): AssistantCredentialRecoveryStore = store
+
+    @Provides
+    @Singleton
+    fun provideAssistantCredentialRecoveryController(
+        coordinator: AssistantCredentialRecoveryCoordinator,
+    ): AssistantCredentialRecoveryController = coordinator
 
     @Provides
     @Singleton
@@ -367,96 +409,23 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAssistantPlanApplier(
-        workoutRepository: WorkoutRepository,
-    ): AssistantPlanApplier = object : AssistantPlanApplier {
-        override suspend fun applyDraftPlan(draft: com.keepfit.feature.assistant.data.AssistantDraftWorkoutPlan): Result<Unit> =
-            runCatching {
-                java.time.DayOfWeek.entries.forEach { day ->
-                    workoutRepository.clearPlannedWorkout(day)
-                }
-                val createdTemplateIdsByKey = linkedMapOf<String, String>()
-
-                draft.days.forEach { day ->
-                    val templateKey = buildString {
-                        append(day.templateName.trim().lowercase())
-                        append("|")
-                        append(day.exercises.joinToString("|") { it.name.trim().lowercase() })
-                    }
-                    val templateId = createdTemplateIdsByKey.getOrPut(templateKey) {
-                        val exerciseIds = day.exercises.map { exercise ->
-                            resolveExerciseId(workoutRepository, exercise.name)
-                        }
-                        createTemplateAndResolveId(
-                            workoutRepository = workoutRepository,
-                            templateName = day.templateName,
-                            exerciseIds = exerciseIds,
-                        )
-                    }
-                    workoutRepository.assignTemplate(day.dayOfWeek, templateId)
-                }
-            }
-
-        private suspend fun resolveExerciseId(
-            workoutRepository: WorkoutRepository,
-            exerciseName: String,
-        ): String {
-            val normalizedName = exerciseName.trim()
-            workoutRepository.observeExercises("")
-                .first()
-                .firstOrNull { it.name.equals(normalizedName, ignoreCase = true) }
-                ?.let { return it.id }
-
-            val beforeIds = workoutRepository.observeExercises("").first().map { it.id }.toSet()
-            workoutRepository.saveExercise(
-                id = null,
-                input = ExerciseInput(
-                    name = normalizedName,
-                    muscleGroup = "General",
-                    instructions = null,
-                    notes = "Created from assistant draft plan.",
-                    isBodyweight = false,
-                ),
-                mediaUri = null,
-            )
-
-            return workoutRepository.observeExercises("")
-                .first()
-                .firstOrNull { exercise ->
-                    exercise.id !in beforeIds && exercise.name.equals(normalizedName, ignoreCase = true)
-                }
-                ?.id
-                ?: workoutRepository.observeExercises("")
-                    .first()
-                    .firstOrNull { it.name.equals(normalizedName, ignoreCase = true) }
-                    ?.id
-                ?: error("Assistant draft plan could not create exercise '$normalizedName'.")
-        }
-
-        private suspend fun createTemplateAndResolveId(
-            workoutRepository: WorkoutRepository,
-            templateName: String,
-            exerciseIds: List<String>,
-        ): String {
-            val beforeIds = workoutRepository.observeTemplates().first().map { it.id }.toSet()
-            workoutRepository.createTemplate(templateName, exerciseIds)
-            return workoutRepository.observeTemplates()
-                .first()
-                .firstOrNull { template ->
-                    template.id !in beforeIds && template.name == templateName
-                }
-                ?.id
-                ?: workoutRepository.observeTemplates()
-                    .first()
-                    .lastOrNull { it.name == templateName }
-                    ?.id
-                ?: error("Assistant draft plan could not create template '$templateName'.")
-        }
-    }
+        database: KeepfitDatabase,
+        activeProfileStore: ActiveProfileStore,
+    ): AssistantPlanApplier = RoomAssistantPlanApplier(database, activeProfileStore)
 
     @Provides
     @Singleton
-    fun provideSettingsGoalsRepository(dao: BodyProfileDao): SettingsGoalsRepository =
-        RoomSettingsGoalsRepository(dao)
+    fun provideAssistantPlanContextDataSource(
+        starterPlanRepository: StarterPlanRepository,
+        workoutRepository: WorkoutRepository,
+    ): AssistantPlanContextDataSource = KeepfitAssistantPlanContextDataSource(starterPlanRepository, workoutRepository)
+
+    @Provides
+    @Singleton
+    fun provideSettingsGoalsRepository(
+        dao: BodyProfileDao,
+        activeProfileStore: ActiveProfileStore,
+    ): SettingsGoalsRepository = RoomSettingsGoalsRepository(dao, activeProfileStore)
 
     @Provides
     @Singleton
@@ -464,7 +433,13 @@ object AppModule {
         @ApplicationContext context: Context,
         database: KeepfitDatabase,
         settingsRepository: AppSettingsRepository,
-    ): BackupRepository = DeviceBackupRepository(context, database, settingsRepository)
+        activeProfileStore: ActiveProfileStore,
+    ): BackupRepository = DeviceBackupRepository(
+        context = context,
+        database = database,
+        settingsRepository = settingsRepository,
+        activeProfileStore = activeProfileStore,
+    )
 
     @Provides
     @Singleton
@@ -494,12 +469,14 @@ object AppModule {
         workoutDao: WorkoutDao,
         nutritionDao: NutritionDao,
         settingsRepository: AppSettingsRepository,
+        activeProfileStore: ActiveProfileStore,
         activityProvider: WeeklyActivityProvider,
     ): WeeklyReviewRepository = RoomWeeklyReviewRepository(
         database = database,
         workoutDao = workoutDao,
         nutritionDao = nutritionDao,
         settingsRepository = settingsRepository,
+        activeProfileStore = activeProfileStore,
         activityProvider = activityProvider,
     )
 
@@ -512,7 +489,8 @@ object AppModule {
     fun provideNutritionRepository(
         dao: NutritionDao,
         bodyProfileDao: BodyProfileDao,
-    ): NutritionRepository = RoomNutritionRepository(dao, bodyProfileDao)
+        activeProfileStore: ActiveProfileStore,
+    ): NutritionRepository = RoomNutritionRepository(dao, bodyProfileDao, activeProfileStore)
 
     @Provides
     fun provideTransformationDao(database: KeepfitDatabase): TransformationDao =
@@ -538,20 +516,13 @@ object AppModule {
         dao: WorkoutDao,
         mediaStore: ExerciseMediaStore,
         settingsRepository: AppSettingsRepository,
-    ): WorkoutRepository = RoomWorkoutRepository(dao, mediaStore, settingsRepository = settingsRepository)
-
-    @Provides
-    @Singleton
-    fun provideExerciseCatalogProvider(): ExerciseCatalogProvider =
-        ExerciseDbCatalogProvider(UrlConnectionCatalogHttpClient())
-
-    @Provides
-    fun provideExerciseLibraryGateway(repository: WorkoutRepository): ExerciseLibraryGateway =
-        WorkoutExerciseLibraryGateway(repository)
-
-    @Provides
-    fun provideCatalogLibraryService(gateway: ExerciseLibraryGateway): CatalogLibraryService =
-        CatalogLibraryService(gateway)
+        activeProfileStore: ActiveProfileStore,
+    ): WorkoutRepository = RoomWorkoutRepository(
+        dao,
+        mediaStore,
+        settingsRepository = settingsRepository,
+        activeProfileStore = activeProfileStore,
+    )
 
     @Provides
     @Singleton
@@ -559,8 +530,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideStarterPlanRepository(database: KeepfitDatabase): StarterPlanRepository =
-        RoomStarterPlanRepository(database)
+    fun provideStarterPlanRepository(
+        database: KeepfitDatabase,
+        activeProfileStore: ActiveProfileStore,
+    ): StarterPlanRepository = RoomStarterPlanRepository(database, activeProfileStore)
 
     @Provides
     @Singleton
@@ -570,11 +543,13 @@ object AppModule {
         nutritionDao: NutritionDao,
         workoutDao: WorkoutDao,
         photoStore: TransformationPhotoStore,
+        activeProfileStore: ActiveProfileStore,
     ): TransformationRepository = RoomTransformationRepository(
         transformationDao = dao,
         bodyProfileDao = bodyProfileDao,
         nutritionDao = nutritionDao,
         workoutDao = workoutDao,
         photoStore = photoStore,
+        activeProfileStore = activeProfileStore,
     )
 }

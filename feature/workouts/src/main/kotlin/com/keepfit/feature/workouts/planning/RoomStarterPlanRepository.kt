@@ -8,18 +8,21 @@ import com.keepfit.core.database.workout.PlannedWorkoutEntity
 import com.keepfit.core.database.workout.WeeklyPlanEntity
 import com.keepfit.core.database.workout.WorkoutTemplateEntity
 import com.keepfit.core.database.workout.WorkoutTemplateExerciseEntity
+import com.keepfit.core.preferences.ActiveProfileStore
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.UUID
+import kotlinx.coroutines.flow.first
 
 class RoomStarterPlanRepository(
     private val database: KeepfitDatabase,
+    private val activeProfileStore: ActiveProfileStore,
     private val idFactory: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Long = System::currentTimeMillis,
     private val today: () -> LocalDate = LocalDate::now,
 ) : StarterPlanRepository {
     override suspend fun loadPreferences(): StarterPlanInput? {
-        val bodyProfile = database.bodyProfileDao().findLocalProfile() ?: return null
+        val bodyProfile = activeProfile() ?: return null
         val profile = database.journeyDao().findForBodyProfile(bodyProfile.id) ?: return null
         return StarterPlanInput(
             goal = JourneyGoal.valueOf(profile.primaryGoal),
@@ -42,11 +45,12 @@ class RoomStarterPlanRepository(
         }
         database.withTransaction {
             val now = clock()
+            val profileId = requireProfileId()
             persistPreferences(input, now)
 
             val workoutDao = database.workoutDao()
-            workoutDao.deactivateWeeklyPlans()
-            workoutDao.archiveTemplatesByOrigin(STARTER_PLAN_ORIGIN, now)
+            workoutDao.deactivateWeeklyPlansForProfile(profileId)
+            workoutDao.archiveTemplatesByOriginForProfile(profileId, STARTER_PLAN_ORIGIN, now)
 
             val weeklyPlanId = idFactory()
             workoutDao.upsertWeeklyPlan(
@@ -57,6 +61,7 @@ class RoomStarterPlanRepository(
                     isActive = true,
                     createdAt = now,
                     updatedAt = now,
+                    bodyProfileId = profileId,
                 ),
             )
             draft.days.forEachIndexed { dayPosition, day ->
@@ -70,6 +75,7 @@ class RoomStarterPlanRepository(
                         updatedAt = now,
                         archivedAt = null,
                         origin = STARTER_PLAN_ORIGIN,
+                        bodyProfileId = profileId,
                     ),
                 )
                 val templateExercises = day.exercises.mapIndexed { exercisePosition, exercise ->
@@ -112,7 +118,7 @@ class RoomStarterPlanRepository(
     }
 
     private suspend fun persistPreferences(input: StarterPlanInput, now: Long) {
-        val bodyProfile = requireNotNull(database.bodyProfileDao().findLocalProfile()) {
+        val bodyProfile = requireNotNull(activeProfile()) {
             "Complete your local profile before creating a starter week."
         }
         val previousJourney = database.journeyDao().findForBodyProfile(bodyProfile.id)
@@ -140,6 +146,12 @@ class RoomStarterPlanRepository(
 
     private fun <T> Set<T>.toCanonicalCsv(name: (T) -> String): String =
         map(name).sorted().joinToString(",")
+
+    private suspend fun requireProfileId(): String =
+        requireNotNull(activeProfileStore.observeActiveProfileId().first()) { "Profile missing." }
+
+    private suspend fun activeProfile() =
+        activeProfileStore.observeActiveProfileId().first()?.let { database.bodyProfileDao().findProfile(it) }
 
     companion object {
         const val STARTER_PLAN_ORIGIN = "STARTER_PLAN"

@@ -3,7 +3,7 @@ package com.keepfit.feature.transformation
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.keepfit.core.database.transformation.TransformationPhotoAngle
+import com.keepfit.core.model.TransformationPose
 import com.keepfit.feature.transformation.data.CurrentProgressOverview
 import com.keepfit.feature.transformation.data.TransformationRepository
 import com.keepfit.feature.transformation.data.TransformationTimeline
@@ -36,6 +36,13 @@ class TransformationViewModel @Inject constructor(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
             TransformationTimeline(activeCycle = null, history = emptyList()),
+        )
+
+    val enabledPoses: StateFlow<List<TransformationPose>> = repository.observeEnabledPoses()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            TransformationPose.defaultPoses,
         )
 
     private val _message = MutableStateFlow<String?>(null)
@@ -78,9 +85,14 @@ class TransformationViewModel @Inject constructor(
             repository.saveCycleNotes(notes)
         }
 
-    fun importPhoto(captureDate: LocalDate, angle: TransformationPhotoAngle, uri: Uri) =
-        launchWrite("${angle.name.lowercase().replaceFirstChar(Char::titlecase)} photo saved.") {
-            repository.importPhoto(captureDate, angle, uri)
+    fun importPhoto(captureDate: LocalDate, pose: TransformationPose, uri: Uri) =
+        launchWrite("${pose.label} photo saved.") {
+            repository.importPhoto(captureDate, pose, uri)
+        }
+
+    fun setOptionalPoseEnabled(pose: TransformationPose, enabled: Boolean) =
+        launchWrite(null) {
+            repository.setOptionalPoseEnabled(pose, enabled)
         }
 
     fun closeActiveCycle() =

@@ -8,6 +8,7 @@ import com.keepfit.core.database.KeepfitDatabase
 import com.keepfit.core.database.nutrition.MealQuality
 import com.keepfit.core.database.nutrition.MealType
 import com.keepfit.core.database.nutrition.SavedMealItemEntity
+import com.keepfit.core.database.profile.BodyProfileEntity
 import com.keepfit.feature.nutrition.FoodInput
 import com.keepfit.feature.nutrition.SavedMealInput
 import com.keepfit.feature.nutrition.SavedMealItemInput
@@ -25,14 +26,20 @@ import org.junit.runner.RunWith
 class RoomNutritionRepositoryTest {
     private lateinit var database: KeepfitDatabase
     private lateinit var repository: RoomNutritionRepository
+    private lateinit var activeProfileStore: TestActiveProfileStore
 
     @Before
-    fun setUp() {
+    fun setUp() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, KeepfitDatabase::class.java).build()
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("profile", "Alex", 170.0, null, createdAt = 1L, updatedAt = 1L),
+        )
+        activeProfileStore = TestActiveProfileStore()
         repository = RoomNutritionRepository(
             dao = database.nutritionDao(),
             bodyProfileDao = database.bodyProfileDao(),
+            activeProfileStore = activeProfileStore,
             idFactory = IdFactory(),
             clock = { 100L },
         )
@@ -72,6 +79,28 @@ class RoomNutritionRepositoryTest {
         val diary = repository.observeDiaryEntries(date).first()
         assertEquals(listOf("Oats"), diary.map(DiaryEntry::foodName))
         assertEquals(1.0, diary.single().servings, 0.0)
+    }
+
+    @Test
+    fun switchingProfilesHidesDiaryAndRejectsAnotherProfilesSavedMeal() = runBlocking {
+        repository.saveFood(null, FoodInput("Oats", "1 bowl", 1.0, 300.0, 12.0, 50.0, 6.0))
+        val food = repository.observeFoods("").first().single()
+        repository.createSavedMeal(SavedMealInput("Breakfast", listOf(SavedMealItemInput(food.id, 1.0))))
+        val savedMeal = repository.observeSavedMeals().first().single()
+        val date = LocalDate.parse("2026-09-13")
+        repository.addFoodToDiary(date, MealType.BREAKFAST, food.id, 1.0)
+
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity("profile-b", "Sam", 165.0, null, createdAt = 2L, updatedAt = 2L),
+        )
+        activeProfileStore.selectProfile("profile-b")
+
+        assertTrue(repository.observeDiaryEntries(date).first().isEmpty())
+        assertTrue(repository.observeFoods("").first().any { it.id == food.id })
+        val error = runCatching {
+            repository.addSavedMealToDiary(date, MealType.BREAKFAST, savedMeal.id, 1.0)
+        }.exceptionOrNull()
+        assertEquals("Saved meal not found.", error?.message)
     }
 
     @Test

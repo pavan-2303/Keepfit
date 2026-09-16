@@ -10,13 +10,201 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WorkoutDao {
+    @Transaction
+    @Query("SELECT * FROM workout_templates WHERE bodyProfileId = :profileId AND archivedAt IS NULL ORDER BY name COLLATE NOCASE")
+    fun observeTemplateDetailsForProfile(profileId: String): Flow<List<WorkoutTemplateDetails>>
+
+    @Query("SELECT * FROM workout_templates WHERE id = :id AND bodyProfileId = :profileId LIMIT 1")
+    suspend fun findTemplateForProfile(id: String, profileId: String): WorkoutTemplateEntity?
+
+    @Transaction
+    @Query("SELECT * FROM workout_templates WHERE id = :templateId AND bodyProfileId = :profileId LIMIT 1")
+    suspend fun findTemplateDetailsForProfile(templateId: String, profileId: String): WorkoutTemplateDetails?
+
+    @Query("UPDATE weekly_plans SET isActive = 0 WHERE bodyProfileId = :profileId")
+    suspend fun deactivateWeeklyPlansForProfile(profileId: String)
+
+    @Query(
+        "UPDATE workout_templates SET archivedAt = :archivedAt, updatedAt = :archivedAt " +
+            "WHERE bodyProfileId = :profileId AND origin = :origin AND archivedAt IS NULL",
+    )
+    suspend fun archiveTemplatesByOriginForProfile(profileId: String, origin: String, archivedAt: Long)
+
+    @Query(
+        """
+        SELECT planned_workouts.*, workout_templates.name AS templateName,
+               weekly_plans.startsOn AS planStartsOn
+        FROM planned_workouts
+        JOIN weekly_plans ON weekly_plans.id = planned_workouts.weeklyPlanId
+        JOIN workout_templates ON workout_templates.id = planned_workouts.workoutTemplateId
+        WHERE weekly_plans.bodyProfileId = :profileId AND weekly_plans.isActive = 1
+          AND workout_templates.bodyProfileId = :profileId
+        ORDER BY planned_workouts.dayOfWeek, planned_workouts.position
+        """,
+    )
+    fun observeWeeklyScheduleForProfile(profileId: String): Flow<List<PlannedWorkoutRow>>
+
+    @Query(
+        """
+        SELECT planned_workouts.*, workout_templates.name AS templateName,
+               weekly_plans.startsOn AS planStartsOn
+        FROM planned_workouts
+        JOIN weekly_plans ON weekly_plans.id = planned_workouts.weeklyPlanId
+        JOIN workout_templates ON workout_templates.id = planned_workouts.workoutTemplateId
+        WHERE weekly_plans.bodyProfileId = :profileId AND weekly_plans.isActive = 1
+          AND workout_templates.bodyProfileId = :profileId AND planned_workouts.dayOfWeek = :dayOfWeek
+        ORDER BY planned_workouts.position
+        """,
+    )
+    fun observePlannedWorkoutsForProfile(profileId: String, dayOfWeek: DayOfWeek): Flow<List<PlannedWorkoutRow>>
+
+    @Query(
+        """
+        SELECT planned_workouts.*, workout_templates.name AS templateName,
+               weekly_plans.startsOn AS planStartsOn
+        FROM planned_workouts
+        JOIN weekly_plans ON weekly_plans.id = planned_workouts.weeklyPlanId
+        JOIN workout_templates ON workout_templates.id = planned_workouts.workoutTemplateId
+        WHERE planned_workouts.id = :id AND weekly_plans.bodyProfileId = :profileId
+          AND workout_templates.bodyProfileId = :profileId LIMIT 1
+        """,
+    )
+    suspend fun findPlannedWorkoutForProfile(id: String, profileId: String): PlannedWorkoutRow?
+
+    @Query("SELECT * FROM workout_occurrences WHERE id = :id AND bodyProfileId = :profileId LIMIT 1")
+    suspend fun findOccurrenceForProfile(id: String, profileId: String): WorkoutOccurrenceEntity?
+
+    @Transaction
+    @Query("SELECT * FROM workout_occurrences WHERE id = :id AND bodyProfileId = :profileId LIMIT 1")
+    suspend fun findOccurrenceDetailsForProfile(id: String, profileId: String): WorkoutOccurrenceDetails?
+
+    @Query("SELECT * FROM workout_occurrences WHERE bodyProfileId = :profileId AND sourcePlannedWorkoutId = :plannedWorkoutId AND originalDate = :originalDate LIMIT 1")
+    suspend fun findOccurrenceForSourceAndProfile(
+        plannedWorkoutId: String,
+        originalDate: java.time.LocalDate,
+        profileId: String,
+    ): WorkoutOccurrenceEntity?
+
+    @Transaction
+    @Query("SELECT * FROM workout_occurrences WHERE bodyProfileId = :profileId AND (originalDate BETWEEN :startDate AND :endDate OR scheduledDate BETWEEN :startDate AND :endDate) ORDER BY scheduledDate, createdAt")
+    fun observeOccurrenceDetailsForProfile(
+        profileId: String,
+        startDate: java.time.LocalDate,
+        endDate: java.time.LocalDate,
+    ): Flow<List<WorkoutOccurrenceDetails>>
+
+    @Query("SELECT * FROM workout_sessions WHERE bodyProfileId = :profileId AND completedAt IS NULL LIMIT 1")
+    suspend fun findActiveSessionForProfile(profileId: String): WorkoutSessionEntity?
+
+    @Query("SELECT * FROM workout_sessions WHERE bodyProfileId = :profileId AND workoutOccurrenceId = :occurrenceId AND completedAt IS NOT NULL LIMIT 1")
+    suspend fun findCompletedSessionForOccurrenceAndProfile(
+        occurrenceId: String,
+        profileId: String,
+    ): WorkoutSessionEntity?
+
+    @Query("SELECT * FROM workout_sessions WHERE bodyProfileId = :profileId AND plannedWorkoutId = :plannedWorkoutId AND workoutDate = :workoutDate AND completedAt IS NOT NULL LIMIT 1")
+    suspend fun findCompletedSessionForPlanDateAndProfile(
+        plannedWorkoutId: String,
+        workoutDate: java.time.LocalDate,
+        profileId: String,
+    ): WorkoutSessionEntity?
+
+    @Transaction
+    @Query("SELECT * FROM workout_sessions WHERE bodyProfileId = :profileId AND completedAt IS NULL LIMIT 1")
+    fun observeActiveSessionForProfile(profileId: String): Flow<WorkoutSessionDetails?>
+
+    @Transaction
+    @Query("SELECT * FROM workout_sessions WHERE bodyProfileId = :profileId AND completedAt IS NULL LIMIT 1")
+    suspend fun findActiveSessionDetailsForProfile(profileId: String): WorkoutSessionDetails?
+
+    @Query("SELECT * FROM workout_sessions WHERE bodyProfileId = :profileId AND workoutDate BETWEEN :startDate AND :endDate ORDER BY startedAt")
+    fun observeSessionsBetweenForProfile(
+        profileId: String,
+        startDate: java.time.LocalDate,
+        endDate: java.time.LocalDate,
+    ): Flow<List<WorkoutSessionEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM workout_sessions WHERE bodyProfileId = :profileId AND completedAt IS NOT NULL ORDER BY completedAt DESC")
+    fun observeSessionHistoryForProfile(profileId: String): Flow<List<WorkoutSessionDetails>>
+
+    @Query("SELECT workoutDate, COUNT(*) AS completedCount FROM workout_sessions WHERE bodyProfileId = :profileId AND completedAt IS NOT NULL GROUP BY workoutDate ORDER BY workoutDate DESC")
+    fun observeCompletedWorkoutDaysForProfile(profileId: String): Flow<List<CompletedWorkoutDayRow>>
+
+    @Query(
+        """
+        SELECT exercise_logs.exerciseId, exercises.name AS exerciseName,
+               MAX(set_logs.weightKg) AS highestWeightKg, MAX(set_logs.repetitions) AS highestRepetitions
+        FROM set_logs
+        JOIN exercise_logs ON exercise_logs.id = set_logs.exerciseLogId
+        JOIN exercises ON exercises.id = exercise_logs.exerciseId
+        JOIN workout_sessions ON workout_sessions.id = exercise_logs.workoutSessionId
+        WHERE workout_sessions.bodyProfileId = :profileId AND set_logs.isCompleted = 1
+          AND workout_sessions.completedAt IS NOT NULL
+        GROUP BY exercise_logs.exerciseId, exercises.name ORDER BY exercises.name COLLATE NOCASE
+        """,
+    )
+    fun observePersonalRecordsForProfile(profileId: String): Flow<List<PersonalRecordRow>>
+
+    @Query(
+        """
+        SELECT exercise_logs.exerciseId AS exerciseId, MAX(set_logs.weightKg) AS highestWeightKg,
+               MAX(set_logs.repetitions) AS highestRepetitions
+        FROM workout_sessions
+        JOIN exercise_logs ON exercise_logs.workoutSessionId = workout_sessions.id
+        JOIN set_logs ON set_logs.exerciseLogId = exercise_logs.id
+        WHERE workout_sessions.bodyProfileId = :profileId AND workout_sessions.completedAt IS NOT NULL
+          AND workout_sessions.workoutDate BETWEEN :startDate AND :endDate AND set_logs.isCompleted = 1
+        GROUP BY exercise_logs.exerciseId
+        """,
+    )
+    suspend fun findExercisePerformanceBetweenForProfile(
+        profileId: String,
+        startDate: java.time.LocalDate,
+        endDate: java.time.LocalDate,
+    ): List<ExercisePerformanceRow>
+
+    @Query(
+        """
+        SELECT set_logs.repetitions, set_logs.weightKg FROM set_logs
+        JOIN exercise_logs ON exercise_logs.id = set_logs.exerciseLogId
+        JOIN workout_sessions ON workout_sessions.id = exercise_logs.workoutSessionId
+        WHERE workout_sessions.bodyProfileId = :profileId AND exercise_logs.exerciseId = :exerciseId
+          AND set_logs.isCompleted = 1 AND workout_sessions.id = (
+            SELECT previous_sessions.id FROM workout_sessions AS previous_sessions
+            JOIN exercise_logs AS previous_logs ON previous_logs.workoutSessionId = previous_sessions.id
+            WHERE previous_sessions.bodyProfileId = :profileId AND previous_logs.exerciseId = :exerciseId
+              AND previous_sessions.completedAt IS NOT NULL
+            ORDER BY previous_sessions.completedAt DESC LIMIT 1
+          ) ORDER BY set_logs.position
+        """,
+    )
+    suspend fun findPreviousSetsForProfile(profileId: String, exerciseId: String): List<PreviousSetRow>
+
+    @Query(
+        """
+        UPDATE exercise_logs SET notes = :notes
+        WHERE id = :exerciseLogId AND workoutSessionId IN (
+            SELECT id FROM workout_sessions WHERE bodyProfileId = :profileId
+        )
+        """,
+    )
+    suspend fun updateExerciseLogNotesForProfile(profileId: String, exerciseLogId: String, notes: String?): Int
+
     @Upsert
     suspend fun upsertExercise(exercise: ExerciseEntity)
 
     @Query(
         """
         SELECT * FROM exercises
-        WHERE archivedAt IS NULL AND name LIKE '%' || :query || '%'
+        WHERE archivedAt IS NULL AND (
+            name LIKE '%' || :query || '%'
+            OR muscleGroup LIKE '%' || :query || '%'
+            OR instructions LIKE '%' || :query || '%'
+            OR equipment LIKE '%' || :query || '%'
+            OR targetMuscle LIKE '%' || :query || '%'
+            OR secondaryMuscles LIKE '%' || :query || '%'
+        )
         ORDER BY name COLLATE NOCASE
         """,
     )
@@ -26,7 +214,14 @@ interface WorkoutDao {
     @Query(
         """
         SELECT * FROM exercises
-        WHERE archivedAt IS NULL AND name LIKE '%' || :query || '%'
+        WHERE archivedAt IS NULL AND (
+            name LIKE '%' || :query || '%'
+            OR muscleGroup LIKE '%' || :query || '%'
+            OR instructions LIKE '%' || :query || '%'
+            OR equipment LIKE '%' || :query || '%'
+            OR targetMuscle LIKE '%' || :query || '%'
+            OR secondaryMuscles LIKE '%' || :query || '%'
+        )
         ORDER BY name COLLATE NOCASE
         """,
     )
@@ -510,4 +705,108 @@ interface WorkoutDao {
         """,
     )
     suspend fun findPreviousSets(exerciseId: String): List<PreviousSetRow>
+
+    @Transaction
+    suspend fun replaceWeeklyScheduleForProfile(
+        profileId: String,
+        plan: WeeklyPlanEntity,
+        workouts: List<PlannedWorkoutEntity>,
+    ) {
+        require(plan.bodyProfileId == profileId)
+        deactivateWeeklyPlansForProfile(profileId)
+        upsertWeeklyPlan(plan)
+        deleteAllPlannedWorkouts(plan.id)
+        workouts.forEach { upsertPlannedWorkout(it) }
+    }
+
+    @Transaction
+    suspend fun startSessionIfNoneActiveForProfile(
+        profileId: String,
+        session: WorkoutSessionEntity,
+        logs: List<ExerciseLogEntity>,
+    ): String {
+        require(session.bodyProfileId == profileId)
+        findActiveSessionForProfile(profileId)?.let { return it.id }
+        insertSession(session)
+        insertExerciseLogs(logs)
+        return session.id
+    }
+
+    @Transaction
+    suspend fun appendSetToActiveSessionForProfile(
+        profileId: String,
+        setId: String,
+        exerciseLogId: String,
+        repetitions: Int,
+        weightKg: Double,
+    ) {
+        val active = requireNotNull(findActiveSessionDetailsForProfile(profileId)) { "There is no active workout." }
+        val exercise = requireNotNull(active.exercises.find { it.exerciseLog.id == exerciseLogId }) {
+            "This exercise is not part of the active workout."
+        }
+        insertSetLog(SetLogEntity(setId, exerciseLogId, exercise.sets.size, repetitions, weightKg, true))
+    }
+
+    @Transaction
+    suspend fun repeatPreviousSetInActiveSessionForProfile(
+        profileId: String,
+        setId: String,
+        exerciseLogId: String,
+    ) {
+        val active = requireNotNull(findActiveSessionDetailsForProfile(profileId)) { "There is no active workout." }
+        val exercise = requireNotNull(active.exercises.find { it.exerciseLog.id == exerciseLogId }) {
+            "This exercise is not part of the active workout."
+        }
+        val previousSets = findPreviousSetsForProfile(profileId, exercise.exerciseLog.exerciseId)
+        val previous = previousSets.getOrNull(exercise.sets.size) ?: previousSets.lastOrNull()
+        requireNotNull(previous) { "There is no previous set to repeat." }
+        insertSetLog(SetLogEntity(setId, exerciseLogId, exercise.sets.size, previous.repetitions, previous.weightKg, true))
+    }
+
+    @Transaction
+    suspend fun substituteExerciseInActiveSessionForProfile(
+        profileId: String,
+        exerciseLogId: String,
+        replacementExerciseId: String,
+    ) {
+        val active = requireNotNull(findActiveSessionDetailsForProfile(profileId)) { "There is no active workout." }
+        val source = requireNotNull(active.exercises.find { it.exerciseLog.id == exerciseLogId }) {
+            "This exercise is not part of the active workout."
+        }
+        require(source.sets.isEmpty()) { "An exercise with logged sets cannot be substituted." }
+        requireNotNull(findActiveExercise(replacementExerciseId)) { "The replacement exercise is not available." }
+        require(active.exercises.none {
+            it.exerciseLog.id != exerciseLogId && it.exerciseLog.exerciseId == replacementExerciseId
+        }) { "That replacement is already in this workout." }
+        updateExerciseLogExercise(exerciseLogId, replacementExerciseId)
+    }
+
+    @Transaction
+    suspend fun convertActiveSessionToMinimumForProfile(profileId: String) {
+        val active = requireNotNull(findActiveSessionDetailsForProfile(profileId)) { "There is no active workout." }
+        val ordered = active.exercises.sortedBy { it.exerciseLog.position }
+        val removed = ordered.drop(2)
+        require(removed.all { it.sets.isEmpty() }) { "Minimum mode cannot remove an exercise with logged sets." }
+        val removedIds = removed.map { it.exerciseLog.id }
+        if (removedIds.isNotEmpty()) {
+            deleteExerciseLogs(removedIds)
+        }
+        ordered.take(2).forEach { exercise ->
+            updateExerciseLogTargetSets(exercise.exerciseLog.id, exercise.exerciseLog.targetSets?.coerceAtMost(2))
+        }
+        updateSessionVariant(active.session.id, "MINIMUM")
+    }
+
+    @Transaction
+    suspend fun completeActiveSessionForProfile(
+        profileId: String,
+        completedAt: Long,
+        energyLevel: Int?,
+        difficulty: Int?,
+    ) {
+        val active = requireNotNull(findActiveSessionForProfile(profileId)) { "There is no active workout." }
+        check(completeSession(active.id, completedAt, energyLevel, difficulty) == 1) {
+            "The active workout could not be completed."
+        }
+    }
 }

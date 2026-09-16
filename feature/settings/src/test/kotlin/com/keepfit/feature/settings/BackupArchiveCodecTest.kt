@@ -52,6 +52,7 @@ class BackupArchiveCodecTest {
             assertEquals("sqlite-payload", extracted.databaseFile.readText())
             assertEquals("gif-payload", File(extracted.mediaDirectory, "exercises/demo.gif").readText())
             assertEquals("KG", extracted.settingsSnapshot.weightUnit)
+            assertTrue(extracted.settingsSnapshot.reduceMotion)
             assertTrue(extracted.manifest.files.any { it.relativePath == "media/exercises/demo.gif" })
         } finally {
             workingDirectory.deleteRecursively()
@@ -123,6 +124,7 @@ class BackupArchiveCodecTest {
         measurementUnit = "CM",
         restTimerSeconds = 90,
         weeklyReviewPaused = true,
+        reduceMotion = true,
         workoutReminderEnabled = true,
         workoutReminderHour = 18,
         workoutReminderMinute = 30,

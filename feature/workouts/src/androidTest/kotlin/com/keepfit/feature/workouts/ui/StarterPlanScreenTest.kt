@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
@@ -17,6 +20,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.keepfit.core.designsystem.KeepfitTheme
@@ -35,33 +39,78 @@ class StarterPlanScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun setupExplainsOfflinePlanningAndGeneratesPreview() {
+    fun setupExplainsOfflinePlanningAndShowsRouteChooser() {
         var generated = false
         var nutritionDepth: NutritionTrackingDepth? = null
+        var state by mutableStateOf(StarterPlanUiState())
         composeRule.setContent {
             KeepfitTheme {
                 StarterPlanScreen(
-                    state = StarterPlanUiState(),
+                    state = state,
                     onCreateDraft = { generated = true },
+                    onChoosePlanningRoute = { state = state.copy(stage = StarterPlanStage.ROUTE_CHOICE) },
                     onNutritionDepthSelected = { nutritionDepth = it },
                     onBack = {},
                 )
             }
         }
 
-        composeRule.onNodeWithText("Step 2 of 8").assertIsDisplayed()
+        composeRule.onNodeWithText("Training setup · 1 of 7").assertIsDisplayed()
         composeRule.onNodeWithText("What do you want to work toward?").assertIsDisplayed()
         repeat(5) { composeRule.onNodeWithText("Continue").performScrollTo().performClick() }
         composeRule.onNodeWithText("Anything you prefer not to do?").assertIsDisplayed()
         composeRule.onNodeWithText("Continue").performScrollTo().performClick()
         composeRule.onNodeWithText("How much nutrition detail helps you?").assertIsDisplayed()
         composeRule.onNodeWithText("Calories + protein").performClick()
-        composeRule.onNodeWithText("Review my week").performScrollTo().performClick()
+        composeRule.onNodeWithText("Choose how to plan").performScrollTo().performClick()
+        composeRule.onNodeWithText("Choose your next step").assertIsDisplayed()
+        composeRule.onNodeWithText("Build an offline starter week").performClick()
 
         composeRule.runOnIdle {
             assertTrue(generated)
             assertTrue(nutritionDepth == NutritionTrackingDepth.CALORIES_PROTEIN)
         }
+    }
+
+    @Test
+    fun routeChooserOffersManualAndAiDraftPaths() {
+        var manual = false
+        var coach = false
+        composeRule.setContent {
+            KeepfitTheme {
+                StarterPlanScreen(
+                    state = StarterPlanUiState(stage = StarterPlanStage.ROUTE_CHOICE),
+                    onBack = {},
+                    onPlanManually = { manual = true },
+                    onAskCoach = { coach = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Plan it myself").performClick()
+        composeRule.onNodeWithText("Let AI personalize a draft").performClick()
+
+        composeRule.runOnIdle {
+            assertTrue(manual)
+            assertTrue(coach)
+        }
+        composeRule.onNodeWithText("The AI draft is only a preview", substring = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun movementConstraintsStayCompactUntilExpandedAndCanBeFiltered() {
+        composeRule.setContent {
+            KeepfitTheme { StarterPlanScreen(state = StarterPlanUiState(), onBack = {}) }
+        }
+
+        repeat(5) { composeRule.onNodeWithText("Continue").performScrollTo().performClick() }
+        composeRule.onNodeWithText("Choose exercises to avoid").assertIsDisplayed()
+        composeRule.onNodeWithText("Chair Squat").assertDoesNotExist()
+        composeRule.onNodeWithText("Choose exercises to avoid").performClick()
+        composeRule.onNodeWithText("Search exercises").performTextInput("chair")
+        composeRule.onNodeWithText("Chair Squat").assertIsDisplayed()
     }
 
     @Test

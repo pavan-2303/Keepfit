@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import com.keepfit.core.database.profile.BodyProfileEntity
 import java.time.LocalDate
 
 enum class MealType {
@@ -23,7 +24,17 @@ enum class MealQuality {
 
 @Entity(
     tableName = "meal_quality_check_ins",
-    indices = [Index(value = ["diaryDate", "mealType"], unique = true)],
+    foreignKeys = [
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
+    ],
+    indices = [
+        Index("bodyProfileId"),
+        Index(value = ["bodyProfileId", "diaryDate", "mealType"], unique = true),
+    ],
 )
 data class MealQualityCheckInEntity(
     @PrimaryKey val id: String,
@@ -31,6 +42,7 @@ data class MealQualityCheckInEntity(
     val mealType: MealType,
     val quality: MealQuality,
     val loggedAt: Long,
+    val bodyProfileId: String = "",
 )
 
 @Entity(tableName = "foods")
@@ -49,12 +61,23 @@ data class FoodEntity(
     val archivedAt: Long?,
 )
 
-@Entity(tableName = "saved_meals")
+@Entity(
+    tableName = "saved_meals",
+    foreignKeys = [
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
+    ],
+    indices = [Index("bodyProfileId")],
+)
 data class SavedMealEntity(
     @PrimaryKey val id: String,
     val name: String,
     val createdAt: Long,
     val updatedAt: Long,
+    val bodyProfileId: String = "",
 )
 
 @Entity(
@@ -95,8 +118,13 @@ data class SavedMealItemEntity(
             parentColumns = ["id"],
             childColumns = ["savedMealId"],
         ),
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
     ],
-    indices = [Index("diaryDate"), Index("foodId"), Index("savedMealId")],
+    indices = [Index("bodyProfileId"), Index("diaryDate"), Index("foodId"), Index("savedMealId")],
 )
 data class FoodDiaryEntryEntity(
     @PrimaryKey val id: String,
@@ -106,6 +134,7 @@ data class FoodDiaryEntryEntity(
     val savedMealId: String?,
     val servings: Double,
     val loggedAt: Long,
+    val bodyProfileId: String = "",
 )
 
 data class SavedMealItemWithFood(

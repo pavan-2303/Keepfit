@@ -9,11 +9,13 @@ import com.keepfit.core.database.transformation.BodyMeasurementEntity
 import com.keepfit.core.database.transformation.TransformationCycleDetails
 import com.keepfit.core.database.transformation.TransformationCycleEntity
 import com.keepfit.core.database.transformation.TransformationDao
-import com.keepfit.core.database.transformation.TransformationPhotoAngle
 import com.keepfit.core.database.transformation.TransformationPhotoEntity
+import com.keepfit.core.database.transformation.TransformationPosePreferenceEntity
 import com.keepfit.core.database.workout.CompletedWorkoutDayRow
 import com.keepfit.core.database.workout.WorkoutDao
 import com.keepfit.core.media.TransformationPhotoStore
+import com.keepfit.core.model.TransformationPose
+import com.keepfit.core.preferences.ActiveProfileStore
 import com.keepfit.feature.transformation.MeasurementInput
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -22,6 +24,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 
@@ -32,10 +35,13 @@ class RoomTransformationRepository(
     private val nutritionDao: NutritionDao,
     private val workoutDao: WorkoutDao,
     private val photoStore: TransformationPhotoStore,
+    private val activeProfileStore: ActiveProfileStore,
     private val idFactory: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Long = System::currentTimeMillis,
 ) : TransformationRepository {
-    private val profileFlow = bodyProfileDao.observeLocalProfile().filterNotNull()
+    private val profileFlow = activeProfileStore.observeActiveProfileId().filterNotNull()
+        .flatMapLatest(bodyProfileDao::observeProfile)
+        .filterNotNull()
 
     override fun observeCurrentOverview(): Flow<CurrentProgressOverview> =
         profileFlow.flatMapLatest { profile ->
@@ -58,8 +64,12 @@ class RoomTransformationRepository(
     override fun observeTimeline(): Flow<TransformationTimeline> =
         combine(
             profileFlow.flatMapLatest { profile -> transformationDao.observeCycles(profile.id) },
-            workoutDao.observeCompletedWorkoutDays(),
-            nutritionDao.observeAllDailyTotals(),
+            activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest(
+                workoutDao::observeCompletedWorkoutDaysForProfile,
+            ),
+            activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest(
+                nutritionDao::observeAllDailyTotalsForProfile,
+            ),
             profileFlow.flatMapLatest { profile -> transformationDao.observeMeasurements(profile.id) },
         ) { cycles, completedWorkoutDays, nutritionDays, measurements ->
             buildTransformationTimeline(
@@ -67,9 +77,15 @@ class RoomTransformationRepository(
                 completedWorkoutDays = completedWorkoutDays,
                 nutritionDays = nutritionDays,
                 measurements = measurements,
-                photoPathResolver = photoStore::resolveAbsolutePath,
+                photoPathResolver = photoStore::resolve,
             )
         }
+
+    override fun observeEnabledPoses(): Flow<List<TransformationPose>> =
+        activeProfileStore.observeActiveProfileId()
+            .filterNotNull()
+            .flatMapLatest(transformationDao::observeOptionalPoseKeys)
+            .map(::resolveEnabledPoses)
 
     override suspend fun saveMeasurement(input: MeasurementInput) {
         val profile = requireProfile()
@@ -107,12 +123,12 @@ class RoomTransformationRepository(
 
     override suspend fun importPhoto(
         captureDate: LocalDate,
-        angle: TransformationPhotoAngle,
+        pose: TransformationPose,
         uri: Uri,
     ) {
         val profile = requireProfile()
         val cycle = ensureActiveCycle(profile, captureDate)
-        val existingPhoto = transformationDao.findPhoto(cycle.id, captureDate, angle)
+        val existingPhoto = transformationDao.findPhoto(cycle.id, captureDate, pose.key)
         val imported = photoStore.import(cycle.id, uri)
         try {
             transformationDao.upsertPhoto(
@@ -120,7 +136,7 @@ class RoomTransformationRepository(
                     id = existingPhoto?.id ?: imported.id,
                     transformationCycleId = cycle.id,
                     captureDate = captureDate,
-                    angle = angle,
+                    poseKey = pose.key,
                     relativePath = imported.relativePath,
                     mimeType = imported.mimeType,
                     sizeBytes = imported.sizeBytes,
@@ -133,6 +149,22 @@ class RoomTransformationRepository(
         } catch (error: Exception) {
             photoStore.delete(imported.relativePath)
             throw error
+        }
+    }
+
+    override suspend fun setOptionalPoseEnabled(pose: TransformationPose, enabled: Boolean) {
+        require(!pose.isDefault) { "The four basic poses are always enabled." }
+        val profile = requireProfile()
+        if (enabled) {
+            transformationDao.upsertPosePreference(
+                TransformationPosePreferenceEntity(
+                    bodyProfileId = profile.id,
+                    poseKey = pose.key,
+                    updatedAt = clock(),
+                ),
+            )
+        } else {
+            transformationDao.deletePosePreference(profile.id, pose.key)
         }
     }
 
@@ -176,7 +208,9 @@ class RoomTransformationRepository(
     }
 
     private suspend fun requireProfile(): BodyProfileEntity =
-        requireNotNull(bodyProfileDao.findLocalProfile()) { "Profile missing." }
+        requireNotNull(activeProfileStore.observeActiveProfileId().first()?.let { bodyProfileDao.findProfile(it) }) {
+            "Profile missing."
+        }
 
     private suspend fun ensureActiveCycle(
         profile: BodyProfileEntity,
@@ -224,7 +258,7 @@ fun buildTransformationTimeline(
     completedWorkoutDays: List<CompletedWorkoutDayRow> = emptyList(),
     nutritionDays: List<DailyNutritionTotalsByDateRow> = emptyList(),
     measurements: List<BodyMeasurementEntity> = emptyList(),
-    photoPathResolver: (String) -> String,
+    photoPathResolver: (String) -> String?,
 ): TransformationTimeline {
     val latestClosedCycleId = cycles
         .filter { it.cycle.closedAt != null }
@@ -270,7 +304,7 @@ fun buildTransformationTimeline(
 
 fun TransformationCycleDetails.toCycleModel(
     canReopen: Boolean,
-    photoPathResolver: (String) -> String,
+    photoPathResolver: (String) -> String?,
     workoutsCompleted: Int = 0,
     averageCalories: Double? = null,
     averageProteinGrams: Double? = null,
@@ -278,18 +312,23 @@ fun TransformationCycleDetails.toCycleModel(
     averageFatGrams: Double? = null,
     weightChangeKg: Double? = null,
 ): TransformationCycle {
-    val sortedPhotos = photos.sortedWith(compareBy<TransformationPhotoEntity> { it.captureDate }.thenBy { it.angle })
+    val poseOrder = TransformationPose.entries.map(TransformationPose::key).withIndex().associate { it.value to it.index }
+    val sortedPhotos = photos.sortedWith(
+        compareBy<TransformationPhotoEntity> { it.captureDate }
+            .thenBy { poseOrder[it.poseKey] ?: Int.MAX_VALUE },
+    )
     val mappedDays = sortedPhotos
         .groupBy(TransformationPhotoEntity::captureDate)
         .map { (captureDate, dayPhotos) ->
             TransformationCycleDay(
                 captureDate = captureDate,
                 dayNumber = ChronoUnit.DAYS.between(cycle.startDate, captureDate).toInt(),
-                photos = dayPhotos.map { photo ->
+                photos = dayPhotos.mapNotNull { photo ->
+                    val pose = TransformationPose.fromKey(photo.poseKey) ?: return@mapNotNull null
                     TransformationPhoto(
                         id = photo.id,
                         captureDate = photo.captureDate,
-                        angle = photo.angle,
+                        pose = pose,
                         relativePath = photo.relativePath,
                         absolutePath = photoPathResolver(photo.relativePath),
                         mimeType = photo.mimeType,
@@ -330,4 +369,9 @@ fun TransformationCycleDetails.toCycleModel(
             rightDay = mappedDays.last(),
         ),
     )
+}
+
+fun resolveEnabledPoses(optionalPoseKeys: List<String>): List<TransformationPose> {
+    val selected = optionalPoseKeys.toSet()
+    return TransformationPose.entries.filter { pose -> pose.isDefault || pose.key in selected }
 }
