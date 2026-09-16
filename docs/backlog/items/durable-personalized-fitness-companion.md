@@ -1,8 +1,8 @@
 # Backlog Initiative - Durable Personalized Fitness Companion
 
-> **Status:** Approved - ready for versioning after v0.10.0 closeout
+> **Status:** Complete - v0.11.0 through v0.19.0 delivered and final repository hardening verified
 > **Owner:** Product owner
-> **Last updated:** 2026-09-14
+> **Last updated:** 2026-09-16
 > **Decision authority:** The product outcomes, sequencing, and source-licensing
 > boundaries below are approved. Each planned version receives a frozen version
 > specification before implementation starts.
@@ -221,7 +221,7 @@ application more practical to maintain and safer to extend.
 | v0.19.0 | Intentional visual identity and motion | 8-12d | Core journeys receive consistent styling, meaningful motion, restrained delight, accessibility, and performance verification. |
 
 Version specifications are created one at a time. The next spec is prepared
-after v0.10.0 closes and the preceding dependency remains valid.
+after the preceding version closes and its dependency remains valid.
 
 ## Sequencing Rules
 
@@ -258,28 +258,32 @@ offline exercise use.
 
 ## Completion Criteria
 
-- [ ] Current-version Markdown correction is shipped and verified.
-- [ ] Recovery behavior is accurate, privacy-preserving, and tested without
+- [x] Current-version Markdown correction is shipped and verified in
+      [v0.10.0](../../done/versions/v0.10.0.md).
+- [x] Recovery behavior is accurate, privacy-preserving, and tested without
       promising guaranteed platform restore.
-- [ ] Multiple profiles cannot read or mutate one another's personal data.
-- [ ] The offline catalogue is large, searchable, deterministic, and legally
+- [x] Multiple profiles cannot read or mutate one another's personal data.
+- [x] The offline catalogue is large, searchable, deterministic, and legally
       distributable without a runtime provider.
-- [ ] The first four transformation poses stay quick while all approved poses
+- [x] The first four transformation poses stay quick while all approved poses
       are selectable and comparable.
-- [ ] Onboarding supports offline, AI-assisted, and manual planning without a
+- [x] Onboarding supports offline, AI-assisted, and manual planning without a
       forced account.
-- [ ] Coach conversations persist with bounded memory and profile-aware
+- [x] Coach conversations persist with bounded memory and profile-aware
       context controls.
-- [ ] AI plan changes remain locally validated and approval-only.
-- [ ] Visual polish passes accessibility and performance verification.
-- [ ] All planned versions are complete or explicitly descoped into a new
+- [x] AI plan changes remain locally validated and approval-only.
+- [x] Visual polish passes accessibility and emulator performance verification;
+      representative physical-phone feel is part of owner acceptance review.
+- [x] All planned versions are complete or explicitly descoped into a new
       initiative.
 
-## Remaining Gates
+## Conditional Future Checks
 
-- Select final Coach names, avatar direction, and copy before v0.17.0 freezes.
-- Decide whether optional calculation sex and energy-target estimation provide
-  enough visible value to collect that sensitive input in v0.16.0.
+These are not unfinished work in the delivered private version. They become
+release gates only if their related future scope is approved.
+
+- Reconsider calculation sex only if a future approved energy-target feature
+  provides enough visible value to justify collecting that sensitive input.
 - Validate Block Store behavior on the supported physical-device matrix before
   promising the AI connection can be recovered.
 - Review non-English catalogue instructions before enabling each language.

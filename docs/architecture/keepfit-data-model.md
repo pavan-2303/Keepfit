@@ -51,6 +51,11 @@ AssistantConversation 1 --- * AssistantMessage
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last edit timestamp |
 | `archivedAt` | Instant? | Soft-delete marker |
+| `source` | String? | Bundled source name; null for user-created rows |
+| `sourceId` | String? | Stable identifier at the bundled source |
+| `equipment` | String? | Normalized equipment label |
+| `targetMuscle` | String? | Normalized primary target |
+| `secondaryMuscles` | String? | Canonical comma-separated secondary targets |
 
 Archive exercises instead of deleting them when history references them.
 
@@ -70,23 +75,32 @@ Replacing media creates a new file and updates this record only after the copy
 succeeds. Removing an exercise archive does not remove historical exercise
 logs.
 
-### Bundled and external exercise catalogue data
+### Bundled exercise catalogue data
 
-No bundled or external catalogue entity is part of the Room schema. The 40
-Keepfit offline definitions are deterministic application content. An explicit
-add action copies their user-facing fields into an ordinary `Exercise`; an
-active case-insensitive name match prevents duplicate additions.
+The normalized bundled catalogue is seeded directly into `Exercise`, making
+its stable UUIDs immediately usable by templates, plans, history, and future
+validated drafts. User-created rows keep null provenance fields. Editing a
+bundled exercise preserves its provenance, and a later seed uses `INSERT OR
+IGNORE` so local edits are not overwritten.
 
-Online search results are transient ViewModel/display data. They are not copied
-into `Exercise`, `ExerciseMedia`, DataStore, backups, or app-private storage.
-Live GIF URLs are fetched with the current response and used with memory and
-disk caching disabled.
+`CatalogueImport` records the installed revision:
 
-If a later version permits imports, its version specification must define the
-provider exercise identifier, attribution and license metadata, source URL,
-media ownership or expiry behavior, backup eligibility, refresh behavior, and
-what remains usable after the provider is disconnected. The schema change must
-then follow the normal migration and backup-version rules.
+| Field | Type | Notes |
+| --- | --- | --- |
+| `source` | String | Primary key, currently `hasaneyldrm/exercises-dataset` |
+| `revision` | String | Exact audited upstream Git commit |
+| `recordCount` | Int | Accepted normalized row count |
+| `importedAt` | Instant | Deterministic source-import timestamp |
+
+The bundled asset contains metadata and English instructions only. Upstream
+media identifiers, paths, URLs, images, and GIFs are excluded. Room and the
+revision ledger are part of normal encrypted and platform database backups.
+
+The owned core guidance pack is immutable application code rather than
+persisted user data. It maps 25 stable bundled exercise UUIDs to reviewed cues,
+rights metadata, equipment hints, and normalized start/finish body poses. It
+does not change the Room schema or backup contract. User-imported media remains
+the only exercise visual stored in `ExerciseMedia`.
 
 ### `WorkoutTemplate`
 
@@ -289,15 +303,15 @@ selected and do not create or modify food diary entries.
 
 ### `BodyProfile`
 
-MVP contains exactly one profile row but models it explicitly so future profile
-changes do not affect transformation history.
+Each local person has one profile row. The active profile is selected outside
+Room, and transformation history remains owned by its recorded profile.
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `id` | UUID | Primary key |
 | `displayName` | String | Required |
 | `heightCm` | Decimal? | Optional BMI input |
-| `birthDate` | LocalDate? | Optional context for future suggestions |
+| `birthDate` | LocalDate? | Optional source for locally derived age context |
 | `dailyCalorieGoal` | Decimal? | Optional daily calorie target |
 | `dailyProteinGoalGrams` | Decimal? | Optional daily protein target |
 | `dailyCarbohydrateGoalGrams` | Decimal? | Optional daily carbohydrate target |
@@ -306,6 +320,10 @@ changes do not affect transformation history.
 | `updatedAt` | Instant | Last edit timestamp |
 
 ### `BodyMeasurement`
+
+When a starting weight is supplied during first-run onboarding, the profile
+and its first `BodyMeasurement` are written in one Room transaction. No schema
+change is needed because both records already exist in the authoritative model.
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -345,16 +363,33 @@ as a general reference value, not a diagnosis.
 | `id` | UUID | Primary key |
 | `transformationCycleId` | UUID | Foreign key to `TransformationCycle` |
 | `captureDate` | LocalDate | Upload day within the cycle |
-| `angle` | Enum | `FRONT`, `LEFT`, `RIGHT`, or `BACK` |
+| `poseKey` | String | Stable key from the approved 15-pose catalogue |
 | `relativePath` | String | Path below `files/media/transformation/` |
 | `mimeType` | String | Validated during import |
 | `sizeBytes` | Long | Used for backup summaries |
 | `createdAt` | Instant | Import timestamp |
 
-Allow at most one photo for each cycle day and angle. Uploading the same angle
-twice on the same day replaces the earlier file. Replacement follows the same
-copy-before-update rule as exercise media. Phase 1C supports private JPEG, PNG,
-and WebP imports.
+Allow at most one photo for each cycle day and pose key. Uploading the same
+pose twice on the same day replaces the earlier file. Replacement follows the
+same copy-before-update rule as exercise media. JPEG, PNG, and WebP imports are
+oriented, bounded to a 2048-pixel maximum edge, and re-encoded without source
+EXIF metadata before entering app-private storage.
+
+Legacy `FRONT`, `RIGHT`, `BACK`, and `LEFT` values migrate to
+`front_relaxed`, `right_side_relaxed`, `back_relaxed`, and
+`left_side_relaxed` respectively.
+
+### `TransformationPosePreference`
+
+Stores only additional poses enabled by one profile. The four Basic catalogue
+poses are always derived as enabled, so a profile with no rows has the durable
+four-pose default.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `bodyProfileId` | UUID | Composite primary key and cascading profile foreign key |
+| `poseKey` | String | Composite primary key; must identify a non-Basic catalogue pose |
+| `updatedAt` | Instant | Last selection timestamp |
 
 ## 6. Settings and Goals
 
@@ -438,30 +473,66 @@ Store simple local settings in DataStore rather than Room:
 - rest timer duration;
 - phase-2 optional integration toggles.
 - weekly-review pause state.
+- optional OpenRouter credential-recovery consent;
+- reduced-motion preference for nonessential Compose transitions;
 - nutrition tracking depth: detailed macros, calories/protein, meal quality,
   or disabled;
 - nutrition target flexibility: 5%, 10%, or 15% around saved goal midpoints.
+
+The active body-profile identifier is stored in DataStore. Units, timers,
+nutrition depth, review pause state, and reminder schedules use keys namespaced
+by that identifier. Assistant connection and credential-recovery state remain
+device-level. Encrypted backup serializes every profile namespace and the
+active identifier; older single-profile settings snapshots remain readable.
+Reduced motion is device-level rather than profile-owned because it describes
+how the current device should present every profile.
+
+Exercises, exercise media, foods, and their archive state are shared reference
+records. Workout templates, weekly plans, dated occurrences, sessions, saved
+meals, diary entries, meal-quality check-ins, weekly-review outcomes, goals,
+journey answers, measurements, and transformation cycles are owned by one body
+profile. Child rows inherit ownership through their personal root foreign key.
+
+The single `keepfit_settings` DataStore file is non-secret and allowlisted with
+the Room database for device-dependent Android platform backup. No other file
+or preference directory is included.
 
 Tokens and secrets do not belong in DataStore or Room. The OpenRouter
 credential and any pending PKCE verifier/state are AES/GCM encrypted with an
 Android Keystore key before being placed in dedicated app-private preferences.
 They are excluded from Keepfit backup exports and erased on disconnect.
+They are also outside the Android platform-backup allowlist.
 Keepfit does not maintain an assistant usage ledger or enforce a local request
 allowance; OpenRouter and the selected provider own account limits.
 
+When the user separately enables credential recovery, Google Block Store owns
+one keyed copy of the OpenRouter token. Only the Boolean consent belongs in
+DataStore. Keepfit requests cloud recovery only with Block Store end-to-end
+encryption, validates recovered bytes before local storage, never overwrites an
+existing local token, and deletes the entry on opt-out or disconnect.
+
 Legacy bounded-coaching draft state remains encrypted in a separate app-private
-preference file for compatibility, but the v0.10 Coach UI does not expose
+preference file for compatibility, but the current Coach UI does not expose
 proposal or data-change actions. It is not authoritative fitness data and is
 not included in Keepfit backup exports.
 
-## 7. Optional Phase-2 Models
+## 7. Coach Conversation Models
+
+Coach conversation rows are authoritative private history in Room. They are
+owned by the active profile and therefore participate in database backup and
+profile deletion. Provider credentials, authorization state, and system
+instructions are not stored in these tables.
 
 ### `AssistantConversation`
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `id` | UUID | Primary key |
+| `bodyProfileId` | UUID | Foreign key to `BodyProfile`; cascade on profile deletion |
+| `coachId` | String | Stable local identifier: `mira`, `rook`, or `atlas` |
 | `title` | String | Required |
+| `memorySummary` | String? | Deterministic capped recap of messages older than the recent window |
+| `memoryClearedAt` | Instant? | Earlier messages are excluded from future provider context |
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last activity timestamp |
 
@@ -471,9 +542,23 @@ not included in Keepfit backup exports.
 | --- | --- | --- |
 | `id` | UUID | Primary key |
 | `assistantConversationId` | UUID | Foreign key to `AssistantConversation` |
-| `role` | Enum | `USER`, `ASSISTANT`, or `SYSTEM` |
+| `role` | Enum | Persisted rows are `USER` or `ASSISTANT`; system prompts are assembled per request |
 | `content` | String | Message text |
+| `includedLocalContext` | Boolean | Whether the response used a compact Keepfit activity snapshot |
 | `createdAt` | Instant | Creation timestamp |
+
+Completed user/assistant turns are appended transactionally. The visible local
+transcript is not truncated. Each provider request receives the selected
+Coach's local system instruction, a capped rolling summary when available, and
+at most the latest 12 messages after `memoryClearedAt`. Clearing memory retains
+the transcript while excluding earlier content from subsequent requests.
+
+AI workout drafts are transient ViewModel state, not authoritative Room rows.
+Each exercise carries a stable bundled-catalogue UUID plus locally resolved
+display data and bounded targets. Applying an approved draft creates ordinary
+profile-owned `WeeklyPlan`, `WorkoutTemplate`, `WorkoutTemplateExercise`, and
+`PlannedWorkout` rows in one transaction with template origin `AI_PLAN`. A
+dismissed or invalid draft creates no structured records.
 
 Daily steps should be read from Health Connect when requested. Do not duplicate
 Health Connect records in Room in the first step-tracking iteration.

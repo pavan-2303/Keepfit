@@ -7,32 +7,39 @@ complexity.
 
 ## Product Capabilities
 
-- Browse 40 offline exercise guides, create personal exercises, and optionally
-  view live animated demonstrations.
+- Browse 1,316 bundled exercises with English instructions entirely offline,
+  use original movement guidance for 25 common exercises, create personal
+  exercises, and attach private demonstration media.
 - Build workout templates and weekly workout plans.
 - Log sets, repetitions, weight, notes, history, and personal records.
 - Track personal foods, reusable meals, calories, and macronutrients.
 - Record weight, BMI inputs, optional measurements, and transformation-cycle photos.
+- Keep separate local profiles for family members while sharing the offline exercise and food catalogues.
 - Compare transformation photos between cycle day 0 and later updates.
-- Export and restore an encrypted local backup.
+- Use device-dependent Android recovery for structured records and non-secret
+  settings, or export and restore a complete encrypted local backup.
 - Optional Health Connect step tracking and a user-authorized OpenRouter assistant.
 
 ## Project Status
 
 The active development branch contains a runnable Android application with:
 
-- a first-run local profile form persisted with Room;
+- a progressive first-run profile intake with optional birth date, height,
+  starting weight, locally derived age/BMI context, and transactional Room
+  persistence;
 - a five-destination Compose Navigation shell organized as Today, Plan, Log,
   Progress, and Coach, with Settings behind the profile action;
-- a searchable exercise library with edit, archive, and optional private demo
-  media import;
-- a source-aware exercise browser with 40 original offline guides, explicit
-  duplicate-safe addition, and a transient view-only ExerciseDB prototype;
-- current live GIF demonstrations with attribution, cache-disabled loading, and
-  recoverable offline, timeout, malformed-response, and provider states;
+- one searchable Room-owned library containing 1,316 pinned bundled exercises
+  alongside editable user-created exercises and optional private demo media;
+- offline search across exercise name, body area, equipment, target, secondary
+  muscles, and English instructions, with no runtime catalogue provider;
+- 25 original code-native movement figures with user-triggered animation from
+  supported exercise details and active workouts;
 - an offline guided setup that creates an editable starter week from a goal,
   experience, available days, time, equipment, exercises to avoid, and a
   maintainable nutrition-tracking preference;
+- a final setup choice between the offline starter preview, fully manual Plan,
+  or a validated, review-first AI draft in Coach;
 - reusable workout templates and a recurring weekday plan;
 - a decisive Today workout card that starts or resumes the next action and
   supports reviewed full, shorter, minimum, substitution, reschedule, skip,
@@ -63,26 +70,37 @@ The active development branch contains a runnable Android application with:
 - a mode-specific Today nutrition summary and direct logging or check-in action;
 - dated body measurement logging with BMI derived from profile height and the
   latest weight;
-- transformation cycles with private photo imports for front, left, right, and
-  back angles;
+- transformation cycles with four default relaxed poses and eleven selectable
+  profile-specific standard, flexed, or detailed poses;
+- original neutral pose guidance, optional alignment lines, incomplete
+  captured/enabled progress, and privacy-normalized private photo imports;
 - cycle-day comparison with empty states when a photo is missing;
 - cycle summaries with workout counts, nutrition averages, and weight change;
 - categorized Settings for goals, training preferences, connections, private
-  data, and safety information;
+  data, appearance/accessibility, and safety information;
+- a shared training-field-guide visual system across Today, Plan, active
+  workouts, Coach, and Settings, with restrained navigation/state transitions,
+  success-only workout haptics, and an explicit reduced-motion preference;
 - DataStore-backed settings persistence and WorkManager-based local reminder
   scheduling;
 - encrypted backup export plus restore preview, checksum validation, and
   replace-data restore flow;
+- device-dependent Android recovery allowlisted to the Room database and
+  ordinary settings, with private media and secrets excluded;
 - launcher branding from the repository logo asset plus an in-app Today header
   brand mark;
 - an optional Today steps card backed by Health Connect availability checks,
   permission request flow, and daily plus seven-day step aggregates;
-- a dedicated query-only Coach authorized through the user's own OpenRouter
-  account, with Keystore-encrypted credentials, an explicit privacy disclosure,
-  general chat, and automatic compact local-progress context for relevant
-  questions; Keepfit adds no local request cap;
+- persistent profile-owned Coach conversations with Mira, Rook, or Atlas,
+  authorized through the user's own OpenRouter account, with bounded memory,
+  Keystore-encrypted credentials, and automatic compact local-progress context
+  for relevant questions; Keepfit adds no local request cap, and supported
+  devices offer separate opt-in, verified Block Store credential recovery;
+- catalogue-backed AI workout drafts that use saved journey constraints,
+  reject unknown exercises, and replace the active profile's week only after
+  explicit atomic approval, plus review-first weekly and saved-food proposals;
 - Hilt dependency injection;
-- Room schema export with explicit migrations through schema version `10`;
+- Room schema export with explicit migrations through schema version `14`;
 - unit tests plus Room DAO, migration, Compose UI, and end-to-end backup
   instrumentation coverage.
 
@@ -101,15 +119,34 @@ delivered in [v0.7.0 - Exercise Guidance and Live Demo Prototype](docs/done/vers
 Slice G was delivered in
 [v0.8.0 - Private OpenRouter Access](docs/done/versions/v0.8.0.md). Slice H was
 delivered as the pre-beta
-[v0.9.0 - Bounded Coaching Workflows](docs/done/versions/v0.9.0.md). The next
-approved slice is
-[v0.10.0 - Guided Journey and Interface Reorganization](docs/versions/v0.10.0.md).
-Approved follow-on work for recovery, multiple profiles, transformation pose
+[v0.9.0 - Bounded Coaching Workflows](docs/done/versions/v0.9.0.md). Slice I was
+delivered in
+[v0.10.0 - Guided Journey and Interface Reorganization](docs/done/versions/v0.10.0.md).
+Completed follow-on work for recovery, multiple profiles, transformation pose
 sets, an audited offline catalogue, persistent named Coaches, optional AI plan
 creation, and visual polish is organized in the
 [Durable Personalized Fitness Companion](docs/backlog/items/durable-personalized-fitness-companion.md)
-initiative. It remains planning-only until the current version closes and the
-next sprint specification is approved.
+initiative. Its first working increment protects local data across reinstall
+without weakening the explicit encrypted-backup path and is complete in
+[v0.11.0 - Reinstall-Safe Data Continuity](docs/done/versions/v0.11.0.md).
+Local multi-profile isolation is complete in
+[v0.12.0 - Isolated Local Profiles](docs/done/versions/v0.12.0.md). Flexible
+transformation pose sets are complete in
+[v0.13.0 - Flexible Transformation Pose Sets](docs/done/versions/v0.13.0.md).
+The bundled offline exercise catalogue is complete in
+[v0.14.0 - Bundled Offline Exercise Catalogue](docs/done/versions/v0.14.0.md).
+Original offline movement guidance for its common core is complete in
+[v0.15.0 - Owned Core Exercise Guidance](docs/done/versions/v0.15.0.md).
+Progressive onboarding and manual planning are complete in
+[v0.16.0 - Progressive Onboarding and Manual Planning](docs/done/versions/v0.16.0.md).
+Persistent named Coaches are complete in
+[v0.17.0 - Persistent Named Coaches](docs/done/versions/v0.17.0.md). Validated
+AI plan review is complete in
+[v0.18.0 - Validated AI Plan Review](docs/done/versions/v0.18.0.md). The shared
+training-field-guide identity, accessible motion policy, and reduced-motion
+setting are complete in
+[v0.19.0 - Training Field Guide Polish](docs/done/versions/v0.19.0.md), closing
+the Durable Personalized Fitness Companion initiative.
 
 ## Architecture
 

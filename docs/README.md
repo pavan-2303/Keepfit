@@ -34,7 +34,8 @@ is the archive for old plans and designs.
 
 ## Versioning Rules
 
-- the Android app currently reports version `0.10.0`; v0.10.0 is in progress
+- the Android app currently reports version `0.19.0`; v0.11.0 through
+  [v0.19.0](done/versions/v0.19.0.md) and both documented initiatives are complete
 - future sprint delivery increments from there
 - sprint versions should be real, execution-ready, and user-visible
 - large features must start in backlog before they are sliced into versions

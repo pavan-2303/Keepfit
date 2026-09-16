@@ -1,7 +1,6 @@
 # Backlog Initiative - Practical Fitness Journey and Optional AI Coach
 
-> **Status:** In progress - Slices A-H complete; Slice I is executing as v0.10.0;
-> follow-on work is tracked in the
+> **Status:** Complete - Slices A-I delivered through v0.10.0; follow-on work is tracked in the
 > [Durable Personalized Fitness Companion](durable-personalized-fitness-companion.md)
 > **Owner:** Product owner
 > **Last updated:** 2026-09-13
@@ -16,8 +15,8 @@
 > [v0.6.0 - Sustainable Nutrition](../../done/versions/v0.6.0.md), and
 > [v0.7.0 - Exercise Guidance and Live Demo Prototype](../../done/versions/v0.7.0.md),
 > [v0.8.0 - Private OpenRouter Access](../../done/versions/v0.8.0.md), and
-> [v0.9.0 - Bounded Coaching Workflows](../../done/versions/v0.9.0.md)
-> **Next version:** [v0.10.0 - Guided Journey and Interface Reorganization](../../versions/v0.10.0.md)
+> [v0.9.0 - Bounded Coaching Workflows](../../done/versions/v0.9.0.md), and
+> [v0.10.0 - Guided Journey and Interface Reorganization](../../done/versions/v0.10.0.md)
 > **Follow-on initiative:** [Durable Personalized Fitness Companion](durable-personalized-fitness-companion.md)
 
 ---

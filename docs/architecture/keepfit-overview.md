@@ -2,12 +2,14 @@
 
 ## 1. Purpose
 
-Keepfit is a private Android fitness tracker for one person. It replaces several
+Keepfit is a private Android fitness tracker for people sharing one device. It replaces several
 complex subscription applications with a focused offline experience:
 
 - create exercises with optional animated demonstrations;
 - assemble workout templates and weekly plans;
 - create an editable offline starter week from practical constraints;
+- complete a progressive local intake and choose offline, manual, or validated
+  review-first Coach planning support;
 - log sets, repetitions, weight, notes, and personal progress;
 - track meals, calories, and macronutrients;
 - record measurements and transformation-cycle photos;
@@ -21,7 +23,7 @@ Step tracking and an AI assistant are optional follow-up features.
 
 ### Included in the first release
 
-- One local user profile.
+- Multiple isolated local profiles for people sharing one device.
 - Android 12 and newer.
 - Manual exercise creation and local media import.
 - Weekly workout planning and completed workout history.
@@ -58,16 +60,16 @@ isolated from the offline core.
 | `app` | Application entry point, navigation graph, dashboard composition, dependency wiring |
 | `core:model` | Shared domain models and value types |
 | `core:database` | Room database, entities, DAOs, migrations, and repository implementations |
-| `core:media` | Import, validate, store, retrieve, export, and restore private media |
+| `core:media` | Import, validate, store, retrieve, export, and restore private media; own rights-recorded exercise-guidance data |
 | `core:preferences` | DataStore-backed app settings and reminder scheduling |
-| `core:designsystem` | Theme, reusable Compose components, and application icons |
-| `feature:workouts` | Guided starter-week setup, source-aware exercise catalogue, personal library, templates, plans, workout sessions, history, records, timer |
+| `core:designsystem` | Field-guide theme, reusable Compose components, application icons, and reduced-motion policy |
+| `feature:workouts` | Guided starter-week setup, unified offline exercise library, templates, plans, workout sessions, history, records, timer |
 | `feature:nutrition` | Selectable nutrition depth, personal foods, saved meals, diary entries, meal-quality check-ins, ranges, and daily totals |
 | `feature:review` | Offline weekly evidence, motivation rules, bounded coming-week drafts, review decisions, and focused Compose flow |
 | `feature:transformation` | Measurements, transformation cycle photo capture/import, and comparison |
 | `feature:settings` | User goals, reminder preferences, backup export, and restore |
 | `feature:steps` | Phase-2 Health Connect availability, permission, and daily plus seven-day step summaries |
-| `feature:assistant` | Optional OpenRouter authorization, query-only Coach chat, selective local-summary context, and local safety/privacy controls |
+| `feature:assistant` | Optional OpenRouter authorization, profile-owned named Coach conversations, bounded memory, selective local-summary context, strict catalogue-backed plan contracts, and local safety/privacy controls |
 
 For the first implementation increment, modules may be introduced as features
 are built. The dependency direction remains fixed:
@@ -81,11 +83,26 @@ app -> feature:* -> core:model
 feature:steps     -> Health Connect SDK
 app               -> feature:review WeeklyActivityProvider -> feature:steps
 feature:assistant -> OpenRouter OAuth and chat APIs
-feature:workouts  -> optional ExerciseCatalogProvider adapter
+core:database     -> bundled normalized exercise catalogue asset
 ```
 
 Feature modules must not depend on each other directly. Shared behavior belongs
 in a focused `core:*` module or is coordinated by `app`.
+
+### Visual and motion system
+
+`core:designsystem` owns a code-native field-guide identity built around one
+field-green or action-colored pace line, strong left-aligned hierarchy, quiet
+paper and white surfaces, and sentence-case status language. Shared pace-card,
+section-header, and status-mark components are preferred over screen-local
+hero treatments, gradients, remote fonts, or grids of equally prominent cards.
+
+Short native fades may communicate destination or state changes. A completion
+haptic is emitted only after the authoritative workout state changes to
+completed. The shell provides the device-level reduced-motion preference to
+feature content; reduced mode removes nonessential transitions while retaining
+the complete static state. Android's system animation scale continues to govern
+the remaining native transitions.
 
 ## 4. Data and Media Flow
 
@@ -118,7 +135,8 @@ nutrition, and review-outcome DAOs, while an app-level `WeeklyActivityProvider`
 supplies optional Health Connect aggregates without creating a feature-to-
 feature dependency. Opening or editing a review is read-only. Approval writes
 one dated workout occurrence and one review outcome in a transaction; dismissal
-writes only the outcome. The pause toggle is a simple DataStore preference.
+writes only the outcome. The pause toggle and device-level reduced-motion
+choice are simple DataStore preferences.
 
 ### Dated workout decisions
 
@@ -146,32 +164,42 @@ Short videos should be preferred over GIF files because they are generally
 smaller and more efficient to play. The personal exercise detail uses Android
 Media3 for private video and Coil for private GIF playback.
 
-The Exercises tab has a provenance rail for the personal library, a 40-item
-Keepfit offline guide, and a live ExerciseDB prototype. The offline definitions
-are deterministic bundled content and become ordinary editable Room exercises
-only after an explicit add action. `feature:workouts` consumes a provider-
-independent `ExerciseCatalogProvider`; the AscendAPI adapter owns network
-requests, URL construction, response mapping, timeouts, and provider failures.
-Coil renders live GIF demonstrations only after a deliberate search/open action.
+Keepfit also includes a first owned guidance pack for 25 stable bundled
+exercise UUIDs. `core:media` holds its movement, cue, rights, and normalized
+start/finish pose data. `feature:workouts` draws the figures with Compose Canvas
+and animates them only after a user requests replay. The code-native figures
+remain legible without motion, add no bitmap or video asset, and are available
+from exercise details and the active workout without network access.
 
-Remote results are not authoritative fitness records. They remain in screen
-memory, expose no import action, use disabled memory and disk caches for media,
-and are absent from Room, app-private files, DataStore, logs, and backups. Do
-not persist remote metadata or media unless the provider's plan explicitly
-grants commercial, attribution, caching, and local-storage rights. Media URL
-rotation and provider failure produce recoverable UI states. Only entered
-catalogue search/filter terms leave the device; no workout history, profile
-data, or other private fitness data is sent.
+The Exercises tab presents one Room-owned library. On first open after install
+or migration, `core:database` transactionally seeds 1,316 normalized records
+from a pinned bundled asset and records the source revision in a catalogue
+ledger. Existing rows and user edits are never overwritten. Bundled and
+user-created exercises share the same template, plan, history, archive, and
+private-media workflows.
+
+Search runs only in Room across names, body areas, equipment, target muscles,
+secondary muscles, and English instructions. The upstream Gym images, GIFs,
+media identifiers, paths, and URLs are excluded. No exercise search term or
+fitness record leaves the device. Dataset provenance is shown in exercise
+details and the full copyright and MIT notice is available in Settings.
 
 ### Transformation photos
 
-Transformation photos are imported or captured for a transformation cycle and a
-fixed angle: front, left, right, or back. The first imported batch starts a
-cycle. Later uploads can happen on any date in that cycle, and uploading the
-same angle again on the same day replaces the earlier photo. Files live in
-app-private storage. The comparison view loads the same angle from two selected
-cycle days side by side. Missing angles show an empty state instead of blocking
-comparison.
+Transformation photos belong to one profile and use stable keys from the
+15-pose catalogue. Four relaxed poses are always enabled; each profile may
+enable any additional standard, flexed, or detailed pose. The first import
+starts a cycle, incomplete check-ins remain valid, and replacing a pose on the
+same date retains the old file until the processed replacement and Room row
+succeed. Imports are orientation-corrected, re-encoded without source EXIF
+metadata, and bounded to a 2048-pixel maximum edge before entering app-private
+storage. The comparison view loads the identical pose key from two selected
+cycle days. A missing counterpart names the date and pose without blocking
+other comparisons.
+
+Reference figures and alignment guides are original Compose drawings bundled
+with the application. They are framing aids rather than appearance targets;
+the product-review poster is not redistributed.
 
 ### Private file layout
 
@@ -190,8 +218,26 @@ paths.
 ## 5. Privacy, Backup, and Restore
 
 Keepfit is local-first, not cloud-backed. Room data and private media remain in
-the application sandbox. Android removes app-private files when the app is
-uninstalled, so the settings screen must make backup export easy to find.
+the application sandbox. Android platform backup allowlists the Room database
+and non-secret DataStore settings for device-dependent cloud backup and
+device-to-device transfer. It excludes app-private media and all shared
+preferences, including assistant credentials and authorization state. Platform
+backup timing, availability, quota, and restoration are not guaranteed, so the
+settings screen must keep encrypted backup export easy to find.
+
+One installation can contain several local body profiles. The active profile
+is observable app state, not an account or remote identity. Feature repositories
+scope personal reads and mutations at their DAO boundary, while the exercise
+and food reference catalogues remain shared. Switching profiles updates open
+screens without restarting the process.
+
+OpenRouter access recovery is a separate, disabled-by-default Google Block
+Store option. It stores one provider token only after explicit consent, asks
+for cloud recovery only when end-to-end encryption is available, and validates
+retrieved bytes with OpenRouter before writing them into Keepfit's
+Keystore-backed credential store. Unsupported services, missing data, invalid
+tokens, and provider failures fall back to reconnecting and never block local
+fitness workflows.
 
 An exported backup is a single encrypted archive containing:
 
@@ -215,25 +261,12 @@ stored by the app.
 
 ### Exercise catalogue
 
-The private prototype uses the keyless AscendAPI ExerciseDB V1 endpoint. It
-remains behind `ExerciseCatalogProvider` so provider selection, licensing, or
-availability can change without changing workout domain behavior.
-
-The integration must:
-
-- require network access only while the user opens or searches the online
-  catalogue;
-- show provider attribution and media availability honestly;
-- avoid embedding a shared provider credential in the Android package;
-- avoid persistent caching or imports until the provider grants the required
-  rights; and
-- keep the owned offline starter catalogue, custom exercises, local media, and
-  workout logging fully functional when disabled or unavailable.
-
-Current provider caching rules do not establish sufficient rights for durable
-storage or public release. Live results are view-only and a current rights
-review is maintained in the
+Exercise browsing is a core offline capability, not an optional integration.
+The checked-in import inputs, deterministic transformation, audit report, and
+rights decision are maintained in the
 [exercise catalogue register](../references/exercise-catalogue-rights-register.md).
+Refreshing the catalogue requires an explicit source audit and a new migration
+or revision-aware seed; the application performs no runtime catalogue request.
 
 ### Health Connect steps
 
@@ -253,9 +286,15 @@ or nutrition tracking.
 `feature:assistant` is an optional adapter over OpenRouter OAuth and chat APIs.
 A dedicated credential store encrypts the user-controlled token and an active
 PKCE transaction with an Android Keystore AES/GCM key. It is not part of
-Keepfit's encrypted fitness backup, and Android platform backup remains
-disabled. Connecting the account is the opt-in; there is no second enable
-toggle or Keepfit-maintained request ledger.
+Keepfit's encrypted fitness backup or Android platform backup. Connecting the
+account is the opt-in; there is no second enable toggle or Keepfit-maintained
+request ledger.
+
+Settings may offer a separate `Recover access after reinstall` switch when
+Google Block Store is supported. Consent is stored as a non-secret preference;
+the token remains in Block Store rather than Room, DataStore, the fitness
+archive, or the Android backup allowlist. Disconnect and opt-out erase local
+consent and request deletion of the keyed recovery entry.
 
 The private Android build starts an ephemeral HTTP receiver on `127.0.0.1`,
 generates a random verifier and state, and opens OpenRouter authorization in the
@@ -264,18 +303,39 @@ local-first clients without adding a Keepfit backend. The one-time callback is
 accepted only while the matching encrypted transaction is current. Public
 distribution requires an owned HTTPS domain and verified Android App Link.
 
-The shipped Coach UI is query-only. It answers ordinary questions and uses a
-local context policy to add compact workout, nutrition, step, and progress
-aggregates only when the question refers to the user's own history. Context use
-is disclosed in the conversation. Mutation-capable coaching contracts remain
-inaccessible from the UI for later evaluation.
+Each profile-owned conversation selects
+Mira (warm), Rook (direct), or Atlas (analytical). Room retains the visible
+transcript, while each provider request is bounded to the selected local Coach
+instruction, a deterministic capped recap, and the latest 12 messages after
+the user's most recent clear-memory action. The user can switch, rename, clear
+memory, or delete conversations. Deleting a profile cascades through its Coach
+history.
 
-Remote prompts contain short-lived aliases and bounded display labels rather
-than Room identifiers. The validated proposal shows observed evidence, current
+A local context policy adds compact workout, nutrition, step, and progress
+aggregates only when the question refers to the user's own history. Context use
+is disclosed in the conversation. Coach also exposes review-first weekly-plan,
+schedule, and saved-food contracts. These remain previews until an explicit
+approval invokes the focused app-level command.
+
+Remote coaching prompts contain short-lived aliases and bounded display labels
+rather than private Room identifiers. AI plan creation is the narrow exception:
+it sends at most 60 stable IDs and labels from the public bundled exercise
+catalogue so returned selections can be resolved exactly. Custom-exercise,
+profile, template, workout, nutrition, and progress identifiers are never sent.
+The validated proposal shows observed evidence, current
 state, proposed state, and reason. Preview, edit, and dismiss write nothing;
 only an explicit approval invokes a focused app-level command. Schedule and
 multi-food changes validate all referenced local records before their atomic
 repository write.
+
+Plan creation uses the active profile's locally saved goal, experience,
+preferred days, session length, and equipment to build a bounded request. One
+strict tool contract accepts only supplied bundled exercise IDs, unique selected
+weekdays, and bounded targets. Keepfit resolves names locally and rejects extra
+fields, duplicates, unknown IDs, and invalid targets. Approval rechecks every
+catalogue record and replaces only the active profile's weekly plan, generated
+templates, exact targets, and assignments in one Room transaction. A dismissed,
+invalid, or failed draft leaves the existing plan unchanged.
 
 A local safety gate refuses diagnosis, rehabilitation, medication, extreme
 dieting, and unsafe progression before quota reservation or network dispatch.
@@ -286,9 +346,10 @@ No AI dependency is permitted in core tracking flows. The user must initiate
 every remote request. The OpenRouter adapter uses the named free evaluation
 model and requires zero-data-retention routing and denial of provider data
 collection. Keepfit does not cap requests; OpenRouter and the selected provider
-own account, rate, free-tier, and credit limits. Body
-weight, height, BMI, photos, measurements, identifiers, notes, paths, and raw
-records are not assembled into remote prompts. The typed task and latest
+own account, rate, free-tier, and credit limits. Body weight, height, BMI,
+photos, measurements, private identifiers, notes, paths, and raw records are
+not assembled into remote prompts. The planning exception is limited to public
+bundled-catalogue identifiers and labels. The typed task and latest
 validated proposal are encrypted with a separate Android Keystore key so they
 survive recreation; this local draft store is excluded from fitness backups.
 
@@ -303,7 +364,7 @@ consistent profile action instead of competing with daily workflows:
 | Destination | Main content |
 | --- | --- |
 | Today | One primary workout action, weekly-review entry, missed-workout recovery, mode-specific nutrition summary/action, reminders, and optional steps |
-| Plan | Starter journey, weekly schedule, templates, exercises, offline guide, live demo prototype, and adjustments |
+| Plan | Starter journey, weekly schedule, templates, unified offline exercise library, and adjustments |
 | Log | Workout history plus nutrition diary, foods, saved meals, and reuse actions |
 | Progress | Weekly review, records, measurements, transformation cycles, photo comparison, and step context |
 | Coach | General questions and read-only insights over selectively included local progress aggregates |
@@ -334,7 +395,7 @@ consistency for meal-quality mode, and no signal when nutrition is disabled.
 - Validate required numeric values before saving; allow zero weight for
   bodyweight exercises.
 - Show recoverable empty states for missing photos, missing Health Connect
-  support, unavailable exercise catalogues, and disabled AI.
+  support, empty exercise searches, and disabled AI.
 - Validate a backup completely before replacing current data.
 - Keep the previous database and media until restore succeeds.
 
@@ -346,8 +407,8 @@ consistency for meal-quality mode, and no signal when nutrition is disabled.
 - Use Compose UI tests for the primary logging and comparison workflows.
 - Use fake adapters for Health Connect, OpenRouter, and Ollama compatibility so optional integrations do
   not make core tests depend on device services or a network.
-- Use a fake exercise catalogue provider for search, attribution, malformed
-  response, missing media, timeout, and offline tests.
+- Verify catalogue import determinism, Room seeding, migration, metadata search,
+  provenance disclosure, and lazy-list scale without a network.
 
 ## 10. References
 
@@ -360,7 +421,6 @@ consistency for meal-quality mode, and no signal when nutrition is disabled.
 - [OpenRouter OAuth PKCE](https://openrouter.ai/docs/guides/overview/auth/oauth)
 - [OpenRouter current-key endpoint](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-key)
 - [OpenRouter provider routing](https://openrouter.ai/docs/guides/routing/provider-selection)
-- [AscendAPI ExerciseDB V1](https://docs.ascendapi.com/products/edb-v1/overview)
-- [AscendAPI caching policy](https://docs.ascendapi.com/guides/caching)
+- [Exercises Dataset](https://github.com/hasaneyldrm/exercises-dataset)
 - [Coil GIF support](https://coil-kt.github.io/coil/gifs/)
 - [Android Media3](https://developer.android.com/media/media3/exoplayer/hello-world)

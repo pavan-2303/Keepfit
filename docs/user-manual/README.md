@@ -18,16 +18,16 @@ Keepfit.
 Keepfit is a private Android fitness tracker for one local user. Core features
 work without an account, subscription, or backend.
 
-- Workouts: personal library, 40-item offline guide, optional live demos,
-  templates, weekly plan, active logging, and history.
+- Workouts: unified 1,316-item offline library, original movement guides for 25
+  common exercises, personal exercises, templates, weekly plan, active logging,
+  and history.
 - Weekly review: local evidence, flexible motivation, and one optional
   coming-week adjustment.
 - Nutrition: selectable depth, target ranges, neutral meal check-ins, personal
   foods, saved meals, fast repeats, and daily totals.
 - Progress: measurements, BMI, transformation cycles, and comparison.
 - Settings: goals, units, reminders, rest timer, backup and restore.
-- Optional integrations: view-only ExerciseDB demos, Health Connect steps, and
-  OpenRouter assistant.
+- Optional integrations: Health Connect steps and OpenRouter assistant.
 
 ## Privacy Notes
 

@@ -37,15 +37,34 @@ initiative.
 
 Approved follow-on discovery and sequencing is tracked in the
 [Durable Personalized Fitness Companion](backlog/items/durable-personalized-fitness-companion.md)
-initiative. It begins only after v0.10.0 closes.
+initiative. Its reinstall-safe recovery, isolated local-profile, and flexible
+transformation-pose increments are complete.
 
 Quick-start planning, decisive daily execution, low-friction workouts, the
-offline weekly review, sustainable nutrition, and exercise guidance are
-complete through the pre-beta
-[v0.9.0 - Bounded Coaching Workflows](done/versions/v0.9.0.md). Journey UX
-reorganization is next as
-[v0.10.0 - Guided Journey and Interface Reorganization](versions/v0.10.0.md)
-and is now in progress.
+offline weekly review, sustainable nutrition, exercise guidance, optional
+Coach access, bounded proposals, and journey UX are complete through
+[v0.10.0 - Guided Journey and Interface Reorganization](done/versions/v0.10.0.md).
+Scoped reinstall recovery is complete in
+[v0.11.0 - Reinstall-Safe Data Continuity](done/versions/v0.11.0.md), and
+local-profile isolation is complete in
+[v0.12.0 - Isolated Local Profiles](done/versions/v0.12.0.md). Flexible
+transformation pose sets are complete in
+[v0.13.0 - Flexible Transformation Pose Sets](done/versions/v0.13.0.md). The
+audited bundled offline exercise catalogue is complete in
+[v0.14.0 - Bundled Offline Exercise Catalogue](done/versions/v0.14.0.md).
+Original code-native guidance for its common core is complete in
+[v0.15.0 - Owned Core Exercise Guidance](done/versions/v0.15.0.md). Progressive
+onboarding and manual planning are complete in
+[v0.16.0 - Progressive Onboarding and Manual Planning](done/versions/v0.16.0.md).
+Persistent named Coaches are complete in
+[v0.17.0 - Persistent Named Coaches](done/versions/v0.17.0.md).
+Catalogue-backed, approval-only AI planning is complete in
+[v0.18.0 - Validated AI Plan Review](done/versions/v0.18.0.md).
+Intentional visual identity, motion, accessibility, and private-beta hardening
+are complete in [v0.19.0](done/versions/v0.19.0.md), closing the Durable
+Personalized Fitness Companion initiative. The owner's physical-phone review
+may produce future issues or suggestions, but it is not an unfinished
+implementation slice.
 
 ## Delivery Order
 

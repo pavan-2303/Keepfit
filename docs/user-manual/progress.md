@@ -18,20 +18,28 @@ BMI is derived from your saved height and latest weight.
 
 ## Transformation Cycles
 
-Keepfit organizes transformation photos into cycles. The first uploaded batch
-starts a cycle. Each cycle day can include these angles:
+Keepfit organizes transformation photos into cycles. The first imported photo
+starts a cycle. Every profile begins with four quick relaxed poses:
 
-- front
-- left
-- right
-- back
+- front relaxed;
+- right side relaxed;
+- back relaxed;
+- left side relaxed.
 
-Uploading the same angle twice on the same day replaces the previous photo for
-that day. Photos are imported into app-private storage.
+Use the pose-control button beside the captured count to enable any of eleven
+additional standard, flexed, or detailed poses. Choices belong to the active
+profile. You can leave a check-in incomplete, revisit any pose, or replace its
+photo later.
+
+Each pose includes a neutral reference figure, a short positioning cue, and an
+alignment guide that can be switched off. These are consistency aids, not an
+appearance target. Imported photos are rotated correctly, reduced to a
+reasonable maximum size, stripped of source location/device metadata, and
+stored in app-private storage.
 
 ## Compare Cycle Days
 
-Use the `Compare` area to select two cycle days and one angle. By default,
+Use the `Compare` area to select two cycle days and one pose. By default,
 Keepfit shows day 0 and the latest updated day from the current cycle.
 
 This is useful for:
@@ -40,8 +48,9 @@ This is useful for:
 - comparing the same pose across different cycle days;
 - spotting changes that scale readings alone may not show.
 
-If a photo is missing for one of the selected days, Keepfit shows an empty
-state instead of blocking the rest of the comparison.
+Keepfit never mixes different poses in a comparison. If a matching photo is
+missing, the empty state identifies the pose and date while the other pose and
+date controls remain available.
 
 ## Cycle Notes
 

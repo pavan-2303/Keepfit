@@ -2,13 +2,10 @@
 
 ## Exercise Library
 
-Open `Workouts` and use the `Exercises` tab. The source rail separates three
-places so it is always clear what is private, offline, or live:
-
-- `My library` contains exercises you own and can edit.
-- `Offline guide` contains 40 original Keepfit guides that work without a
-  connection.
-- `Live demos` is an optional, view-only ExerciseDB prototype.
+Open `Workouts` and use the `Exercises` tab. It contains one searchable library
+with 1,316 bundled exercises plus exercises you create yourself. Everything in
+this library works without an internet connection and can be used directly in
+templates and plans.
 
 You can:
 
@@ -20,37 +17,21 @@ You can:
 
 Archiving does not remove past workout history.
 
-Tap a personal exercise to read its instructions or play an attached private
-demonstration. Keepfit uses Media3 for MP4 and WebM videos and Coil for GIFs.
+Search by name, body area, equipment, target muscle, secondary muscle, or words
+from the instructions. Tap an exercise to see its source, equipment, target,
+other muscles, and numbered steps. Bundled exercises are labeled in their
+details; user-created exercises remain easy to identify and edit.
 
-### Use the offline guide
+Twenty-five common bundled exercises also show an original Keepfit movement
+guide. The ink figure shows the start position and the lighter outline shows
+the finish position. Tap `Play movement` when you want to see the transition.
+The form and safety cues stay visible even when phone animations are disabled.
 
-1. Select `Offline guide`.
-2. Search by name or instruction, then optionally filter by movement and
-   equipment.
-3. Open a guide to read its steps.
-4. Choose `Add to my library` or the card's `Add` action.
-
-The new item becomes a normal editable personal exercise. If an active exercise
-already has that name, Keepfit reports that it is already in the library rather
-than creating a duplicate. The guide itself has no downloaded media.
-
-### View live animated demonstrations
-
-1. Select `Live demos`.
-2. Enter an exercise name. Optional filters accept a body area, target muscle,
-   and equipment.
-3. Choose `Search live demos`.
-4. Open `View demo` to load the current GIF and written steps.
-
-Only the entered catalogue terms are sent to ExerciseDB. Live results are not
-saved, cannot be added to the library, do not enter backups, and are fetched
-again after another search. GIF memory and disk caching are disabled because
-the provider controls and rotates its media URLs. If the network, provider, or
-animation is unavailable, use the offline guide or the written steps.
-
-Live demonstrations are general form references, not medical, rehabilitation,
-or injury-specific guidance.
+You may attach a private MP4, WebM, or GIF demonstration to an exercise from
+your device. Keepfit does not bundle or download third-party exercise images or
+animations; its 25 built-in figures are original code-native artwork. Exercise
+guidance is general information, not medical,
+rehabilitation, or injury-specific advice.
 
 ## Build a Starter Week
 
@@ -62,14 +43,22 @@ AI.
 2. Pick one to four training days and a realistic session length.
 3. Select equipment and optionally mark exercises to avoid.
 4. Choose how much nutrition detail you want Keepfit to show.
-5. Tap `Review my week`.
-6. Review each workout. You can rename it, remove exercises, or add another
+5. Choose your next step: build an offline starter week, plan manually, or let
+   Coach create a catalogue-backed draft from the saved answers.
+6. If you choose the starter week, review each workout. You can rename it, remove exercises, or add another
    exercise from Keepfit's built-in starter library.
 7. Tap `Use this week` only when the draft looks right.
 
 Your answers are saved locally for next time. Rebuilding the starter week
 replaces only the previous generated starter plan; personal templates and
 workout history are preserved.
+
+If you choose Coach, connect your own OpenRouter account if needed, add any
+optional emphasis, and create the draft. Review every weekday, exercise, set,
+and repetition target. `Dismiss` changes nothing; `Apply plan` replaces only
+the active profile's recurring week in one operation. A provider response that
+uses an unknown exercise or invalid target is rejected instead of partially
+applying.
 
 ## Templates
 
@@ -130,6 +119,8 @@ During an active workout you can:
 - save exercise notes;
 - see an explained local suggestion to repeat, add a small amount of weight,
   or add one repetition next time;
+- open `View guide` for a supported exercise and close it without changing the
+  active session;
 - start the rest timer manually; it also starts automatically after a set is
   saved successfully;
 - use `Adapt session` to replace an untouched exercise or switch safely to a

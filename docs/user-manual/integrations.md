@@ -1,16 +1,5 @@
 # Optional Integrations
 
-## Live Exercise Demonstrations
-
-The Workouts exercise-source rail includes an optional `Live demos` prototype.
-It uses the keyless ExerciseDB hosted API only after you submit a search. The
-request contains the exercise name and optional body-area, muscle, and equipment
-filters you entered; it does not include profile, workout, nutrition, progress,
-notes, identifiers, or private media.
-
-Results are view-only, not stored in Keepfit or included in backups. Use the
-40-item `Offline guide` whenever a connection or the provider is unavailable.
-
 ## Health Connect Steps
 
 Health Connect step tracking is optional.
@@ -44,10 +33,18 @@ use your account's free-model quota or credits.
 Current capabilities:
 
 - connect, inspect, and disconnect your OpenRouter access;
+- choose Mira for a warm style, Rook for a direct style, or Atlas for an
+  analytical style;
+- keep separate profile-owned conversations across app restarts;
+- switch, rename, clear future Coach memory, or delete a conversation;
 - ask ordinary training and nutrition questions;
 - ask about recent personal progress and receive insights from compact local
-  workout, nutrition, step, and transformation summaries; and
-- retry a failed query without exposing any data-changing action.
+  workout, nutrition, step, and transformation summaries;
+- create a workout-plan draft from saved journey answers using only supplied
+  bundled-catalogue exercises;
+- review the current week, propose a week from existing templates, or suggest
+  a meal from saved foods; and
+- retry a failed request without changing local records.
 
 ### Connect the Assistant
 
@@ -56,18 +53,35 @@ Current capabilities:
 3. Approve access in the system browser and return to Keepfit.
 4. Use the connection menu if you want to check or disconnect access.
 
+On supported devices, open `Settings` > `Connections` and enable `Recover
+access after reinstall` if you want Google Block Store to retain this token
+separately. Keepfit validates recovered access before using it. Turning the
+switch off or disconnecting requests deletion; when the service is unavailable,
+reconnect through Coach instead.
+
 ### Use the Assistant
 
 Inside Coach you can:
 
-1. Type a general question, or choose a starter question.
-2. Ask about "my progress", "my recent workouts", or similar personal history
+1. Choose a Coach when starting a conversation. This changes communication
+   style, not safety or privacy boundaries.
+2. Type a general question, or choose a starter question.
+3. Ask about "my progress", "my recent workouts", or similar personal history
    when you want Keepfit to include a compact local snapshot.
-3. Look for the context notice below the response to confirm local activity was
+4. Look for the context notice below the response to confirm local activity was
    included.
+5. Open conversation history to switch threads. Use a thread's options to
+   rename it, clear future Coach memory while retaining the transcript, or
+   permanently delete it.
+6. Use `Create plan` for a new catalogue-backed week. Inspect the vertical
+   weekday preview and choose `Apply plan` only when every target is correct.
+7. Use `Review` for a weekly summary, an existing-template week, or a saved-food
+   meal proposal. These remain previews until you explicitly apply them.
 
-Coach is query-only in v0.10. It cannot edit plans, add food, or write local
-records.
+Coach never writes as part of an ordinary answer. Plan and review actions use
+strict structured contracts, show the full proposal first, and require a
+separate approval. Dismissal, invalid output, and failed storage leave the
+existing records unchanged.
 
 ### Privacy and Usage Limits
 
@@ -80,12 +94,20 @@ records.
   without relaxing the privacy rule.
 - Chat sends the conversation you type. Questions about your own progress may
   also send compact workout, nutrition, step, and transformation aggregates.
-- Weight, BMI, height, transformation photos, body measurements, identifiers,
-  private paths, and raw database rows are excluded.
+- Keepfit stores the full transcript locally under the active profile. A model
+  request sends only a capped recap of earlier content plus the latest 12
+  messages. Clearing Coach memory excludes earlier messages from later
+  requests without deleting the local transcript.
+- Weight, BMI, height, transformation photos, body measurements, profile and
+  personal-record identifiers, private paths, and raw database rows are
+  excluded. Plan creation sends at most 60 public bundled-catalogue IDs and
+  labels so Keepfit can reject invented exercises.
 - OpenRouter records request metadata such as model, token counts, and latency.
   Its prompt logging is off by default according to its current documentation.
 - The encrypted credential and OAuth transaction are not included in Keepfit
-  backups. Disconnect removes them from the device.
+  fitness or Android backups. Optional Block Store recovery is a separate,
+  explicit choice. Disconnect removes local access and requests recovery-entry
+  deletion.
 
 ### Assistant Safety Notes
 
@@ -97,4 +119,5 @@ records.
 - Assistant requests are sent through OpenRouter when you use this feature.
 - If the endpoint is unreachable, drafted chat text should remain available for
   retry.
-- Provider output cannot write fitness data in the current Coach experience.
+- Provider output cannot write fitness data directly. Only locally validated
+  plan or review proposals can reach an explicit apply action.

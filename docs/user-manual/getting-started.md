@@ -4,13 +4,18 @@
 
 1. Install the debug or release APK on an Android 12+ device.
 2. Open Keepfit.
-3. Complete the guided setup: local profile, goal, experience, realistic days,
+3. Create a local profile. Birth date, height, and starting weight are optional;
+   when supplied, Keepfit shows age and BMI context locally and stores the
+   starting weight as the first Progress measurement.
+4. Complete the short training setup: goal, experience, realistic days,
    session time, available equipment, movements to avoid, and preferred
    nutrition detail.
-4. Review the offline starter week before applying it.
+5. Choose whether to preview an offline starter week, plan manually, or ask
+   Coach to create a catalogue-backed draft from the saved answers.
 
-Height is optional and is used only for BMI context. The training plan does not
-depend on it.
+BMI is a general reference, not a diagnosis or complete picture of health.
+Birth date, height, and weight do not leave the device unless you explicitly
+export a backup. The deterministic starter plan does not require them.
 
 ## Main Navigation
 
@@ -20,7 +25,8 @@ Keepfit uses five main areas:
 - `Plan`: starter journey, weekly schedule, exercise library, and templates.
 - `Log`: food diary, saved meals, and reusable nutrition entries.
 - `Progress`: weekly review, records, measurements, cycles, and comparisons.
-- `Coach`: general questions and query-only insights about recent progress.
+- `Coach`: general questions, recent-progress insights, and review-first plans
+  or proposals that cannot change records without approval.
 
 Open the profile icon for categorized Settings; it is not a daily-use tab.
 
@@ -28,7 +34,7 @@ Open the profile icon for categorized Settings; it is not a daily-use tab.
 
 Recommended first setup order:
 
-1. Review and apply the starter week created during guided setup.
+1. Preview and apply the offline starter week, or build your own week in `Plan`.
 2. Adjust the schedule or exercise library from `Plan` if needed.
 3. Open the profile icon and set nutrition goals if you use them.
 4. Add a few foods in `Log`.
@@ -46,6 +52,7 @@ The `Today` screen acts as a quick summary and launch point.
 
 ## General Tips
 
-- Keepfit is designed for one local user.
+- Keepfit supports several isolated local profiles on one device. Use the
+  profile switcher before logging for another person.
 - Most screens save through explicit buttons rather than autosave.
 - If a feature looks empty, start by adding source data in its main screen.

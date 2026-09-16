@@ -1,9 +1,8 @@
 # Transformation Pose Catalogue
 
-This reference defines the stable pose taxonomy approved for future Keepfit
-transformation check-ins. It describes product behavior only; the current app
-continues to use four photo angles until the corresponding version is
-implemented and migrated.
+This reference defines the stable pose taxonomy used by Keepfit transformation
+check-ins. It is the authoritative mapping for persisted keys, default
+selection, guidance, and migration behavior.
 
 ## Pose Set
 
