@@ -19,6 +19,13 @@ completion, or any action. Android's system animation setting still applies to
 native transitions. The preference applies to the device across local profiles
 and is included in encrypted Keepfit backups.
 
+## Open-source Licences
+
+Open `About`, then expand `Open-source licences` to inspect the bundled
+exercise catalogue source, pinned revision, MIT notice, and media exclusion.
+The notice is centralized here so it does not consume space in every exercise
+detail view. Full upstream terms are also packaged inside the application.
+
 ## Nutrition Goals
 
 Open the profile icon, choose `Goals and nutrition`, then save:

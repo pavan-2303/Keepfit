@@ -25,7 +25,18 @@ interface WorkoutRepository {
     suspend fun archiveExercise(id: String)
     suspend fun deleteExercise(id: String)
     suspend fun createTemplate(name: String, exerciseIds: List<String>)
+    suspend fun updateTemplate(id: String, name: String, exerciseIds: List<String>)
+    suspend fun renameTemplate(id: String, name: String)
+    suspend fun addTemplateExercises(id: String, exerciseIds: List<String>)
+    suspend fun updateTemplateExercise(
+        templateId: String,
+        templateExerciseId: String,
+        targetSets: Int,
+        targetReps: String?,
+    )
+    suspend fun removeTemplateExercise(templateId: String, templateExerciseId: String)
     suspend fun deleteTemplate(id: String)
+    suspend fun deleteTemplates(ids: Set<String>)
     suspend fun assignTemplate(dayOfWeek: DayOfWeek, templateId: String)
     suspend fun clearPlannedWorkout(dayOfWeek: DayOfWeek)
     suspend fun replaceWeeklySchedule(assignments: List<Pair<DayOfWeek, String>>) {

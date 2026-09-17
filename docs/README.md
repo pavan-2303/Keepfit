@@ -34,8 +34,11 @@ is the archive for old plans and designs.
 
 ## Versioning Rules
 
-- the Android app currently reports version `0.19.0`; v0.11.0 through
-  [v0.19.0](done/versions/v0.19.0.md) and both documented initiatives are complete
+- the Android app currently reports version `0.22.0`; v0.11.0 through
+  [v0.19.0](done/versions/v0.19.0.md) and the first two documented initiatives are complete
+- [v0.20.0](done/versions/v0.20.0.md) completed the exercise-clarity and licence-boundary increment
+- [v0.21.0](done/versions/v0.21.0.md) completed the release-candidate navigation and conversation-integrity increment
+- [v0.22.0](done/versions/v0.22.0.md) completed the practical template-maintenance increment
 - future sprint delivery increments from there
 - sprint versions should be real, execution-ready, and user-visible
 - large features must start in backlog before they are sliced into versions

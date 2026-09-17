@@ -64,7 +64,9 @@ reconnect through Coach instead.
 Inside Coach you can:
 
 1. Choose a Coach when starting a conversation. This changes communication
-   style, not safety or privacy boundaries.
+   style, not safety or privacy boundaries. Choosing a Coach alone does not
+   create a history entry; the conversation is saved after you send the first
+   question.
 2. Type a general question, or choose a starter question.
 3. Ask about "my progress", "my recent workouts", or similar personal history
    when you want Keepfit to include a compact local snapshot.
@@ -117,7 +119,8 @@ existing records unchanged.
   or unsafe progression are refused locally.
 - Keep core workflows independent of the assistant.
 - Assistant requests are sent through OpenRouter when you use this feature.
-- If the endpoint is unreachable, drafted chat text should remain available for
-  retry.
+- Sending clears the composer immediately. If the endpoint is unreachable,
+  use the separate retry action; Keepfit retains that failed payload in memory
+  without putting old text back into the input box.
 - Provider output cannot write fitness data directly. Only locally validated
   plan or review proposals can reach an explicit apply action.

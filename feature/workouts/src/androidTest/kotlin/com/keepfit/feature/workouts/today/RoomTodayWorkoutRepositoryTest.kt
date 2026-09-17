@@ -102,6 +102,64 @@ class RoomTodayWorkoutRepositoryTest {
     }
 
     @Test
+    fun updatingTemplatePreservesIdentityAndWeeklyAssignment() = runBlocking {
+        repository.updateTemplate(
+            id = "template",
+            name = "Foundation edited",
+            exerciseIds = listOf("exercise-3", "exercise-1"),
+        )
+
+        val updated = repository.observeTemplates().first().single()
+        val planned = repository.observeWeeklySchedule().first().single()
+
+        assertEquals("template", updated.id)
+        assertEquals("Foundation edited", updated.name)
+        assertEquals(listOf("exercise-3", "exercise-1"), updated.exercises.map { it.exerciseId })
+        assertEquals("template", planned.templateId)
+        assertEquals("Foundation edited", planned.templateName)
+    }
+
+    @Test
+    fun directTemplateMaintenanceUpdatesOnlyTheRequestedFields() = runBlocking {
+        val exerciseRowId = repository.observeTemplates().first().single().exercises.first().id
+
+        repository.renameTemplate("template", "Upper pull")
+        repository.updateTemplateExercise(
+            templateId = "template",
+            templateExerciseId = exerciseRowId,
+            targetSets = 5,
+            targetReps = "5-7",
+        )
+        repository.removeTemplateExercise("template", "template-exercise-4")
+
+        val updated = repository.observeTemplates().first().single()
+        val planned = repository.observeWeeklySchedule().first().single()
+
+        assertEquals("Upper pull", updated.name)
+        assertEquals(4, updated.exercises.size)
+        assertEquals(5, updated.exercises.first().targetSets)
+        assertEquals("5-7", updated.exercises.first().targetReps)
+        assertEquals("Upper pull", planned.templateName)
+    }
+
+    @Test
+    fun bulkDeleteValidatesEveryTemplateBeforeDeletingAny() = runBlocking {
+        repository.createTemplate("Spare", listOf("exercise-1"))
+        repository.startOrResume(repository.observeWeeklySchedule().first().single())
+        val templatesBefore = repository.observeTemplates().first()
+
+        val result = runCatching {
+            repository.deleteTemplates(templatesBefore.map { it.id }.toSet())
+        }
+
+        assertTrue(result.isFailure)
+        assertEquals(
+            templatesBefore.map { it.id }.toSet(),
+            repository.observeTemplates().first().map { it.id }.toSet(),
+        )
+    }
+
+    @Test
     fun skipIsIdempotentAndRestoreReturnsToRecurringPlan() = runBlocking {
         val action = repository.observeTodayWorkout().first().primary!!
         val skip = TodayChangeRequest(

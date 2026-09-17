@@ -68,7 +68,7 @@ class ExerciseCatalogueUiTest {
     }
 
     @Test
-    fun bundledExerciseDetailsShowSourceAndUsefulMetadata() {
+    fun bundledExerciseDetailsPrioritizeStructuredMovementGuidance() {
         composeRule.setContent {
             MaterialTheme {
                 PersonalExerciseDetailDialog(
@@ -85,12 +85,50 @@ class ExerciseCatalogueUiTest {
             }
         }
 
-        composeRule.onNodeWithText("BUNDLED CATALOGUE").assertIsDisplayed()
-        composeRule.onNodeWithText("Equipment: Cable").assertIsDisplayed()
-        composeRule.onNodeWithText("Target: Lats").assertIsDisplayed()
-        composeRule.onNodeWithText("Also works: Biceps, rear delts").assertIsDisplayed()
-        composeRule.onNodeWithText("Exercises Dataset • MIT metadata and instructions").assertIsDisplayed()
+        composeRule.onNodeWithText("Bundled exercise").assertIsDisplayed()
+        composeRule.onNodeWithText("Movement profile").assertIsDisplayed()
+        composeRule.onNodeWithText("Body area").assertIsDisplayed()
+        composeRule.onNodeWithText("Upper arms").assertIsDisplayed()
+        composeRule.onNodeWithText("Equipment").assertIsDisplayed()
+        composeRule.onNodeWithText("Cable").assertIsDisplayed()
+        composeRule.onNodeWithText("Primary target").assertIsDisplayed()
+        composeRule.onNodeWithText("Lats").assertIsDisplayed()
+        composeRule.onNodeWithText("Also works").assertIsDisplayed()
+        composeRule.onNodeWithText("Biceps, rear delts").assertIsDisplayed()
+        composeRule.onNodeWithText("How to perform").assertIsDisplayed()
+        composeRule.onNodeWithText("Exercises Dataset • MIT metadata and instructions").assertDoesNotExist()
         composeRule.onNodeWithText("Movement guide").assertDoesNotExist()
+    }
+
+    @Test
+    fun exerciseDetailsKeepTechniqueReadableAtCompactWidthWithLargeText() {
+        composeRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(density.density, fontScale = 2f),
+            ) {
+                MaterialTheme {
+                    Box(Modifier.width(360.dp).height(640.dp)) {
+                        PersonalExerciseDetailDialog(
+                            exercise = exercise(
+                                id = "row",
+                                name = "Cable row",
+                                equipment = "cable",
+                                targetMuscle = "lats",
+                                secondaryMuscles = "biceps, rear delts",
+                            ),
+                            onEdit = {},
+                            onDismiss = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("How to perform").assertIsDisplayed()
+        composeRule.onNodeWithText("Move with control.").assertIsDisplayed()
+        composeRule.onNodeWithText("Edit exercise").assertIsDisplayed()
+        composeRule.onNodeWithText("Close").assertIsDisplayed()
     }
 
     @Test

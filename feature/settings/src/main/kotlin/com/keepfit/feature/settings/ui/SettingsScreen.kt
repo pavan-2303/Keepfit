@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -135,6 +136,7 @@ fun SettingsScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
@@ -142,16 +144,14 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             if (selectedSection == null) {
-                Text(text = "Manage Keepfit", style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     "Daily actions stay in the main tabs. Setup, reminders, connections, and private data live here.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 SettingsSection.entries.forEach { section ->
                     SettingsSectionRow(section) { selectedSection = section }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
@@ -373,30 +373,42 @@ fun SettingsScreen(
 
 @Composable
 internal fun ExerciseCatalogueLegalNotice() {
-    SettingsCard("Exercise catalogue") {
+    var detailsVisible by remember { mutableStateOf(false) }
+    SettingsCard("Open-source licences") {
         Text(
-            "Exercises Dataset by Hasan Emir Yıldırım. Metadata and English instructions are included under the MIT License.",
+            "Third-party catalogue and library notices.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
         )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            "Pinned source revision: 7455efae41b3",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            "Copyright (c) 2026 Hasan Emir Yıldırım. Gym visual images and GIFs are not included.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            "25 original Keepfit movement figures are included as code-native artwork. They do not reuse the dataset's Gym visual media.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        TextButton(onClick = { detailsVisible = !detailsVisible }) {
+            Text(if (detailsVisible) "Hide details" else "View details")
+        }
+        if (detailsVisible) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+            Text(
+                "Exercises Dataset by Hasan Emir Yıldırım. Metadata and English instructions are included under the MIT License.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "Pinned source revision: 7455efae41b3",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "Copyright (c) 2026 Hasan Emir Yıldırım. Gym visual images and GIFs are not included.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "25 original Keepfit movement figures are included as code-native artwork. They do not reuse the dataset's Gym visual media.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
 }
 

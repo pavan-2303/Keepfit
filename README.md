@@ -9,7 +9,8 @@ complexity.
 
 - Browse 1,316 bundled exercises with English instructions entirely offline,
   use original movement guidance for 25 common exercises, create personal
-  exercises, and attach private demonstration media.
+  exercises, attach private demonstration media, and read technique in a
+  structured movement sheet without repeated legal text.
 - Build workout templates and weekly workout plans.
 - Log sets, repetitions, weight, notes, history, and personal records.
 - Track personal foods, reusable meals, calories, and macronutrients.
@@ -28,9 +29,12 @@ The active development branch contains a runnable Android application with:
   starting weight, locally derived age/BMI context, and transactional Room
   persistence;
 - a five-destination Compose Navigation shell organized as Today, Plan, Log,
-  Progress, and Coach, with Settings behind the profile action;
+  Progress, and Coach, with compact single-title headers and Settings behind
+  the profile action;
 - one searchable Room-owned library containing 1,316 pinned bundled exercises
   alongside editable user-created exercises and optional private demo media;
+- structured exercise details with media-first guidance, a compact movement
+  profile, numbered technique steps, and one consolidated About notice;
 - offline search across exercise name, body area, equipment, target, secondary
   muscles, and English instructions, with no runtime catalogue provider;
 - 25 original code-native movement figures with user-triggered animation from
@@ -40,7 +44,9 @@ The active development branch contains a runnable Android application with:
   maintainable nutrition-tracking preference;
 - a final setup choice between the offline starter preview, fully manual Plan,
   or a validated, review-first AI draft in Coach;
-- reusable workout templates and a recurring weekday plan;
+- a weekly-plan-first Plan destination with navigable template, exercise
+  catalogue, and history tools, including compact template details, direct
+  name/membership/prescription maintenance, and atomic multi-template cleanup;
 - a decisive Today workout card that starts or resumes the next action and
   supports reviewed full, shorter, minimum, substitution, reschedule, skip,
   and restore decisions for one date without editing the reusable template;
@@ -96,6 +102,8 @@ The active development branch contains a runnable Android application with:
   Keystore-encrypted credentials, and automatic compact local-progress context
   for relevant questions; Keepfit adds no local request cap, and supported
   devices offer separate opt-in, verified Block Store credential recovery;
+  choosing a Coach alone creates no history item, and sent prompts clear from
+  the composer while remaining separately retryable after a failure;
 - catalogue-backed AI workout drafts that use saved journey constraints,
   reject unknown exercises, and replace the active profile's week only after
   explicit atomic approval, plus review-first weekly and saved-food proposals;
@@ -147,6 +155,15 @@ training-field-guide identity, accessible motion policy, and reduced-motion
 setting are complete in
 [v0.19.0 - Training Field Guide Polish](docs/done/versions/v0.19.0.md), closing
 the Durable Personalized Fitness Companion initiative.
+Apache-2.0 code licensing, explicit media boundaries, consolidated catalogue
+notices, and the exercise-detail rebuild are complete in
+[v0.20.0 - Exercise Clarity and Licence Boundaries](docs/done/versions/v0.20.0.md).
+The compact release-candidate hierarchy, plan-first navigation, editable
+template details, and truthful Coach conversation creation are complete in
+[v0.21.0 - Release-candidate Navigation](docs/done/versions/v0.21.0.md).
+Direct template actions, per-exercise set and repetition editing, and safe
+multi-template deletion are complete in
+[v0.22.0 - Practical Template Maintenance](docs/done/versions/v0.22.0.md).
 
 ## Architecture
 
@@ -311,5 +328,11 @@ End-user setup and usage documentation lives in [docs/user-manual](docs/user-man
 
 ## License
 
-No license has been selected. Treat the repository as private unless a license
-file is added explicitly.
+Keepfit source code is available under the
+[Apache License 2.0](LICENSE). This does not automatically license third-party
+catalogue content, trademarks, user-imported media, or future media explicitly
+identified as restricted.
+
+- [Media licensing boundaries](MEDIA-LICENSE.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
+- [Exercise catalogue rights register](docs/references/exercise-catalogue-rights-register.md)

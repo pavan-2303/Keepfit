@@ -5,13 +5,19 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -46,10 +53,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -130,10 +139,21 @@ fun HomeShell(
                         scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     ),
                     title = {
-                        Text(
-                            if (currentRoute == settingsRoute) "Profile and settings"
-                            else HomeDestination.entries.firstOrNull { it.route == currentRoute }?.label ?: "Keepfit",
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier
+                                    .width(4.dp)
+                                    .height(26.dp)
+                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                if (currentRoute == settingsRoute) "Profile and settings"
+                                else HomeDestination.entries.firstOrNull { it.route == currentRoute }?.label ?: "Keepfit",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                     },
                     navigationIcon = {
                         if (currentRoute == settingsRoute) {
@@ -145,13 +165,20 @@ fun HomeShell(
                     actions = {
                         if (currentRoute != settingsRoute) {
                             Box {
-                                TextButton(
+                                Surface(
                                     onClick = { profileMenuExpanded = true },
-                                    modifier = Modifier.semantics {
-                                        contentDescription = "Switch profile. ${profile.displayName} is active."
-                                    },
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .semantics {
+                                            contentDescription = "Switch profile. ${profile.displayName} is active."
+                                        },
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                 ) {
-                                    Text(profile.displayName.take(1).uppercase())
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(profile.displayName.take(1).uppercase(), fontWeight = FontWeight.Bold)
+                                    }
                                 }
                                 DropdownMenu(
                                     expanded = profileMenuExpanded,
@@ -458,7 +485,7 @@ private fun TodayScreen(
     val largeText = LocalDensity.current.fontScale >= 1.5f
     Column(
         modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         KeepfitSectionHeader(
             title = if (largeText) "Hello, ${profile.displayName}." else "Good to see you, ${profile.displayName}.",

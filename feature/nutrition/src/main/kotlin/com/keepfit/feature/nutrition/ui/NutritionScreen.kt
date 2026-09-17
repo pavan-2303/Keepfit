@@ -1,5 +1,6 @@
 package com.keepfit.feature.nutrition.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -35,12 +38,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -95,7 +96,7 @@ fun NutritionScreen(
     var editingFood by remember { mutableStateOf<Food?>(null) }
     var showSavedMealEditor by remember { mutableStateOf(false) }
     var addMealType by remember { mutableStateOf<MealType?>(null) }
-    var selectedLibraryTab by rememberSaveable { mutableStateOf(LibraryTab.FOODS) }
+    var destination by rememberSaveable { mutableStateOf(NutritionDestination.DIARY) }
 
     LaunchedEffect(message) {
         message?.let {
@@ -107,6 +108,7 @@ fun NutritionScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
@@ -114,18 +116,41 @@ fun NutritionScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text(
-                text = "NUTRITION",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = "Food diary",
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Spacer(modifier = Modifier.height(18.dp))
+            if (destination != NutritionDestination.DIARY) {
+                NutritionSubpageHeader(
+                    title = if (destination == NutritionDestination.FOODS) "Foods" else "Saved meals",
+                    supportingText = if (destination == NutritionDestination.FOODS) {
+                        "Your personal food library."
+                    } else {
+                        "Reusable combinations for faster logging."
+                    },
+                    onBack = { destination = NutritionDestination.DIARY },
+                )
+                when (destination) {
+                    NutritionDestination.FOODS -> FoodLibrarySection(
+                        foods = foods,
+                        onSearch = viewModel::searchFoods,
+                        onCreate = {
+                            editingFood = null
+                            showFoodEditor = true
+                        },
+                        onEdit = {
+                            editingFood = it
+                            showFoodEditor = true
+                        },
+                        onToggleFavorite = viewModel::toggleFavorite,
+                        onArchive = { viewModel.archiveFood(it.id) },
+                    )
+                    NutritionDestination.SAVED_MEALS -> SavedMealsSection(
+                        foods = foods,
+                        meals = savedMeals,
+                        onCreate = { showSavedMealEditor = true },
+                    )
+                    NutritionDestination.DIARY -> Unit
+                }
+            } else {
             NutritionLensSelector(
                 depth = appSettings.nutritionTrackingDepth,
                 rangePercent = appSettings.nutritionTargetRangePercent,
@@ -183,40 +208,15 @@ fun NutritionScreen(
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("LIBRARY", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    PrimaryTabRow(selectedTabIndex = selectedLibraryTab.ordinal) {
-                        LibraryTab.entries.forEach { tab ->
-                            Tab(
-                                selected = selectedLibraryTab == tab,
-                                onClick = { selectedLibraryTab = tab },
-                                text = { Text(tab.label) },
-                            )
-                        }
-                    }
-                    when (selectedLibraryTab) {
-                        LibraryTab.FOODS -> FoodLibrarySection(
-                            foods = foods,
-                            onSearch = viewModel::searchFoods,
-                            onCreate = {
-                                editingFood = null
-                                showFoodEditor = true
-                            },
-                            onEdit = {
-                                editingFood = it
-                                showFoodEditor = true
-                            },
-                            onToggleFavorite = viewModel::toggleFavorite,
-                            onArchive = { viewModel.archiveFood(it.id) },
-                        )
-                        LibraryTab.SAVED_MEALS -> SavedMealsSection(
-                            foods = foods,
-                            meals = savedMeals,
-                            onCreate = { showSavedMealEditor = true },
-                        )
-                    }
                 }
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            Text("Log tools", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(6.dp))
+            NutritionTools(
+                onOpenFoods = { destination = NutritionDestination.FOODS },
+                onOpenSavedMeals = { destination = NutritionDestination.SAVED_MEALS },
+            )
             }
         }
     }
@@ -265,6 +265,54 @@ fun NutritionScreen(
             },
         )
     }
+}
+
+@Composable
+private fun NutritionSubpageHeader(
+    title: String,
+    supportingText: String,
+    onBack: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back to food diary")
+        }
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            Text(supportingText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun NutritionToolRow(title: String, detail: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.RestaurantMenu, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.Outlined.ChevronRight, contentDescription = "Open $title")
+    }
+    HorizontalDivider()
+}
+
+@Composable
+internal fun NutritionTools(onOpenFoods: () -> Unit, onOpenSavedMeals: () -> Unit) {
+    NutritionToolRow(
+        title = "Foods",
+        detail = "Create, edit, and favorite foods",
+        onClick = onOpenFoods,
+    )
+    NutritionToolRow(
+        title = "Saved meals",
+        detail = "Build reusable meals from your foods",
+        onClick = onOpenSavedMeals,
+    )
 }
 
 @Composable
@@ -1080,10 +1128,7 @@ private data class MetricValues(
     val unit: String,
 )
 
-private enum class LibraryTab(val label: String) {
-    FOODS("Foods"),
-    SAVED_MEALS("Saved meals"),
-}
+private enum class NutritionDestination { DIARY, FOODS, SAVED_MEALS }
 
 private enum class EntryMode {
     FOOD,

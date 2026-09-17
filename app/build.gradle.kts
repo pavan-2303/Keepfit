@@ -6,10 +6,30 @@ plugins {
 }
 
 import java.util.Properties
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.Sync
+
+abstract class PrepareLegalAssets : Sync() {
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+}
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 val hasReleaseSigning = keystorePropertiesFile.exists()
+val generatedLegalAssetsDirectory = layout.buildDirectory.dir("generated/legal-assets")
+val prepareLegalAssets by tasks.registering(PrepareLegalAssets::class) {
+    outputDirectory.set(generatedLegalAssetsDirectory)
+    into(outputDirectory)
+    into("legal") {
+        from(rootProject.file("LICENSE")) {
+            rename { "KEEPFIT_APACHE_2_0.txt" }
+        }
+        from(rootProject.file("MEDIA-LICENSE.md"))
+        from(rootProject.file("THIRD_PARTY_NOTICES.md"))
+    }
+}
 
 if (hasReleaseSigning) {
     keystorePropertiesFile.inputStream().use(keystoreProperties::load)
@@ -22,8 +42,8 @@ android {
         applicationId = "com.keepfit.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 19
-        versionName = "0.19.0"
+        versionCode = 22
+        versionName = "0.22.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -68,6 +88,15 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    }
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            prepareLegalAssets,
+            PrepareLegalAssets::outputDirectory,
+        )
     }
 }
 

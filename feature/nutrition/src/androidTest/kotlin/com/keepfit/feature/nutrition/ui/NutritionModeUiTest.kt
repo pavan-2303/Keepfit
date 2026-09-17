@@ -1,10 +1,12 @@
 package com.keepfit.feature.nutrition.ui
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import com.keepfit.core.database.nutrition.MealQuality
 import com.keepfit.core.database.nutrition.MealType
@@ -106,6 +108,25 @@ class NutritionModeUiTest {
 
         composeRule.onNodeWithText("1.5x").performClick()
         assertEquals("1.5", value)
+    }
+
+    @Test
+    fun foodLibrariesAreSecondaryNavigationInsteadOfTabs() {
+        var destination = ""
+        composeRule.setContent {
+            MaterialTheme {
+                Column {
+                    NutritionTools(
+                        onOpenFoods = { destination = "foods" },
+                        onOpenSavedMeals = { destination = "meals" },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Open Foods").assertIsDisplayed().performClick()
+        assertEquals("foods", destination)
+        composeRule.onNodeWithText("Saved meals").assertIsDisplayed()
     }
 
     private fun summary() = DailyNutritionSummary(

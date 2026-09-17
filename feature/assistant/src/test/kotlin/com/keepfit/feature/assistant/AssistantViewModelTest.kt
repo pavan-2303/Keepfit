@@ -104,7 +104,7 @@ class AssistantViewModelTest {
     }
 
     @Test
-    fun keepsDraftMessageWhenSendFails() = runTest(dispatcher) {
+    fun clearsComposerWhenSendFailsAndKeepsRetrySeparate() = runTest(dispatcher) {
         repository.chatResult = Result.failure(IllegalStateException("Endpoint unavailable."))
         val viewModel = viewModel()
 
@@ -112,7 +112,8 @@ class AssistantViewModelTest {
         viewModel.sendDraftMessage(sampleConfig())
         advanceUntilIdle()
 
-        assertEquals("Summarize this week.", viewModel.uiState.value.draftMessage)
+        assertEquals("", viewModel.uiState.value.draftMessage)
+        assertTrue(viewModel.uiState.value.canRetryLastMessage)
         assertTrue(viewModel.uiState.value.messages.isEmpty())
         assertEquals("Endpoint unavailable.", viewModel.uiState.value.errorMessage)
     }
@@ -144,16 +145,34 @@ class AssistantViewModelTest {
     }
 
     @Test
-    fun choosingCoachCreatesAndActivatesNamedConversation() = runTest(dispatcher) {
+    fun choosingCoachDoesNotCreateConversationUntilFirstQuestion() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
 
         viewModel.chooseCoach(CoachPersona.ROOK)
         advanceUntilIdle()
 
-        assertEquals(CoachPersona.ROOK, viewModel.uiState.value.activeConversation?.coach)
+        assertEquals(CoachPersona.ROOK, viewModel.uiState.value.selectedCoach)
         assertEquals(false, viewModel.uiState.value.showCoachPicker)
+        assertTrue(conversationRepository.createdCoaches.isEmpty())
+
+        viewModel.updateDraftMessage("What should I train today?")
+        viewModel.sendDraftMessage(sampleConfig())
+        advanceUntilIdle()
+
         assertEquals(CoachPersona.ROOK, conversationRepository.createdCoaches.single())
+        assertEquals(CoachPersona.ROOK, viewModel.uiState.value.activeConversation?.coach)
+    }
+
+    @Test
+    fun legacyProposalDraftDoesNotPopulateGeneralChatComposer() = runTest(dispatcher) {
+        val store = FakeDraftStore(
+            AssistantDraftSnapshot("Old proposal prompt", CoachingIntent.WEEKLY_PLAN, null),
+        )
+
+        val viewModel = viewModel(draftStore = store)
+
+        assertEquals("", viewModel.uiState.value.draftMessage)
     }
 
     @Test
@@ -181,6 +200,8 @@ class AssistantViewModelTest {
     fun managesConversationTitleMemoryAndDeletionThroughRepository() = runTest(dispatcher) {
         val viewModel = viewModel()
         viewModel.chooseCoach(CoachPersona.ATLAS)
+        viewModel.updateDraftMessage("Start an Atlas conversation")
+        viewModel.sendDraftMessage(sampleConfig())
         advanceUntilIdle()
         val conversationId = requireNotNull(viewModel.uiState.value.activeConversationId)
 

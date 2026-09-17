@@ -2,7 +2,7 @@
 
 ## Choose Your Nutrition Lens
 
-Open `Nutrition` and choose the amount of detail that is practical right now:
+Open `Log` and choose the amount of detail that is practical right now:
 
 - `Full macros` shows calories, protein, carbohydrates, and fat.
 - `Calories + protein` hides the other macro detail.
@@ -30,7 +30,7 @@ The diary is split into four sections:
 
 ## Add Foods
 
-Use the `Library` area to create foods you regularly eat.
+Under `Log tools`, choose `Foods` to create foods you regularly eat.
 
 Each food stores:
 
@@ -45,7 +45,7 @@ Foods can also be favorited or archived.
 
 ## Saved Meals
 
-Saved meals let you reuse a group of foods together.
+Choose `Saved meals` under `Log tools` to reuse a group of foods together.
 
 Good examples:
 

@@ -84,7 +84,18 @@ class WorkoutViewModelExecutionTest {
         override suspend fun archiveExercise(id: String) = Unit
         override suspend fun deleteExercise(id: String) = Unit
         override suspend fun createTemplate(name: String, exerciseIds: List<String>) = Unit
+        override suspend fun updateTemplate(id: String, name: String, exerciseIds: List<String>) = Unit
+        override suspend fun renameTemplate(id: String, name: String) = Unit
+        override suspend fun addTemplateExercises(id: String, exerciseIds: List<String>) = Unit
+        override suspend fun updateTemplateExercise(
+            templateId: String,
+            templateExerciseId: String,
+            targetSets: Int,
+            targetReps: String?,
+        ) = Unit
+        override suspend fun removeTemplateExercise(templateId: String, templateExerciseId: String) = Unit
         override suspend fun deleteTemplate(id: String) = Unit
+        override suspend fun deleteTemplates(ids: Set<String>) = Unit
         override suspend fun assignTemplate(dayOfWeek: DayOfWeek, templateId: String) = Unit
         override suspend fun clearPlannedWorkout(dayOfWeek: DayOfWeek) = Unit
         override suspend fun startOrResume(plannedWorkout: PlannedWorkout): String = "session"

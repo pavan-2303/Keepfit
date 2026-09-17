@@ -7,6 +7,7 @@ import com.keepfit.feature.assistant.access.AssistantAccessState
 import com.keepfit.feature.assistant.coaching.CoachingIntent
 import com.keepfit.feature.assistant.coaching.CoachingProposal
 import com.keepfit.feature.assistant.conversation.AssistantConversation
+import com.keepfit.feature.assistant.conversation.CoachPersona
 
 enum class AssistantConnectionStatus {
     DISABLED,
@@ -60,9 +61,14 @@ data class AssistantUiState(
     val conversations: List<AssistantConversation> = emptyList(),
     val activeConversationId: String? = null,
     val showCoachPicker: Boolean = false,
+    val pendingCoach: CoachPersona? = null,
+    val canRetryLastMessage: Boolean = false,
 ) {
     val activeConversation: AssistantConversation?
         get() = conversations.firstOrNull { it.id == activeConversationId }
+
+    val selectedCoach: CoachPersona?
+        get() = activeConversation?.coach ?: pendingCoach
 }
 
 data class AssistantDraftInput(

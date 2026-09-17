@@ -301,16 +301,124 @@ class RoomWorkoutRepository(
         )
     }
 
-    override suspend fun deleteTemplate(id: String) {
-        requireNotNull(dao.findTemplateForProfile(id, requireProfileId())) { "Workout template not found." }
-        require(
-            dao.countTemplateSessionUsage(id) == 0 && dao.countTemplateOccurrenceUsage(id) == 0,
-        ) {
-            "This template is already referenced by a dated workout or history and cannot be deleted."
+    override suspend fun updateTemplate(id: String, name: String, exerciseIds: List<String>) {
+        val profileId = requireProfileId()
+        require(name.isNotBlank()) { "Enter a template name." }
+        require(exerciseIds.isNotEmpty()) { "Choose at least one exercise." }
+        require(exerciseIds.distinct().size == exerciseIds.size) { "Choose each exercise once." }
+        val current = requireNotNull(dao.findTemplateDetailsForProfile(id, profileId)) {
+            "Workout template not found."
         }
-        dao.deletePlannedWorkoutsForTemplate(id)
-        dao.deleteTemplate(id)
+        val existingByExerciseId = current.exercises.associateBy { it.exercise.id }
+        val now = clock()
+        dao.updateTemplateAndExercises(
+            template = current.template.copy(name = name.trim(), updatedAt = now),
+            exercises = exerciseIds.mapIndexed { index, exerciseId ->
+                val existing = existingByExerciseId[exerciseId]?.templateExercise
+                WorkoutTemplateExerciseEntity(
+                    id = existing?.id ?: idFactory(),
+                    workoutTemplateId = id,
+                    exerciseId = exerciseId,
+                    position = index,
+                    targetSets = existing?.targetSets ?: 3,
+                    targetReps = existing?.targetReps ?: "8-10",
+                    notes = existing?.notes,
+                )
+            },
+        )
     }
+
+    override suspend fun renameTemplate(id: String, name: String) {
+        require(name.isNotBlank()) { "Enter a template name." }
+        val current = requireTemplate(id)
+        dao.upsertTemplate(current.template.copy(name = name.trim(), updatedAt = clock()))
+    }
+
+    override suspend fun addTemplateExercises(id: String, exerciseIds: List<String>) {
+        require(exerciseIds.isNotEmpty()) { "Choose at least one exercise." }
+        require(exerciseIds.distinct().size == exerciseIds.size) { "Choose each exercise once." }
+        val current = requireTemplate(id)
+        val existingIds = current.exercises.map { it.exercise.id }.toSet()
+        require(exerciseIds.none(existingIds::contains)) { "That exercise is already in this template." }
+        exerciseIds.forEach { exerciseId ->
+            requireNotNull(dao.findActiveExercise(exerciseId)) { "Exercise not found." }
+        }
+        val startPosition = current.exercises.size
+        dao.appendTemplateExercises(
+            template = current.template.copy(updatedAt = clock()),
+            exercises = exerciseIds.mapIndexed { index, exerciseId ->
+                WorkoutTemplateExerciseEntity(
+                    id = idFactory(),
+                    workoutTemplateId = id,
+                    exerciseId = exerciseId,
+                    position = startPosition + index,
+                    targetSets = 3,
+                    targetReps = "8-10",
+                    notes = null,
+                )
+            },
+        )
+    }
+
+    override suspend fun updateTemplateExercise(
+        templateId: String,
+        templateExerciseId: String,
+        targetSets: Int,
+        targetReps: String?,
+    ) {
+        require(targetSets > 0) { "Target sets must be at least 1." }
+        val current = requireTemplate(templateId)
+        val exercise = requireNotNull(
+            current.exercises.firstOrNull { it.templateExercise.id == templateExerciseId },
+        ) { "Template exercise not found." }
+        dao.updateTemplateExercise(
+            template = current.template.copy(updatedAt = clock()),
+            exercise = exercise.templateExercise.copy(
+                targetSets = targetSets,
+                targetReps = targetReps?.trim()?.ifBlank { null },
+            ),
+        )
+    }
+
+    override suspend fun removeTemplateExercise(templateId: String, templateExerciseId: String) {
+        val current = requireTemplate(templateId)
+        require(current.exercises.size > 1) {
+            "A template needs at least one exercise. Delete the template instead."
+        }
+        require(current.exercises.any { it.templateExercise.id == templateExerciseId }) {
+            "Template exercise not found."
+        }
+        val remaining = current.exercises
+            .filterNot { it.templateExercise.id == templateExerciseId }
+            .mapIndexed { index, exercise -> exercise.templateExercise.copy(position = index) }
+        dao.updateTemplateAndExercises(
+            template = current.template.copy(updatedAt = clock()),
+            exercises = remaining,
+        )
+    }
+
+    override suspend fun deleteTemplate(id: String) {
+        deleteTemplates(setOf(id))
+    }
+
+    override suspend fun deleteTemplates(ids: Set<String>) {
+        require(ids.isNotEmpty()) { "Choose at least one template." }
+        val profileId = requireProfileId()
+        ids.forEach { id ->
+            requireNotNull(dao.findTemplateForProfile(id, profileId)) { "Workout template not found." }
+            require(
+                dao.countTemplateSessionUsage(id) == 0 && dao.countTemplateOccurrenceUsage(id) == 0,
+            ) {
+                "A selected template is already referenced by a dated workout or history. Nothing was deleted."
+            }
+        }
+        dao.deleteTemplates(ids.sorted())
+    }
+
+    private suspend fun requireTemplate(id: String): WorkoutTemplateDetails =
+        requireNotNull(dao.findTemplateDetailsForProfile(id, requireProfileId())) {
+            "Workout template not found."
+        }
 
     override suspend fun assignTemplate(dayOfWeek: DayOfWeek, templateId: String) {
         val profileId = requireProfileId()

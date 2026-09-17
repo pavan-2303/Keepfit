@@ -24,7 +24,7 @@ class AndroidKeystoreAssistantCredentialStoreTest {
 
     @Test
     fun tokenAndPendingTransactionRoundTripEncryptedAndEraseOnDisconnect() {
-        val token = "sk-or-v1-user-secret-value"
+        val token = "test-openrouter-token"
         val pending = OpenRouterPendingAuthorization(
             callbackUrl = "http://127.0.0.1:49152/oauth/callback/state",
             state = "state",

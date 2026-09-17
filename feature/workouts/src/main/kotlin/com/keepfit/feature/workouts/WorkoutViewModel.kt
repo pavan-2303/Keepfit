@@ -124,8 +124,40 @@ class WorkoutViewModel @Inject constructor(
             repository.createTemplate(name, exerciseIds)
         }
 
+    fun updateTemplate(id: String, name: String, exerciseIds: List<String>) =
+        launchWrite("Workout template updated.") {
+            repository.updateTemplate(id, name, exerciseIds)
+        }
+
+    fun renameTemplate(id: String, name: String) = launchWrite("Template renamed.") {
+        repository.renameTemplate(id, name)
+    }
+
+    fun addTemplateExercises(id: String, exerciseIds: List<String>) =
+        launchWrite("Exercises added.") {
+            repository.addTemplateExercises(id, exerciseIds)
+        }
+
+    fun updateTemplateExercise(
+        templateId: String,
+        templateExerciseId: String,
+        targetSets: Int,
+        targetReps: String?,
+    ) = launchWrite("Exercise targets updated.") {
+        repository.updateTemplateExercise(templateId, templateExerciseId, targetSets, targetReps)
+    }
+
+    fun removeTemplateExercise(templateId: String, templateExerciseId: String) =
+        launchWrite("Exercise removed from template.") {
+            repository.removeTemplateExercise(templateId, templateExerciseId)
+        }
+
     fun deleteTemplate(id: String) = launchWrite("Workout template deleted.") {
         repository.deleteTemplate(id)
+    }
+
+    fun deleteTemplates(ids: Set<String>) = launchWrite("Workout templates deleted.") {
+        repository.deleteTemplates(ids)
     }
 
     fun assignTemplate(dayOfWeek: DayOfWeek, templateId: String) =

@@ -291,6 +291,9 @@ interface WorkoutDao {
     @Insert
     suspend fun insertTemplateExercises(exercises: List<WorkoutTemplateExerciseEntity>)
 
+    @Upsert
+    suspend fun upsertTemplateExercise(exercise: WorkoutTemplateExerciseEntity)
+
     @Transaction
     suspend fun replaceTemplateExercises(
         templateId: String,
@@ -298,6 +301,41 @@ interface WorkoutDao {
     ) {
         deleteTemplateExercises(templateId)
         insertTemplateExercises(exercises)
+    }
+
+    @Transaction
+    suspend fun updateTemplateAndExercises(
+        template: WorkoutTemplateEntity,
+        exercises: List<WorkoutTemplateExerciseEntity>,
+    ) {
+        upsertTemplate(template)
+        replaceTemplateExercises(template.id, exercises)
+    }
+
+    @Transaction
+    suspend fun appendTemplateExercises(
+        template: WorkoutTemplateEntity,
+        exercises: List<WorkoutTemplateExerciseEntity>,
+    ) {
+        upsertTemplate(template)
+        insertTemplateExercises(exercises)
+    }
+
+    @Transaction
+    suspend fun updateTemplateExercise(
+        template: WorkoutTemplateEntity,
+        exercise: WorkoutTemplateExerciseEntity,
+    ) {
+        upsertTemplate(template)
+        upsertTemplateExercise(exercise)
+    }
+
+    @Transaction
+    suspend fun deleteTemplates(templateIds: List<String>) {
+        templateIds.forEach { templateId ->
+            deletePlannedWorkoutsForTemplate(templateId)
+            deleteTemplate(templateId)
+        }
     }
 
     @Upsert

@@ -1,11 +1,11 @@
 # Workouts
 
-## Exercise Library
+## Exercise Catalogue
 
-Open `Workouts` and use the `Exercises` tab. It contains one searchable library
-with 1,316 bundled exercises plus exercises you create yourself. Everything in
-this library works without an internet connection and can be used directly in
-templates and plans.
+Open `Plan`, then choose `Exercise catalogue` under `Plan tools`. It contains
+one searchable library with 1,316 bundled exercises plus exercises you create
+yourself. Everything in this library works without an internet connection and
+can be used directly in templates and plans.
 
 You can:
 
@@ -18,9 +18,11 @@ You can:
 Archiving does not remove past workout history.
 
 Search by name, body area, equipment, target muscle, secondary muscle, or words
-from the instructions. Tap an exercise to see its source, equipment, target,
-other muscles, and numbered steps. Bundled exercises are labeled in their
-details; user-created exercises remain easy to identify and edit.
+from the instructions. Tap an exercise to open its movement sheet. Original
+guidance or private media appears first, followed by a compact movement
+profile, numbered technique steps, personal notes, and stable actions.
+Bundled and user-created exercises have short type labels without repeating
+catalogue licence text.
 
 Twenty-five common bundled exercises also show an original Keepfit movement
 guide. The ink figure shows the start position and the lighter outline shows
@@ -33,9 +35,12 @@ animations; its 25 built-in figures are original code-native artwork. Exercise
 guidance is general information, not medical,
 rehabilitation, or injury-specific advice.
 
+Catalogue attribution and licensing are available once under
+`Settings > About > Open-source licences` and remain packaged with the app.
+
 ## Build a Starter Week
 
-From `Plan`, tap `Build my starter week` when you want help turning your
+From `Plan`, tap `Starter setup` when you want help turning your
 real schedule into a manageable routine. The planner works without internet or
 AI.
 
@@ -62,7 +67,17 @@ applying.
 
 ## Templates
 
-Use the `Templates` tab to create reusable workouts.
+Open `Plan`, then choose `Templates` under `Plan tools` to create reusable
+workouts. Tap a template to inspect its exercises. The icon actions beside the
+template name let you rename it, add exercises from the offline catalogue, or
+delete it. Each exercise has its own edit action for target sets and reps plus
+a remove action, so ordinary changes do not reopen the full template editor.
+
+On the template list, choose the selection action to select one or more
+templates. The header then shows the selected count, select-all or clear, and
+delete. Deletion always asks for confirmation. If any selected template is
+protected by a dated workout or history, none of the selected templates are
+deleted.
 
 Each template can include:
 
@@ -74,7 +89,8 @@ Templates are reused in the weekly plan and in workout history.
 
 ## Weekly Plan
 
-Use the `Plan` tab to assign templates to weekdays.
+The weekly schedule is the main `Plan` page. Assign templates to weekdays
+there; secondary tools no longer compete with the schedule as tabs.
 
 Typical flow:
 
@@ -132,7 +148,8 @@ An unfinished workout stays active in Room and reopens when you return.
 
 ## History and Records
 
-Use the `History` tab to review completed sessions and simple personal records.
+Open `Plan`, then choose `Workout history` under `Plan tools` to review
+completed sessions and simple personal records.
 
 Historical logs stay readable even if the related exercise is archived later.
 

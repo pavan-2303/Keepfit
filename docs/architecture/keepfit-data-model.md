@@ -126,6 +126,13 @@ the only exercise visual stored in `ExerciseMedia`.
 | `targetReps` | String? | Optional free-form target such as `8-10` |
 | `notes` | String? | Optional template-specific note |
 
+Renaming a template updates only its name and timestamp. Adding exercises
+appends new rows with new UUIDs and default `3 x 8-10` targets. Editing a
+prescription keeps the `WorkoutTemplateExercise` UUID and changes only its
+target fields. Removing one row normalizes the remaining positions and is
+rejected when it would leave an empty template. None of these actions rewrites
+dated occurrences or completed workout snapshots.
+
 ### `WeeklyPlan`
 
 | Field | Type | Notes |
@@ -567,6 +574,8 @@ Health Connect records in Room in the first step-tracking iteration.
 
 - Archive exercises, foods, and workout templates referenced by history.
 - Cascade-delete template children when deleting an unused template.
+- Validate every template in a bulk delete before deleting any row, then apply
+  the eligible batch in one transaction.
 - Cascade-delete set logs and exercise logs when deleting a workout session.
 - Cascade-delete saved meal items when deleting a saved meal.
 - Delete transformation photo files only after their Room records are removed

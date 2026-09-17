@@ -43,10 +43,10 @@ class AssistantViewModel @Inject constructor(
     private val activeConversationId = MutableStateFlow<String?>(null)
     private val supplementalMessages = mutableMapOf<String?, List<AssistantChatMessage>>()
     private var coachPickerRequested = false
+    private var failedMessage: String? = null
     private val restoredDraft = assistantDraftStore.read()
     private val _uiState = MutableStateFlow(
         AssistantUiState(
-            draftMessage = restoredDraft.draftText,
             selectedCoachingIntent = restoredDraft.selectedIntent,
             pendingCoachingProposal = restoredDraft.proposal,
         ),
@@ -72,12 +72,13 @@ class AssistantViewModel @Inject constructor(
                 val state = _uiState.value
                 val currentId = activeConversationId.value
                 val nextId = currentId?.takeIf { id -> conversations.any { it.id == id } }
-                    ?: conversations.firstOrNull()?.id
+                    ?: conversations.firstOrNull()?.id?.takeIf { state.pendingCoach == null }
                 activeConversationId.value = nextId
                 _uiState.value = state.copy(
                     conversations = conversations,
                     activeConversationId = nextId,
-                    showCoachPicker = conversations.isEmpty() || coachPickerRequested,
+                    showCoachPicker = coachPickerRequested ||
+                        (conversations.isEmpty() && state.pendingCoach == null),
                 )
             }
         }
@@ -114,23 +115,15 @@ class AssistantViewModel @Inject constructor(
     }
 
     fun chooseCoach(coach: CoachPersona) {
-        viewModelScope.launch {
-            runCatching { conversationRepository.createConversation(coach) }
-                .onSuccess { conversation ->
-                    coachPickerRequested = false
-                    activeConversationId.value = conversation.id
-                    _uiState.value = _uiState.value.copy(
-                        activeConversationId = conversation.id,
-                        showCoachPicker = false,
-                        errorMessage = null,
-                    )
-                }
-                .onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = exception.message ?: "A Coach conversation could not be created.",
-                    )
-                }
-        }
+        coachPickerRequested = false
+        activeConversationId.value = null
+        _uiState.value = _uiState.value.copy(
+            activeConversationId = null,
+            pendingCoach = coach,
+            showCoachPicker = false,
+            messages = emptyList(),
+            errorMessage = null,
+        )
     }
 
     fun selectConversation(conversationId: String) {
@@ -138,6 +131,7 @@ class AssistantViewModel @Inject constructor(
         activeConversationId.value = conversationId
         _uiState.value = _uiState.value.copy(
             activeConversationId = conversationId,
+            pendingCoach = null,
             showCoachPicker = false,
             errorMessage = null,
         )
@@ -237,8 +231,12 @@ class AssistantViewModel @Inject constructor(
     }
 
     fun updateDraftMessage(message: String) {
-        _uiState.value = _uiState.value.copy(draftMessage = message.take(500), safetyMessage = null)
-        persistCoachingDraft()
+        failedMessage = null
+        _uiState.value = _uiState.value.copy(
+            draftMessage = message.take(500),
+            safetyMessage = null,
+            canRetryLastMessage = false,
+        )
     }
 
     fun selectCoachingIntent(intent: CoachingIntent) {
@@ -351,39 +349,40 @@ class AssistantViewModel @Inject constructor(
     }
 
     fun sendDraftMessage(config: AssistantRuntimeConfig) {
-        val draftMessage = _uiState.value.draftMessage.trim()
-        if (draftMessage.isEmpty()) return
-        val usesLocalContext = contextPolicy.shouldIncludeLocalContext(draftMessage)
+        sendMessage(config, _uiState.value.draftMessage)
+    }
+
+    private fun sendMessage(config: AssistantRuntimeConfig, rawMessage: String) {
+        val message = rawMessage.trim()
+        if (message.isEmpty()) return
+        val usesLocalContext = contextPolicy.shouldIncludeLocalContext(message)
 
         viewModelScope.launch {
+            failedMessage = null
             _uiState.value = _uiState.value.copy(
+                draftMessage = "",
                 isWorking = true,
                 errorMessage = null,
+                canRetryLastMessage = false,
             )
             val conversationId = ensureActiveConversation().getOrElse { exception ->
-                _uiState.value = _uiState.value.copy(
-                    isWorking = false,
-                    errorMessage = exception.message ?: "A Coach conversation could not be created.",
-                )
+                markSendFailed(message, exception.message ?: "A Coach conversation could not be created.")
                 return@launch
             }
             val history = conversationRepository.loadRequestHistory(conversationId).getOrElse { exception ->
-                _uiState.value = _uiState.value.copy(
-                    isWorking = false,
-                    errorMessage = exception.message ?: "Coach memory could not be loaded.",
-                )
+                markSendFailed(message, exception.message ?: "Coach memory could not be loaded.")
                 return@launch
             }
             val userMessage = AssistantChatMessage(
                 id = UUID.randomUUID().toString(),
                 role = AssistantMessageRole.USER,
-                content = draftMessage,
+                content = message,
                 createdAtUtcEpochMillis = System.currentTimeMillis(),
             )
             repository.sendChatTurn(
                 config = config,
                 history = history,
-                userMessage = draftMessage,
+                userMessage = message,
             ).onSuccess { assistantReply ->
                 val persistedReply = assistantReply.copy(
                     id = UUID.randomUUID().toString(),
@@ -400,19 +399,14 @@ class AssistantViewModel @Inject constructor(
                             isWorking = false,
                             errorMessage = null,
                             lastResponseUsedLocalContext = usesLocalContext,
+                            canRetryLastMessage = false,
                         )
                     }
                     .onFailure { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isWorking = false,
-                            errorMessage = exception.message ?: "Coach response could not be saved.",
-                        )
+                        markSendFailed(message, exception.message ?: "Coach response could not be saved.")
                     }
             }.onFailure {
-                _uiState.value = _uiState.value.copy(
-                    isWorking = false,
-                    errorMessage = it.message ?: "Assistant request failed.",
-                )
+                markSendFailed(message, it.message ?: "Assistant request failed.")
             }
         }
     }
@@ -420,12 +414,13 @@ class AssistantViewModel @Inject constructor(
     private suspend fun ensureActiveConversation(): Result<String> {
         activeConversationId.value?.let { return Result.success(it) }
         return runCatching {
-            conversationRepository.createConversation(CoachPersona.MIRA)
+            conversationRepository.createConversation(_uiState.value.pendingCoach ?: CoachPersona.MIRA)
         }.map { conversation ->
             coachPickerRequested = false
             activeConversationId.value = conversation.id
             _uiState.value = _uiState.value.copy(
                 activeConversationId = conversation.id,
+                pendingCoach = null,
                 showCoachPicker = false,
             )
             conversation.id
@@ -433,7 +428,16 @@ class AssistantViewModel @Inject constructor(
     }
 
     fun retryLastMessage(config: AssistantRuntimeConfig) {
-        sendDraftMessage(config)
+        failedMessage?.let { sendMessage(config, it) }
+    }
+
+    private fun markSendFailed(message: String, error: String) {
+        failedMessage = message
+        _uiState.value = _uiState.value.copy(
+            isWorking = false,
+            errorMessage = error,
+            canRetryLastMessage = true,
+        )
     }
 
     fun generateProgressSummary(config: AssistantRuntimeConfig) {

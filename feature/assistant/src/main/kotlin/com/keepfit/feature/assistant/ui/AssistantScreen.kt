@@ -1,5 +1,6 @@
 package com.keepfit.feature.assistant.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Send
@@ -247,9 +250,10 @@ fun AssistantScreen(
         Scaffold(
             modifier = modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 CoachTopBar(
-                    activeConversation = uiState.activeConversation,
+                    coach = uiState.selectedCoach,
                     hasConversations = uiState.conversations.isNotEmpty(),
                     onOpenHistory = { scope.launch { drawerState.open() } },
                     onNewConversation = onStartNewConversation,
@@ -301,7 +305,7 @@ fun AssistantScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CoachTopBar(
-    activeConversation: AssistantConversation?,
+    coach: CoachPersona?,
     hasConversations: Boolean,
     onOpenHistory: () -> Unit,
     onNewConversation: () -> Unit,
@@ -309,20 +313,34 @@ private fun CoachTopBar(
     onBack: (() -> Unit)?,
 ) {
     TopAppBar(
+        windowInsets = WindowInsets(0, 0, 0, 0),
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background,
             scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
         title = {
-            Column {
-                Text(activeConversation?.coach?.displayName ?: "Coach", maxLines = 1)
-                Text(
-                    activeConversation?.coach?.styleName ?: "Choose the voice that works for you",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .width(4.dp)
+                        .height(26.dp)
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)),
                 )
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        coach?.displayName ?: "Coach",
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
+                    Text(
+                        coach?.styleName ?: "Choose the voice that works for you",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         },
         navigationIcon = {
@@ -508,7 +526,7 @@ private fun ColumnScope.ConversationContent(
     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.28f))
     Box(Modifier.fillMaxWidth().weight(1f)) {
         if (uiState.messages.isEmpty()) {
-            EmptyConversation(uiState.activeConversation?.coach, onDraftChange)
+            EmptyConversation(uiState.selectedCoach, onDraftChange)
         } else {
             LazyColumn(
                 state = listState,
@@ -536,7 +554,7 @@ private fun ColumnScope.ConversationContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(error, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = onRetry, enabled = uiState.draftMessage.isNotBlank()) { Text("Retry") }
+            TextButton(onClick = onRetry, enabled = uiState.canRetryLastMessage) { Text("Retry") }
         }
     }
     OutlinedTextField(

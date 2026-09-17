@@ -30,6 +30,13 @@ This roadmap captures future themes and sequencing only.
 11. Add durable profile-scoped Coach conversations, named communication styles,
     optional validated plan creation, and purposeful motion after the core
     flows are stable.
+12. Establish open-source code, restricted-media, and third-party-content
+    boundaries before public distribution, then add community and release
+    infrastructure without exposing signing material.
+13. Correct the release-candidate hierarchy so primary workflows lead each
+    destination and persisted Coach history reflects real conversations.
+14. Make routine template prescriptions and cleanup direct from the item being
+    maintained instead of reopening full-template selection flows.
 
 Detailed discovery for these themes is tracked in the
 [Practical Fitness Journey and Optional AI Coach](backlog/items/practical-fitness-journey-and-ai-coach.md)
@@ -65,6 +72,23 @@ are complete in [v0.19.0](done/versions/v0.19.0.md), closing the Durable
 Personalized Fitness Companion initiative. The owner's physical-phone review
 may produce future issues or suggestions, but it is not an unfinished
 implementation slice.
+
+Open-source and content-ownership work is tracked in the
+[Open-source Release and Content Stewardship](backlog/items/open-source-release-and-content-stewardship.md)
+initiative. Its first approved increment is
+[v0.20.0 - Exercise Clarity and Licence Boundaries](done/versions/v0.20.0.md),
+which is complete. Public repository and release infrastructure remains the
+next initiative decision.
+
+Release-candidate hierarchy and Coach conversation integrity are tracked in
+the [Release-candidate Navigation and Conversation Integrity](backlog/items/release-candidate-navigation-and-conversation-integrity.md)
+initiative. Its increment is complete in
+[v0.21.0 - Release-candidate Navigation](done/versions/v0.21.0.md).
+
+Direct template and exercise maintenance is tracked in the
+[Practical Template Maintenance](backlog/items/practical-template-maintenance.md)
+initiative. Its increment is complete in
+[v0.22.0 - Practical Template Maintenance](done/versions/v0.22.0.md).
 
 ## Delivery Order
 

@@ -171,8 +171,9 @@ and animates them only after a user requests replay. The code-native figures
 remain legible without motion, add no bitmap or video asset, and are available
 from exercise details and the active workout without network access.
 
-The Exercises tab presents one Room-owned library. On first open after install
-or migration, `core:database` transactionally seeds 1,316 normalized records
+The Exercise catalogue destination under Plan presents one Room-owned library.
+On first open after install or migration, `core:database` transactionally seeds
+1,316 normalized records
 from a pinned bundled asset and records the source revision in a catalogue
 ledger. Existing rows and user edits are never overwritten. Bundled and
 user-created exercises share the same template, plan, history, archive, and
@@ -303,9 +304,10 @@ local-first clients without adding a Keepfit backend. The one-time callback is
 accepted only while the matching encrypted transaction is current. Public
 distribution requires an owned HTTPS domain and verified Android App Link.
 
-Each profile-owned conversation selects
-Mira (warm), Rook (direct), or Atlas (analytical). Room retains the visible
-transcript, while each provider request is bounded to the selected local Coach
+Each profile-owned conversation selects Mira (warm), Rook (direct), or Atlas
+(analytical). Coach selection remains transient until the first question is
+submitted, so an empty selection never appears in conversation history. Room
+retains the visible transcript, while each provider request is bounded to the selected local Coach
 instruction, a deterministic capped recap, and the latest 12 messages after
 the user's most recent clear-memory action. The user can switch, rename, clear
 memory, or delete conversations. Deleting a profile cascades through its Coach
@@ -349,9 +351,12 @@ collection. Keepfit does not cap requests; OpenRouter and the selected provider
 own account, rate, free-tier, and credit limits. Body weight, height, BMI,
 photos, measurements, private identifiers, notes, paths, and raw records are
 not assembled into remote prompts. The planning exception is limited to public
-bundled-catalogue identifiers and labels. The typed task and latest
-validated proposal are encrypted with a separate Android Keystore key so they
-survive recreation; this local draft store is excluded from fitness backups.
+bundled-catalogue identifiers and labels. The typed task and latest validated
+proposal are encrypted with a separate Android Keystore key so they survive
+recreation; proposal drafts never populate the general chat composer. Failed
+chat payloads remain available only through a separate in-memory retry action
+after the composer clears. This local draft store is excluded from fitness
+backups.
 
 The older Ollama adapter remains source-compatible for migration tests but is
 not the bound runtime provider and receives no packaged credential.
@@ -364,10 +369,18 @@ consistent profile action instead of competing with daily workflows:
 | Destination | Main content |
 | --- | --- |
 | Today | One primary workout action, weekly-review entry, missed-workout recovery, mode-specific nutrition summary/action, reminders, and optional steps |
-| Plan | Starter journey, weekly schedule, templates, unified offline exercise library, and adjustments |
-| Log | Workout history plus nutrition diary, foods, saved meals, and reuse actions |
+| Plan | Weekly schedule first, with starter setup plus navigable templates, exercise catalogue, and workout history |
+| Log | Nutrition diary first, with navigable foods and saved meals |
 | Progress | Weekly review, records, measurements, transformation cycles, photo comparison, and step context |
 | Coach | General questions and read-only insights over selectively included local progress aggregates |
+
+Template maintenance stays on the item being changed. The template detail
+header exposes rename, add-exercise, and delete actions; each exercise row
+exposes its own prescription edit and remove actions. List cleanup uses an
+explicit selection mode. The repository validates every selected template
+before a single Room transaction deletes any of them, so a protected template
+cannot produce a partial batch result. These changes preserve template UUIDs,
+weekly assignments, and historical workout snapshots.
 
 The active workout screen is a dedicated focused flow launched from Today or
 Workouts. Room retains the active session, target snapshots, logged sets, and
