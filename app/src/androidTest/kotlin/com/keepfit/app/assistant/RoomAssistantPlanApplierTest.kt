@@ -44,7 +44,6 @@ class RoomAssistantPlanApplierTest {
         database.workoutDao().upsertExercise(
             ExerciseEntity(
                 "catalogue-exercise", "Goblet squat", "Legs", null, null, false, 1, 1, null,
-                source = RoomAssistantPlanApplier.BUNDLED_CATALOGUE_SOURCE,
             ),
         )
         applier = RoomAssistantPlanApplier(
@@ -69,7 +68,7 @@ class RoomAssistantPlanApplierTest {
 
     @Test
     fun approvalReplacesOnlyActiveProfileAndKeepsExactTargets() = runBlocking {
-        applier.applyDraftPlan(draft("catalogue-exercise")).getOrThrow()
+        applier.applyDraftPlan(draft(PersonalExerciseAlias.forId("catalogue-exercise"))).getOrThrow()
 
         val schedule = database.workoutDao().observeWeeklyScheduleForProfile("profile").first()
         assertEquals(DayOfWeek.WEDNESDAY, schedule.single().dayOfWeek)

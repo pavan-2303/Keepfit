@@ -146,7 +146,6 @@ class DeviceBackupRepository @Inject constructor(
             "diaryEntries" to supportDatabase.countRows("food_diary_entries"),
             "mealQualityCheckIns" to supportDatabase.countRows("meal_quality_check_ins"),
             "exercises" to supportDatabase.countRows("exercises"),
-            "catalogueImports" to supportDatabase.countRows("catalogue_imports"),
             "workoutTemplates" to supportDatabase.countRows("workout_templates"),
             "plannedWorkouts" to supportDatabase.countRows("planned_workouts"),
             "workoutOccurrences" to supportDatabase.countRows("workout_occurrences"),

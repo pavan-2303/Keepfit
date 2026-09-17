@@ -37,6 +37,8 @@ This roadmap captures future themes and sequencing only.
     destination and persisted Coach history reflects real conversations.
 14. Make routine template prescriptions and cleanup direct from the item being
     maintained instead of reopening full-template selection flows.
+15. Replace the preloaded third-party exercise dataset with a user-owned
+    catalogue, progressive template building, and connected exercise details.
 
 Detailed discovery for these themes is tracked in the
 [Practical Fitness Journey and Optional AI Coach](backlog/items/practical-fitness-journey-and-ai-coach.md)
@@ -57,7 +59,7 @@ local-profile isolation is complete in
 [v0.12.0 - Isolated Local Profiles](done/versions/v0.12.0.md). Flexible
 transformation pose sets are complete in
 [v0.13.0 - Flexible Transformation Pose Sets](done/versions/v0.13.0.md). The
-audited bundled offline exercise catalogue is complete in
+historical audited bundled offline exercise catalogue was completed in
 [v0.14.0 - Bundled Offline Exercise Catalogue](done/versions/v0.14.0.md).
 Original code-native guidance for its common core is complete in
 [v0.15.0 - Owned Core Exercise Guidance](done/versions/v0.15.0.md). Progressive
@@ -65,7 +67,7 @@ onboarding and manual planning are complete in
 [v0.16.0 - Progressive Onboarding and Manual Planning](done/versions/v0.16.0.md).
 Persistent named Coaches are complete in
 [v0.17.0 - Persistent Named Coaches](done/versions/v0.17.0.md).
-Catalogue-backed, approval-only AI planning is complete in
+Approval-only AI planning was completed in
 [v0.18.0 - Validated AI Plan Review](done/versions/v0.18.0.md).
 Intentional visual identity, motion, accessibility, and private-beta hardening
 are complete in [v0.19.0](done/versions/v0.19.0.md), closing the Durable
@@ -91,6 +93,13 @@ Direct template and exercise maintenance is tracked in the
 [Practical Template Maintenance](backlog/items/practical-template-maintenance.md)
 initiative. Its increment is complete in
 [v0.22.0 - Practical Template Maintenance](done/versions/v0.22.0.md).
+
+The approved move to an empty-by-default personal exercise catalogue is tracked
+in the [User-Owned Exercise Catalogue](backlog/items/user-owned-exercise-catalogue.md)
+initiative. Its increment is
+[v0.23.0 - Personal Exercise Building](done/versions/v0.23.0.md), which is complete.
+This increment supersedes the bundled-catalogue product decision while keeping
+the earlier done records as delivery history.
 
 ## Delivery Order
 

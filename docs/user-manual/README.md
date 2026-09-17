@@ -18,9 +18,8 @@ Keepfit.
 Keepfit is a private Android fitness tracker for one local user. Core features
 work without an account, subscription, or backend.
 
-- Workouts: unified 1,316-item offline library, original movement guides for 25
-  common exercises, personal exercises, templates, weekly plan, active logging,
-  and history.
+- Workouts: a personal exercise catalogue, progressively built templates,
+  weekly planning, active logging, and history.
 - Weekly review: local evidence, flexible motivation, and one optional
   coming-week adjustment.
 - Nutrition: selectable depth, target ranges, neutral meal check-ins, personal

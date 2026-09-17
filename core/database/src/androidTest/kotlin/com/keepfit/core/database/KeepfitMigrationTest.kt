@@ -699,6 +699,92 @@ class KeepfitMigrationTest {
         }
     }
 
+    @Test
+    fun migrateFourteenToFifteenRemovesOnlyUntouchedBundledExercises() {
+        helper.createDatabase(TEST_DATABASE, 14).use { database ->
+            database.execSQL(
+                """
+                INSERT INTO body_profiles (
+                    id, displayName, heightCm, birthDate, dailyCalorieGoal,
+                    dailyProteinGoalGrams, dailyCarbohydrateGoalGrams,
+                    dailyFatGoalGrams, createdAt, updatedAt, archivedAt
+                ) VALUES ('owner', 'Owner', NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, NULL)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO exercises (
+                    id, name, muscleGroup, instructions, notes, isBodyweight,
+                    createdAt, updatedAt, archivedAt, source, sourceId,
+                    equipment, targetMuscle, secondaryMuscles
+                ) VALUES
+                    ('untouched', 'Untouched', 'Back', NULL, NULL, 1,
+                        $LEGACY_TIMESTAMP, $LEGACY_TIMESTAMP, NULL, '$LEGACY_SOURCE', '1', NULL, NULL, NULL),
+                    ('edited', 'My edited exercise', 'Back', NULL, NULL, 1,
+                        $LEGACY_TIMESTAMP, 99, NULL, '$LEGACY_SOURCE', '2', NULL, NULL, NULL),
+                    ('referenced', 'Used in template', 'Legs', NULL, NULL, 1,
+                        $LEGACY_TIMESTAMP, $LEGACY_TIMESTAMP, NULL, '$LEGACY_SOURCE', '3', NULL, NULL, NULL),
+                    ('with-media', 'Has private demo', 'Chest', NULL, NULL, 1,
+                        $LEGACY_TIMESTAMP, $LEGACY_TIMESTAMP, NULL, '$LEGACY_SOURCE', '4', NULL, NULL, NULL),
+                    ('personal', 'Already personal', 'Core', NULL, NULL, 1,
+                        10, 10, NULL, NULL, NULL, NULL, NULL, NULL)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO workout_templates (
+                    id, name, notes, createdAt, updatedAt, archivedAt, origin, bodyProfileId
+                ) VALUES ('template', 'My template', NULL, 1, 1, NULL, 'CUSTOM', 'owner')
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO workout_template_exercises (
+                    id, workoutTemplateId, exerciseId, position, targetSets, targetReps, notes
+                ) VALUES ('template-exercise', 'template', 'referenced', 0, 3, '8-10', NULL)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO exercise_media (
+                    id, exerciseId, mediaType, relativePath, mimeType, sizeBytes, createdAt
+                ) VALUES ('media', 'with-media', 'IMAGE', 'exercise/demo.jpg', 'image/jpeg', 42, 1)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO catalogue_imports (source, revision, recordCount, importedAt)
+                VALUES ('$LEGACY_SOURCE', 'revision', 4, $LEGACY_TIMESTAMP)
+                """.trimIndent(),
+            )
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DATABASE,
+            15,
+            true,
+            KeepfitMigrations.FOURTEEN_TO_FIFTEEN,
+        ).use { database ->
+            database.query("SELECT id, source, sourceId FROM exercises ORDER BY id").use { cursor ->
+                val rows = buildList {
+                    while (cursor.moveToNext()) {
+                        add(Triple(cursor.getString(0), cursor.getString(1), cursor.getString(2)))
+                    }
+                }
+                assertEquals(listOf("edited", "personal", "referenced", "with-media"), rows.map { it.first })
+                assertEquals(listOf(null, null, null, null), rows.map { it.second })
+                assertEquals(listOf(null, null, null, null), rows.map { it.third })
+            }
+            database.query(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'catalogue_imports'",
+            ).use { cursor ->
+                assertEquals(false, cursor.moveToFirst())
+            }
+            assertEquals("referenced", database.stringFor("SELECT exerciseId FROM workout_template_exercises"))
+            assertEquals("with-media", database.stringFor("SELECT exerciseId FROM exercise_media"))
+        }
+    }
+
     private fun androidx.sqlite.db.SupportSQLiteDatabase.stringFor(query: String): String? =
         query(query).use { cursor ->
             check(cursor.moveToFirst())
@@ -707,5 +793,7 @@ class KeepfitMigrationTest {
 
     private companion object {
         const val TEST_DATABASE = "keepfit-migration-test"
+        const val LEGACY_SOURCE = "hasaneyldrm/exercises-dataset"
+        const val LEGACY_TIMESTAMP = 1_784_184_640_000L
     }
 }

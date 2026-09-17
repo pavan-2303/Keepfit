@@ -10,6 +10,9 @@ class ExerciseInputValidatorTest {
         val result = ExerciseInputValidator.validate(
             name = "  Bench Press ",
             muscleGroup = " Chest ",
+            equipment = " Barbell ",
+            targetMuscle = " Pectorals ",
+            secondaryMuscles = " Triceps, shoulders ",
             instructions = "",
             notes = "  Keep wrists stacked ",
             isBodyweight = false,
@@ -20,6 +23,9 @@ class ExerciseInputValidatorTest {
             ExerciseInput(
                 name = "Bench Press",
                 muscleGroup = "Chest",
+                equipment = "Barbell",
+                targetMuscle = "Pectorals",
+                secondaryMuscles = "Triceps, shoulders",
                 instructions = null,
                 notes = "Keep wrists stacked",
                 isBodyweight = false,
@@ -32,8 +38,7 @@ class ExerciseInputValidatorTest {
     fun blankNameIsRejected() {
         assertEquals(
             ExerciseValidationResult.Invalid("Enter an exercise name."),
-            ExerciseInputValidator.validate("", "Chest", "", "", false),
+            ExerciseInputValidator.validate("", "Chest", "", "", "", "", "", false),
         )
     }
 }
-

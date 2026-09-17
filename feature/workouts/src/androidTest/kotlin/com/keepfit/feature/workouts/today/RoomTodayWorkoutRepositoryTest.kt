@@ -143,8 +143,33 @@ class RoomTodayWorkoutRepositoryTest {
     }
 
     @Test
+    fun emptyTemplateCanBeCreatedButCannotBeScheduled() = runBlocking {
+        repository.createTemplate("Draft day")
+
+        val draft = repository.observeTemplates().first().single { it.name == "Draft day" }
+        val assignment = runCatching { repository.assignTemplate(DayOfWeek.MONDAY, draft.id) }
+
+        assertTrue(draft.exercises.isEmpty())
+        assertTrue(assignment.isFailure)
+    }
+
+    @Test
+    fun removingTheFinalExerciseKeepsTemplateAndClearsItsSchedule() = runBlocking {
+        repository.observeTemplates().first().single().exercises.forEach { exercise ->
+            repository.removeTemplateExercise("template", exercise.id)
+        }
+
+        val template = repository.observeTemplates().first().single { it.id == "template" }
+
+        assertTrue(template.exercises.isEmpty())
+        assertTrue(repository.observeWeeklySchedule().first().isEmpty())
+    }
+
+    @Test
     fun bulkDeleteValidatesEveryTemplateBeforeDeletingAny() = runBlocking {
-        repository.createTemplate("Spare", listOf("exercise-1"))
+        repository.createTemplate("Spare")
+        val spare = repository.observeTemplates().first().single { it.name == "Spare" }
+        repository.addTemplateExercises(spare.id, listOf("exercise-1"))
         repository.startOrResume(repository.observeWeeklySchedule().first().single())
         val templatesBefore = repository.observeTemplates().first()
 

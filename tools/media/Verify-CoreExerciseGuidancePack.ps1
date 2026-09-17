@@ -6,13 +6,9 @@ param(
 $ErrorActionPreference = "Stop"
 
 $registryPath = Join-Path $RepositoryRoot "core\media\src\main\kotlin\com\keepfit\core\media\CoreExerciseGuidanceCatalog.kt"
-$cataloguePath = Join-Path $RepositoryRoot "core\database\src\main\assets\catalogue\exercises-v1.json"
 
 if (-not (Test-Path -LiteralPath $registryPath)) {
     throw "Guidance registry not found: $registryPath"
-}
-if (-not (Test-Path -LiteralPath $cataloguePath)) {
-    throw "Bundled exercise catalogue not found: $cataloguePath"
 }
 
 $registry = Get-Content -Raw -LiteralPath $registryPath
@@ -46,25 +42,6 @@ foreach ($requiredText in @(
     }
 }
 
-$catalogue = Get-Content -Raw -LiteralPath $cataloguePath | ConvertFrom-Json
-$catalogueById = @{}
-foreach ($exercise in $catalogue) {
-    $catalogueById[$exercise.id] = $exercise
-}
-
-foreach ($entry in $entries) {
-    $exercise = $catalogueById[$entry.ExerciseId]
-    if ($null -eq $exercise) {
-        throw "Guidance entry $($entry.ExerciseId) is not in the bundled catalogue."
-    }
-    if ($exercise.sourceId -ne $entry.SourceId) {
-        throw "Source ID mismatch for $($entry.ExerciseId): expected $($exercise.sourceId), found $($entry.SourceId)."
-    }
-    if ($exercise.name -ne $entry.Name) {
-        throw "Exercise name mismatch for $($entry.ExerciseId): expected '$($exercise.name)', found '$($entry.Name)'."
-    }
-}
-
 $visualExtensions = @('.gif', '.mp4', '.webm', '.png', '.jpg', '.jpeg', '.webp', '.svg')
 $bundledVisuals = Get-ChildItem -Path (Join-Path $RepositoryRoot 'core\media\src\main') -Recurse -File |
     Where-Object { $_.Extension.ToLowerInvariant() -in $visualExtensions }
@@ -72,5 +49,5 @@ if ($bundledVisuals.Count -gt 0) {
     throw "The code-native guidance pack unexpectedly contains visual files: $($bundledVisuals.FullName -join ', ')"
 }
 
-Write-Output "Verified $ExpectedCount original guidance entries against the bundled catalogue."
+Write-Output "Verified $ExpectedCount original code-native guidance entries."
 Write-Output "No bitmap, SVG, GIF, or video asset is present in the code-native pack."

@@ -32,8 +32,7 @@ grant additional rights.
 
 - Keepfit source code and code-native artwork are Apache-2.0 unless their files
   contain a different explicit notice.
-- Third-party catalogue content retains the licence identified in
-  [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+- Keepfit does not bundle third-party exercise catalogue content or media.
 - Media imported by an app user remains owned by that user or its existing
   rights holder. Keepfit receives only the local permissions needed to store,
   display, back up, and restore it at the user's request.
