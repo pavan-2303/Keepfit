@@ -3,10 +3,10 @@ package com.keepfit.feature.transformation
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.keepfit.core.database.transformation.TransformationPhotoAngle
+import com.keepfit.core.model.TransformationPose
 import com.keepfit.feature.transformation.data.CurrentProgressOverview
 import com.keepfit.feature.transformation.data.TransformationRepository
-import com.keepfit.feature.transformation.data.TransformationWeek
+import com.keepfit.feature.transformation.data.TransformationTimeline
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
@@ -31,8 +31,19 @@ class TransformationViewModel @Inject constructor(
     val measurements = repository.observeMeasurements()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val weeks: StateFlow<List<TransformationWeek>> = repository.observeWeeks()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val timeline: StateFlow<TransformationTimeline> = repository.observeTimeline()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            TransformationTimeline(activeCycle = null, history = emptyList()),
+        )
+
+    val enabledPoses: StateFlow<List<TransformationPose>> = repository.observeEnabledPoses()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            TransformationPose.defaultPoses,
+        )
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
@@ -69,14 +80,29 @@ class TransformationViewModel @Inject constructor(
             .onFailure { _message.value = it.message }
     }
 
-    fun saveWeekNotes(weekStartDate: LocalDate, notes: String) =
-        launchWrite("Week updated.") {
-            repository.saveWeekNotes(weekStartDate, notes)
+    fun saveCycleNotes(notes: String) =
+        launchWrite("Transformation cycle updated.") {
+            repository.saveCycleNotes(notes)
         }
 
-    fun importPhoto(weekStartDate: LocalDate, angle: TransformationPhotoAngle, uri: Uri) =
-        launchWrite("${angle.name.lowercase().replaceFirstChar(Char::titlecase)} photo saved.") {
-            repository.importPhoto(weekStartDate, angle, uri)
+    fun importPhoto(captureDate: LocalDate, pose: TransformationPose, uri: Uri) =
+        launchWrite("${pose.label} photo saved.") {
+            repository.importPhoto(captureDate, pose, uri)
+        }
+
+    fun setOptionalPoseEnabled(pose: TransformationPose, enabled: Boolean) =
+        launchWrite(null) {
+            repository.setOptionalPoseEnabled(pose, enabled)
+        }
+
+    fun closeActiveCycle() =
+        launchWrite("Transformation cycle closed.") {
+            repository.closeActiveCycle()
+        }
+
+    fun reopenCycle(cycleId: String) =
+        launchWrite("Transformation cycle reopened.") {
+            repository.reopenCycle(cycleId)
         }
 
     fun dismissMessage() {

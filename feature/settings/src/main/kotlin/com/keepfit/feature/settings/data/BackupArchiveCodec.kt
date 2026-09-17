@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.io.EOFException
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -103,7 +104,7 @@ class BackupArchiveCodec(
         } catch (error: JsonSyntaxException) {
             throw IllegalArgumentException("The backup manifest is invalid.", error)
         }
-        require(manifest.formatVersion == BACKUP_MANIFEST_VERSION) {
+        require(manifest.formatVersion in 1..BACKUP_MANIFEST_VERSION) {
             "This backup format version is not supported."
         }
 
@@ -169,33 +170,36 @@ class BackupArchiveCodec(
         passphrase: String,
         destinationZip: File,
     ) {
-        DataInputStream(inputStream.buffered()).use { dataInput ->
-            val magic = ByteArray(MAGIC_BYTES.size)
-            dataInput.readFully(magic)
-            require(magic.contentEquals(MAGIC_BYTES)) { "The selected file is not a Keepfit backup." }
-            val encryptionVersion = dataInput.readInt()
-            require(encryptionVersion == ENCRYPTION_VERSION) { "This backup encryption version is not supported." }
-            val iterations = dataInput.readInt()
-            val salt = ByteArray(SALT_BYTES).also(dataInput::readFully)
-            val iv = ByteArray(IV_BYTES).also(dataInput::readFully)
-            val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
-            cipher.init(
-                Cipher.DECRYPT_MODE,
-                deriveSecretKey(passphrase, salt, iterations),
-                GCMParameterSpec(GCM_TAG_BITS, iv),
-            )
+        try {
+            DataInputStream(inputStream.buffered()).use { dataInput ->
+                val magic = ByteArray(MAGIC_BYTES.size)
+                dataInput.readFully(magic)
+                require(magic.contentEquals(MAGIC_BYTES)) { "The selected file is not a Keepfit backup." }
+                val encryptionVersion = dataInput.readInt()
+                require(encryptionVersion == ENCRYPTION_VERSION) { "This backup encryption version is not supported." }
+                val iterations = dataInput.readInt()
+                val salt = ByteArray(SALT_BYTES).also(dataInput::readFully)
+                val iv = ByteArray(IV_BYTES).also(dataInput::readFully)
+                val cipher = Cipher.getInstance(CIPHER_TRANSFORMATION)
+                cipher.init(
+                    Cipher.DECRYPT_MODE,
+                    deriveSecretKey(passphrase, salt, iterations),
+                    GCMParameterSpec(GCM_TAG_BITS, iv),
+                )
 
-            try {
                 javax.crypto.CipherInputStream(dataInput, cipher).use { cipherInput ->
                     destinationZip.outputStream().buffered().use { output -> cipherInput.copyTo(output) }
                 }
-            } catch (error: Exception) {
-                destinationZip.delete()
-                throw IllegalArgumentException(
-                    "The backup passphrase is incorrect or the file is corrupted.",
-                    error,
-                )
             }
+        } catch (error: EOFException) {
+            destinationZip.delete()
+            throw IllegalArgumentException("The backup file is incomplete or corrupted.", error)
+        } catch (error: Exception) {
+            destinationZip.delete()
+            throw IllegalArgumentException(
+                "The backup passphrase is incorrect or the file is corrupted.",
+                error,
+            )
         }
     }
 
@@ -250,7 +254,7 @@ class BackupArchiveCodec(
         )
 
     companion object {
-        internal const val BACKUP_MANIFEST_VERSION = 1
+        internal const val BACKUP_MANIFEST_VERSION = 3
         internal const val MANIFEST_ENTRY = "manifest.json"
         internal const val DATABASE_ENTRY = "database.sqlite"
         internal const val SETTINGS_ENTRY = "settings.json"

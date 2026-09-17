@@ -1,101 +1,238 @@
 package com.keepfit.app.ui.home
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Insights
-import androidx.compose.material.icons.outlined.MonitorWeight
-import androidx.compose.material.icons.outlined.RestaurantMenu
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.keepfit.core.model.BodyProfile
+import com.keepfit.core.designsystem.KeepfitMotionProvider
+import com.keepfit.core.designsystem.KeepfitSectionHeader
+import com.keepfit.app.profile.ProfileInputValidator
+import com.keepfit.app.profile.ProfileValidationResult
+import com.keepfit.feature.assistant.ui.AssistantRoute
 import com.keepfit.feature.nutrition.ui.NutritionScreen
 import com.keepfit.feature.nutrition.ui.TodayNutritionSection
+import com.keepfit.feature.review.ui.TodayWeeklyReviewCard
+import com.keepfit.feature.review.ui.WeeklyReviewRoute
+import com.keepfit.feature.review.ui.weeklyReviewRoute
 import com.keepfit.feature.settings.ui.SettingsScreen
 import com.keepfit.feature.steps.ui.TodayStepsSection
 import com.keepfit.feature.transformation.ui.ProgressScreen
 import com.keepfit.feature.transformation.ui.TodayProgressSection
+import com.keepfit.feature.workouts.ui.StarterPlanRoute
 import com.keepfit.feature.workouts.ui.TodayWorkoutSection
 import com.keepfit.feature.workouts.ui.WorkoutsScreen
+import com.keepfit.feature.workouts.ui.starterPlanRoute
 import java.time.LocalDate
+import java.time.Instant
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
+private const val settingsRoute = "settings"
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeShell(profile: BodyProfile) {
+fun HomeShell(
+    profile: BodyProfile,
+    profiles: List<BodyProfile> = listOf(profile),
+    startInGuidedSetup: Boolean = false,
+    profileValidationMessage: String? = null,
+    onAddProfile: (String, String, LocalDate?) -> Unit = { _, _, _ -> },
+    onEditProfile: (String, String, String, LocalDate?) -> Unit = { _, _, _, _ -> },
+    onSelectProfile: (String) -> Unit = {},
+    onArchiveProfile: (String) -> Unit = {},
+    onDismissProfileMessage: () -> Unit = {},
+    viewModel: HomeShellViewModel = hiltViewModel(),
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val currentRoute = currentDestination?.route
+    val assistantLaunchState by viewModel.assistantLaunchState.collectAsStateWithLifecycle()
+    val assistantConnectionMessage by viewModel.assistantConnectionMessage.collectAsStateWithLifecycle()
+    val credentialRecoveryEnabled by viewModel.credentialRecoveryEnabled.collectAsStateWithLifecycle()
+    val credentialRecoveryAvailable by viewModel.credentialRecoveryAvailable.collectAsStateWithLifecycle()
+    val reduceMotion by viewModel.reduceMotion.collectAsStateWithLifecycle()
+    val showNavigationLabels = shouldShowNavigationLabels(LocalDensity.current.fontScale)
+    val showBottomBar = HomeDestination.entries.any { destination ->
+        currentDestination?.hierarchy?.any { it.route == destination.route } == true
+    }
+    val showShellTopBar = currentRoute in HomeDestination.entries
+        .filterNot { it == HomeDestination.COACH }
+        .map(HomeDestination::route) || currentRoute == settingsRoute
+    var profileMenuExpanded by remember { mutableStateOf(false) }
+    var editorMode by remember { mutableStateOf<ProfileEditorMode?>(null) }
+    var confirmArchive by remember { mutableStateOf(false) }
+    var openAssistantPlanner by remember { mutableStateOf(false) }
 
+    KeepfitMotionProvider(reduceMotion = reduceMotion) {
     Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ) {
-                HomeDestination.entries.forEach { item ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = item.icon(),
-                                contentDescription = item.label,
+        topBar = {
+            if (showShellTopBar) {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier
+                                    .width(4.dp)
+                                    .height(26.dp)
+                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)),
                             )
-                        },
-                        label = { Text(item.label) },
-                    )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                if (currentRoute == settingsRoute) "Profile and settings"
+                                else HomeDestination.entries.firstOrNull { it.route == currentRoute }?.label ?: "Keepfit",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        if (currentRoute == settingsRoute) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                            }
+                        }
+                    },
+                    actions = {
+                        if (currentRoute != settingsRoute) {
+                            Box {
+                                Surface(
+                                    onClick = { profileMenuExpanded = true },
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .semantics {
+                                            contentDescription = "Switch profile. ${profile.displayName} is active."
+                                        },
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(profile.displayName.take(1).uppercase(), fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = profileMenuExpanded,
+                                    onDismissRequest = { profileMenuExpanded = false },
+                                ) {
+                                    ProfileMenuItems(
+                                        profile = profile,
+                                        profiles = profiles,
+                                        onSelect = {
+                                            profileMenuExpanded = false
+                                            onSelectProfile(it)
+                                        },
+                                        onAdd = {
+                                            profileMenuExpanded = false
+                                            editorMode = ProfileEditorMode.Add
+                                        },
+                                        onEdit = {
+                                            profileMenuExpanded = false
+                                            editorMode = ProfileEditorMode.Edit
+                                        },
+                                        onArchive = {
+                                            profileMenuExpanded = false
+                                            confirmArchive = true
+                                        },
+                                        onSettings = {
+                                            profileMenuExpanded = false
+                                            navController.navigate(settingsRoute)
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    },
+                )
+            }
+        },
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                    HomeDestination.entries.forEach { item ->
+                        NavigationBarItem(
+                            selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = { Icon(item.icon(), contentDescription = item.label) },
+                            label = if (showNavigationLabels) ({ Text(item.label) }) else null,
+                            alwaysShowLabel = showNavigationLabels,
+                        )
+                    }
                 }
             }
         },
@@ -103,32 +240,236 @@ fun HomeShell(profile: BodyProfile) {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = HomeDestination.TODAY.route,
+            startDestination = if (startInGuidedSetup) starterPlanRoute else HomeDestination.TODAY.route,
+            enterTransition = {
+                if (reduceMotion) EnterTransition.None else fadeIn(tween(140))
+            },
+            exitTransition = {
+                if (reduceMotion) ExitTransition.None else fadeOut(tween(90))
+            },
+            popEnterTransition = {
+                if (reduceMotion) EnterTransition.None else fadeIn(tween(120))
+            },
+            popExitTransition = {
+                if (reduceMotion) ExitTransition.None else fadeOut(tween(80))
+            },
         ) {
             composable(HomeDestination.TODAY.route) {
                 TodayScreen(
                     profile = profile,
                     padding = padding,
-                    onOpenWorkout = {
-                        navController.navigate(HomeDestination.WORKOUTS.route) {
-                            launchSingleTop = true
-                        }
-                    },
+                    onOpenWorkout = { navController.navigate(HomeDestination.PLAN.route) },
+                    onOpenWeeklyReview = { navController.navigate(weeklyReviewRoute) },
+                    onOpenNutrition = { navController.navigate(HomeDestination.LOG.route) },
+                    onOpenProgress = { navController.navigate(HomeDestination.PROGRESS.route) },
                 )
             }
-            composable(HomeDestination.WORKOUTS.route) {
-                WorkoutsScreen(modifier = Modifier.padding(padding))
+            composable(HomeDestination.PLAN.route) {
+                WorkoutsScreen(
+                    modifier = Modifier.padding(padding),
+                    onOpenStarterPlan = { navController.navigate(starterPlanRoute) },
+                )
             }
-            composable(HomeDestination.NUTRITION.route) {
+            composable(HomeDestination.LOG.route) {
                 NutritionScreen(modifier = Modifier.padding(padding))
             }
             composable(HomeDestination.PROGRESS.route) {
                 ProgressScreen(modifier = Modifier.padding(padding))
             }
-            composable(HomeDestination.SETTINGS.route) {
-                SettingsScreen(modifier = Modifier.padding(padding))
+            composable(HomeDestination.COACH.route) {
+                AssistantRoute(
+                    isEnabled = assistantLaunchState.isEnabled,
+                    config = assistantLaunchState.config,
+                    validationMessage = assistantLaunchState.validationMessage,
+                    onOpenSettings = { navController.navigate(settingsRoute) },
+                    openPlanner = openAssistantPlanner,
+                    onPlannerOpened = { openAssistantPlanner = false },
+                    modifier = Modifier.padding(padding),
+                )
+            }
+            composable(settingsRoute) {
+                SettingsScreen(
+                    modifier = Modifier.padding(padding),
+                    onOpenAssistant = { navController.navigate(HomeDestination.COACH.route) },
+                    externalMessage = assistantConnectionMessage,
+                    onExternalMessageShown = viewModel::dismissAssistantConnectionMessage,
+                    onTestAssistantConnection = viewModel::testAssistantConnection,
+                    credentialRecoveryEnabled = credentialRecoveryEnabled,
+                    credentialRecoveryAvailable = credentialRecoveryAvailable,
+                    onCredentialRecoveryChanged = viewModel::setCredentialRecoveryEnabled,
+                )
+            }
+            composable(weeklyReviewRoute) {
+                WeeklyReviewRoute(
+                    onBack = { navController.popBackStack() },
+                    modifier = Modifier.padding(padding),
+                )
+            }
+            composable(starterPlanRoute) {
+                StarterPlanRoute(
+                    onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(HomeDestination.TODAY.route) {
+                                popUpTo(starterPlanRoute) { inclusive = true }
+                            }
+                        }
+                    },
+                    onPlanManually = {
+                        navController.navigate(HomeDestination.PLAN.route) {
+                            popUpTo(starterPlanRoute) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    onAskCoach = {
+                        openAssistantPlanner = true
+                        navController.navigate(HomeDestination.COACH.route) {
+                            popUpTo(starterPlanRoute) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    modifier = Modifier.padding(padding),
+                )
             }
         }
+    }
+
+    editorMode?.let { mode ->
+        ProfileEditorDialog(
+            title = if (mode == ProfileEditorMode.Add) "Add profile" else "Edit profile",
+            initialName = if (mode == ProfileEditorMode.Edit) profile.displayName else "",
+            initialHeight = if (mode == ProfileEditorMode.Edit) profile.heightCm?.toString().orEmpty() else "",
+            initialBirthDate = if (mode == ProfileEditorMode.Edit) profile.birthDate else null,
+            validationMessage = profileValidationMessage,
+            onDismiss = {
+                editorMode = null
+                onDismissProfileMessage()
+            },
+            onSave = { name, height, birthDate ->
+                if (mode == ProfileEditorMode.Add) onAddProfile(name, height, birthDate)
+                else onEditProfile(profile.id, name, height, birthDate)
+                if (
+                    ProfileInputValidator.validate(
+                        displayName = name,
+                        heightCm = height,
+                        birthDate = birthDate,
+                    ) is ProfileValidationResult.Valid
+                ) {
+                    editorMode = null
+                }
+            },
+        )
+    }
+    if (confirmArchive) {
+        AlertDialog(
+            onDismissRequest = { confirmArchive = false },
+            title = { Text("Archive ${profile.displayName}?") },
+            text = { Text("Their history stays on this device and is excluded from the profile switcher.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmArchive = false
+                    onArchiveProfile(profile.id)
+                }) { Text("Archive") }
+            },
+            dismissButton = { TextButton(onClick = { confirmArchive = false }) { Text("Cancel") } },
+        )
+    }
+    }
+}
+
+private enum class ProfileEditorMode { Add, Edit }
+
+@Composable
+internal fun ProfileMenuItems(
+    profile: BodyProfile,
+    profiles: List<BodyProfile>,
+    onSelect: (String) -> Unit,
+    onAdd: () -> Unit,
+    onEdit: () -> Unit,
+    onArchive: () -> Unit,
+    onSettings: () -> Unit,
+) {
+    profiles.forEach { candidate ->
+        DropdownMenuItem(
+            text = {
+                val label = if (candidate.id == profile.id) {
+                    "${candidate.displayName} (active)"
+                } else {
+                    candidate.displayName
+                }
+                Text(label)
+            },
+            onClick = { onSelect(candidate.id) },
+        )
+    }
+    DropdownMenuItem(text = { Text("Add profile") }, onClick = onAdd)
+    DropdownMenuItem(text = { Text("Edit ${profile.displayName}") }, onClick = onEdit)
+    if (profiles.size > 1) {
+        DropdownMenuItem(text = { Text("Archive ${profile.displayName}") }, onClick = onArchive)
+    }
+    DropdownMenuItem(
+        text = { Text("Profile and settings") },
+        onClick = onSettings,
+        leadingIcon = { Icon(Icons.Outlined.AccountCircle, contentDescription = null) },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileEditorDialog(
+    title: String,
+    initialName: String,
+    initialHeight: String,
+    initialBirthDate: LocalDate?,
+    validationMessage: String?,
+    onDismiss: () -> Unit,
+    onSave: (String, String, LocalDate?) -> Unit,
+) {
+    var name by remember(initialName) { mutableStateOf(initialName) }
+    var height by remember(initialHeight) { mutableStateOf(initialHeight) }
+    var birthDate by remember(initialBirthDate) { mutableStateOf(initialBirthDate) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text("Height (cm)") })
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = { showDatePicker = true }) {
+                    Text(birthDate?.let { "Birth date: $it" } ?: "Add birth date (optional)")
+                }
+                if (birthDate != null) {
+                    TextButton(onClick = { birthDate = null }) { Text("Remove birth date") }
+                }
+                validationMessage?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(name, height, birthDate) }) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = birthDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            birthDate = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+                        }
+                        showDatePicker = false
+                    },
+                ) { Text("Use date") }
+            },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } },
+        ) { DatePicker(state = datePickerState) }
     }
 }
 
@@ -137,207 +478,38 @@ private fun TodayScreen(
     profile: BodyProfile,
     padding: PaddingValues,
     onOpenWorkout: () -> Unit,
+    onOpenWeeklyReview: () -> Unit,
+    onOpenNutrition: () -> Unit,
+    onOpenProgress: () -> Unit,
 ) {
+    val largeText = LocalDensity.current.fontScale >= 1.5f
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 20.dp),
+        modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        TodayHero(profile = profile)
-        Spacer(modifier = Modifier.height(18.dp))
+        KeepfitSectionHeader(
+            title = if (largeText) "Hello, ${profile.displayName}." else "Good to see you, ${profile.displayName}.",
+            supportingText = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM d")),
+        )
+        Spacer(Modifier.height(14.dp))
         TodayWorkoutSection(onOpenWorkout = onOpenWorkout)
-        Spacer(modifier = Modifier.height(12.dp))
-        TodayNutritionSection()
-        Spacer(modifier = Modifier.height(12.dp))
-        TodayProgressSection()
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
+        TodayWeeklyReviewCard(onOpenReview = onOpenWeeklyReview)
+        Spacer(Modifier.height(10.dp))
+        TodayNutritionSection(onOpenNutrition = onOpenNutrition)
+        Spacer(Modifier.height(10.dp))
+        TodayProgressSection(onOpenProgress = onOpenProgress)
+        Spacer(Modifier.height(10.dp))
         TodayStepsSection()
     }
 }
 
-@Composable
-private fun TodayHero(profile: BodyProfile) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        color = MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.large,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.surface,
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-                        ),
-                    ),
-                )
-                .padding(20.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primaryContainer,
-                                    MaterialTheme.colorScheme.secondaryContainer,
-                                ),
-                            ),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(id = com.keepfit.app.R.drawable.keepfit_brand_mark),
-                        contentDescription = null,
-                        modifier = Modifier.size(34.dp),
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM d")),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Keepfit",
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Good to see you, ${profile.displayName}.",
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Keep the basics visible: training, food, recovery, and progress in one place.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-            Row {
-                AssistChip(onClick = {}, label = { Text("Workouts") })
-                Spacer(modifier = Modifier.width(8.dp))
-                AssistChip(onClick = {}, label = { Text("Nutrition") })
-                Spacer(modifier = Modifier.width(8.dp))
-                AssistChip(onClick = {}, label = { Text("Progress") })
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryCard(
-    icon: ImageVector,
-    label: String,
-    title: String,
-    description: String,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Spacer(modifier = Modifier.height(18.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun EmptyDestinationScreen(
-    padding: PaddingValues,
-    eyebrow: String,
-    title: String,
-    description: String,
-    icon: ImageVector,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .padding(horizontal = 24.dp, vertical = 24.dp),
-    ) {
-        Text(
-            text = eyebrow,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        Spacer(modifier = Modifier.height(28.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-        Spacer(modifier = Modifier.height(36.dp))
-        Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
-            shape = MaterialTheme.shapes.medium,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .size(32.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = "Nothing here yet",
-            style = MaterialTheme.typography.titleLarge,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
+internal fun shouldShowNavigationLabels(fontScale: Float): Boolean = fontScale < 1.5f
 
 private fun HomeDestination.icon(): ImageVector = when (this) {
     HomeDestination.TODAY -> Icons.Outlined.Home
-    HomeDestination.WORKOUTS -> Icons.Outlined.FitnessCenter
-    HomeDestination.NUTRITION -> Icons.Outlined.RestaurantMenu
-    HomeDestination.PROGRESS -> Icons.Outlined.CalendarMonth
-    HomeDestination.SETTINGS -> Icons.Outlined.Settings
+    HomeDestination.PLAN -> Icons.Outlined.CalendarMonth
+    HomeDestination.LOG -> Icons.Outlined.AddCircleOutline
+    HomeDestination.PROGRESS -> Icons.Outlined.Insights
+    HomeDestination.COACH -> Icons.Outlined.ChatBubbleOutline
 }

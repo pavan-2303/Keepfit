@@ -5,22 +5,31 @@ import com.keepfit.core.database.nutrition.FoodDiaryEntryDetails
 import com.keepfit.core.database.nutrition.FoodDiaryEntryEntity
 import com.keepfit.core.database.nutrition.FoodEntity
 import com.keepfit.core.database.nutrition.MealType
+import com.keepfit.core.database.nutrition.MealQuality
+import com.keepfit.core.database.nutrition.MealQualityCheckInEntity
 import com.keepfit.core.database.nutrition.NutritionDao
 import com.keepfit.core.database.nutrition.SavedMealDetails
 import com.keepfit.core.database.nutrition.SavedMealEntity
 import com.keepfit.core.database.nutrition.SavedMealItemEntity
 import com.keepfit.core.database.profile.BodyProfileDao
+import com.keepfit.core.preferences.ActiveProfileStore
 import com.keepfit.feature.nutrition.FoodInput
 import com.keepfit.feature.nutrition.SavedMealInput
 import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class RoomNutritionRepository(
     private val dao: NutritionDao,
     private val bodyProfileDao: BodyProfileDao,
+    private val activeProfileStore: ActiveProfileStore,
     private val idFactory: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Long = System::currentTimeMillis,
 ) : NutritionRepository {
@@ -31,21 +40,31 @@ class RoomNutritionRepository(
         dao.observeFavoriteFoods().map { foods -> foods.map(FoodEntity::toModel) }
 
     override fun observeRecentFoods(limit: Int): Flow<List<Food>> =
-        dao.observeRecentFoods(limit).map { rows -> rows.map { it.food.toModel() } }
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observeRecentFoodsForProfile(profileId, limit)
+        }.map { rows -> rows.map { it.food.toModel() } }
 
     override fun observeSavedMeals(): Flow<List<SavedMeal>> =
-        dao.observeSavedMealDetails().map { meals ->
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observeSavedMealDetailsForProfile(profileId)
+        }.map { meals ->
             meals.map(SavedMealDetails::toModel)
         }
 
     override fun observeDiaryEntries(date: LocalDate): Flow<List<DiaryEntry>> =
-        dao.observeDiaryEntries(date).map { rows -> rows.map(FoodDiaryEntryDetails::toModel) }
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observeDiaryEntriesForProfile(profileId, date)
+        }.map { rows -> rows.map(FoodDiaryEntryDetails::toModel) }
 
     override fun observeDailySummary(date: LocalDate): Flow<DailyNutritionSummary> =
         combine(
-            dao.observeDailyTotals(date),
-            dao.observeDiaryEntries(date),
-            bodyProfileDao.observeLocalProfile(),
+            activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+                dao.observeDailyTotalsForProfile(profileId, date)
+            },
+            activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+                dao.observeDiaryEntriesForProfile(profileId, date)
+            },
+            activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest(bodyProfileDao::observeProfile),
         ) { totals, entries, profile ->
             DailyNutritionSummary(
                 date = date,
@@ -60,6 +79,16 @@ class RoomNutritionRepository(
                 },
                 hasEntries = entries.isNotEmpty(),
             )
+        }
+
+    override fun observeMealQualityCheckIns(date: LocalDate): Flow<List<MealQualityCheckIn>> =
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observeMealQualityCheckInsForProfile(profileId, date)
+        }.map { rows -> rows.map(MealQualityCheckInEntity::toModel) }
+
+    override fun observePreviousMealTypes(date: LocalDate): Flow<List<MealType>> =
+        activeProfileStore.observeActiveProfileId().filterNotNull().flatMapLatest { profileId ->
+            dao.observeLoggedMealTypesForProfile(profileId, date.minusDays(1))
         }
 
     override suspend fun saveFood(id: String?, input: FoodInput) {
@@ -92,6 +121,7 @@ class RoomNutritionRepository(
     }
 
     override suspend fun createSavedMeal(input: SavedMealInput) {
+        val profileId = requireProfileId()
         val mealId = idFactory()
         val now = clock()
         dao.upsertSavedMeal(
@@ -100,6 +130,7 @@ class RoomNutritionRepository(
                 name = input.name,
                 createdAt = now,
                 updatedAt = now,
+                bodyProfileId = profileId,
             ),
         )
         dao.replaceSavedMealItems(
@@ -122,6 +153,7 @@ class RoomNutritionRepository(
         foodId: String,
         servings: Double,
     ) {
+        val profileId = requireProfileId()
         dao.insertDiaryEntry(
             FoodDiaryEntryEntity(
                 id = idFactory(),
@@ -131,7 +163,37 @@ class RoomNutritionRepository(
                 savedMealId = null,
                 servings = servings,
                 loggedAt = clock(),
+                bodyProfileId = profileId,
             ),
+        )
+    }
+
+    override suspend fun addFoodsToDiary(
+        date: LocalDate,
+        mealType: MealType,
+        items: List<FoodDiaryAddition>,
+    ) {
+        val profileId = requireProfileId()
+        require(items.isNotEmpty()) { "Choose at least one food." }
+        require(items.size <= 6 && items.map { it.foodId }.distinct().size == items.size)
+        items.forEach { item ->
+            require(item.servings.isFinite() && item.servings in 0.25..5.0)
+            requireNotNull(dao.findFood(item.foodId)) { "Food not found." }
+        }
+        val now = clock()
+        dao.insertDiaryEntries(
+            items.map { item ->
+                FoodDiaryEntryEntity(
+                    id = idFactory(),
+                    diaryDate = date,
+                    mealType = mealType,
+                    foodId = item.foodId,
+                    savedMealId = null,
+                    servings = item.servings,
+                    loggedAt = now,
+                    bodyProfileId = profileId,
+                )
+            },
         )
     }
 
@@ -141,7 +203,8 @@ class RoomNutritionRepository(
         savedMealId: String,
         multiplier: Double,
     ) {
-        val meal = requireNotNull(dao.findSavedMealDetails(savedMealId)) { "Saved meal not found." }
+        val profileId = requireProfileId()
+        val meal = requireNotNull(dao.findSavedMealDetailsForProfile(savedMealId, profileId)) { "Saved meal not found." }
         val now = clock()
         dao.insertDiaryEntries(
             meal.items
@@ -155,22 +218,56 @@ class RoomNutritionRepository(
                         savedMealId = savedMealId,
                         servings = item.item.servings * multiplier,
                         loggedAt = now,
+                        bodyProfileId = profileId,
                     )
                 },
         )
     }
 
     override suspend fun deleteDiaryEntry(entryId: String) {
-        dao.deleteDiaryEntry(entryId)
+        dao.deleteDiaryEntryForProfile(entryId, requireProfileId())
     }
 
     override suspend fun duplicatePreviousDay(targetDate: LocalDate) {
-        dao.duplicateDiaryEntries(
+        dao.duplicateDiaryEntriesForProfile(
+            profileId = requireProfileId(),
             sourceDate = targetDate.minusDays(1),
             targetDate = targetDate,
             loggedAt = clock(),
         )
     }
+
+    override suspend fun repeatPreviousMeal(targetDate: LocalDate, mealType: MealType) {
+        dao.repeatDiaryMealForProfile(
+            profileId = requireProfileId(),
+            sourceDate = targetDate.minusDays(1),
+            targetDate = targetDate,
+            mealType = mealType,
+            loggedAt = clock(),
+        )
+    }
+
+    override suspend fun setMealQuality(
+        date: LocalDate,
+        mealType: MealType,
+        quality: MealQuality,
+    ) {
+        val profileId = requireProfileId()
+        dao.upsertMealQualityCheckInForProfile(
+            profileId = profileId,
+            checkIn = MealQualityCheckInEntity(
+                id = idFactory(),
+                diaryDate = date,
+                mealType = mealType,
+                quality = quality,
+                loggedAt = clock(),
+                bodyProfileId = profileId,
+            ),
+        )
+    }
+
+    private suspend fun requireProfileId(): String =
+        requireNotNull(activeProfileStore.observeActiveProfileId().first()) { "Profile missing." }
 }
 
 private fun FoodEntity.toModel() = Food(
@@ -220,4 +317,11 @@ private fun DailyNutritionTotalsRow.toModel() = NutritionTotals(
     proteinGrams = proteinGrams,
     carbohydrateGrams = carbohydrateGrams,
     fatGrams = fatGrams,
+)
+
+private fun MealQualityCheckInEntity.toModel() = MealQualityCheckIn(
+    id = id,
+    date = diaryDate,
+    mealType = mealType,
+    quality = quality,
 )

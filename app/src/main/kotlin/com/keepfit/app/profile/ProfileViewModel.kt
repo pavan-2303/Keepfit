@@ -5,27 +5,40 @@ import androidx.lifecycle.viewModelScope
 import com.keepfit.core.model.BodyProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface ProfileUiState {
     data object Loading : ProfileUiState
     data object SetupRequired : ProfileUiState
-    data class Ready(val profile: BodyProfile) : ProfileUiState
+    data class Ready(
+        val profile: BodyProfile,
+        val profiles: List<BodyProfile>,
+        val continueGuidedSetup: Boolean = false,
+    ) : ProfileUiState
 }
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val repository: ProfileRepository,
 ) : ViewModel() {
-    val uiState: StateFlow<ProfileUiState> = repository.observeLocalProfile()
-        .map { profile ->
-            profile?.let(ProfileUiState::Ready) ?: ProfileUiState.SetupRequired
+    private val continueGuidedSetup = MutableStateFlow(false)
+    val uiState: StateFlow<ProfileUiState> = combine(
+        repository.observeActiveProfile(),
+        repository.observeProfiles(),
+        continueGuidedSetup,
+    ) { profile, profiles, shouldContinue ->
+            when {
+                profile != null -> ProfileUiState.Ready(profile, profiles, shouldContinue)
+                profiles.isEmpty() -> ProfileUiState.SetupRequired
+                else -> ProfileUiState.Loading
+            }
         }
         .stateIn(
             scope = viewModelScope,
@@ -36,16 +49,74 @@ class ProfileViewModel @Inject constructor(
     private val _validationMessage = MutableStateFlow<String?>(null)
     val validationMessage: StateFlow<String?> = _validationMessage.asStateFlow()
 
-    fun saveProfile(displayName: String, heightCm: String) {
-        when (val result = ProfileInputValidator.validate(displayName, heightCm)) {
+    init {
+        viewModelScope.launch { repository.ensureActiveProfile() }
+    }
+
+    fun saveProfile(
+        displayName: String,
+        heightCm: String,
+        birthDate: LocalDate?,
+        startingWeightKg: String,
+    ) {
+        validateAndRun(displayName, heightCm, birthDate, startingWeightKg) { input ->
+            continueGuidedSetup.value = true
+            repository.saveProfile(input)
+        }
+    }
+
+    fun addProfile(displayName: String, heightCm: String, birthDate: LocalDate?) {
+        validateAndRun(displayName, heightCm, birthDate = birthDate, action = repository::addProfile)
+    }
+
+    fun editProfile(profileId: String, displayName: String, heightCm: String, birthDate: LocalDate?) {
+        validateAndRun(displayName, heightCm, birthDate = birthDate) { input ->
+            repository.editProfile(profileId, input)
+        }
+    }
+
+    fun selectProfile(profileId: String) {
+        continueGuidedSetup.value = false
+        viewModelScope.launch {
+            runCatching { repository.selectProfile(profileId) }
+                .onFailure { _validationMessage.value = it.message ?: "Profile could not be selected." }
+        }
+    }
+
+    fun archiveProfile(profileId: String) {
+        viewModelScope.launch {
+            repository.archiveProfile(profileId)
+                .onFailure { _validationMessage.value = it.message ?: "Profile could not be archived." }
+        }
+    }
+
+    fun dismissValidationMessage() {
+        _validationMessage.value = null
+    }
+
+    private fun validateAndRun(
+        displayName: String,
+        heightCm: String,
+        birthDate: LocalDate? = null,
+        startingWeightKg: String = "",
+        action: suspend (ProfileInput) -> Unit,
+    ) {
+        when (
+            val result = ProfileInputValidator.validate(
+                displayName = displayName,
+                heightCm = heightCm,
+                birthDate = birthDate,
+                startingWeightKg = startingWeightKg,
+            )
+        ) {
             is ProfileValidationResult.Invalid -> _validationMessage.value = result.message
             is ProfileValidationResult.Valid -> {
                 _validationMessage.value = null
                 viewModelScope.launch {
-                    repository.saveProfile(result.input)
+                    runCatching { action(result.input) }
+                        .onFailure { _validationMessage.value = it.message ?: "Profile could not be saved." }
                 }
             }
         }
     }
 }
-

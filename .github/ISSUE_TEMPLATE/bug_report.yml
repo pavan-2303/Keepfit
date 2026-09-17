@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a reproducible Keepfit problem without sharing private data.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a problem. Do not attach real health records, photos, backups, API keys, or signing files.
+  - type: input
+    id: version
+    attributes:
+      label: Keepfit version
+      placeholder: 0.22.0
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version and device
+      placeholder: Android 16, Pixel emulator
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use synthetic data only.
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed personal data, credentials, backups, and private media.
+          required: true

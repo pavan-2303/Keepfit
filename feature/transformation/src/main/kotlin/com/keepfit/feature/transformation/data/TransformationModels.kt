@@ -1,9 +1,8 @@
 package com.keepfit.feature.transformation.data
 
-import com.keepfit.core.database.transformation.TransformationPhotoAngle
+import com.keepfit.core.model.TransformationPose
+import com.keepfit.core.model.calculateBodyMassIndex
 import java.time.LocalDate
-import kotlin.math.pow
-import kotlin.math.round
 
 data class BodyMeasurement(
     val id: String,
@@ -22,15 +21,16 @@ data class BodyMeasurement(
 
 data class TransformationPhoto(
     val id: String,
-    val angle: TransformationPhotoAngle,
+    val captureDate: LocalDate,
+    val pose: TransformationPose,
     val relativePath: String,
-    val absolutePath: String,
+    val absolutePath: String?,
     val mimeType: String,
     val sizeBytes: Long,
     val createdAt: Long,
 )
 
-data class WeeklyProgressSummary(
+data class TransformationCycleSummary(
     val workoutsCompleted: Int,
     val averageCalories: Double?,
     val averageProteinGrams: Double?,
@@ -39,12 +39,48 @@ data class WeeklyProgressSummary(
     val weightChangeKg: Double?,
 )
 
-data class TransformationWeek(
-    val id: String,
-    val weekStartDate: LocalDate,
-    val notes: String?,
+data class TransformationCycleDay(
+    val captureDate: LocalDate,
+    val dayNumber: Int,
     val photos: List<TransformationPhoto>,
-    val summary: WeeklyProgressSummary,
+)
+
+data class PoseCaptureProgress(
+    val captured: Int,
+    val enabled: Int,
+)
+
+fun calculatePoseCaptureProgress(
+    day: TransformationCycleDay?,
+    enabledPoses: List<TransformationPose>,
+): PoseCaptureProgress {
+    val capturedPoses = day?.photos.orEmpty().map(TransformationPhoto::pose).toSet()
+    return PoseCaptureProgress(
+        captured = enabledPoses.count(capturedPoses::contains),
+        enabled = enabledPoses.size,
+    )
+}
+
+data class TransformationComparison(
+    val leftDay: TransformationCycleDay,
+    val rightDay: TransformationCycleDay,
+)
+
+data class TransformationCycle(
+    val id: String,
+    val startDate: LocalDate,
+    val latestCaptureDate: LocalDate,
+    val isActive: Boolean,
+    val canReopen: Boolean,
+    val notes: String?,
+    val days: List<TransformationCycleDay>,
+    val summary: TransformationCycleSummary,
+    val defaultComparison: TransformationComparison,
+)
+
+data class TransformationTimeline(
+    val activeCycle: TransformationCycle?,
+    val history: List<TransformationCycle>,
 )
 
 data class CurrentProgressOverview(
@@ -54,10 +90,7 @@ data class CurrentProgressOverview(
 )
 
 fun calculateBmi(heightCm: Double?, weightKg: Double?): Double? {
-    val normalizedHeightCm = heightCm?.takeIf { it > 0.0 } ?: return null
-    val normalizedWeightKg = weightKg?.takeIf { it > 0.0 } ?: return null
-    val bmi = normalizedWeightKg / (normalizedHeightCm / 100.0).pow(2)
-    return round(bmi * 10.0) / 10.0
+    return calculateBodyMassIndex(heightCm, weightKg)
 }
 
 fun Double.formatMetric(): String =

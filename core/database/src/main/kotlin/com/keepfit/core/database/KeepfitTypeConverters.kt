@@ -2,7 +2,7 @@ package com.keepfit.core.database
 
 import androidx.room.TypeConverter
 import com.keepfit.core.database.nutrition.MealType
-import com.keepfit.core.database.transformation.TransformationPhotoAngle
+import com.keepfit.core.database.nutrition.MealQuality
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -26,9 +26,9 @@ class KeepfitTypeConverters {
     fun toMealType(value: String?): MealType? = value?.let(MealType::valueOf)
 
     @TypeConverter
-    fun fromTransformationPhotoAngle(value: TransformationPhotoAngle?): String? = value?.name
+    fun fromMealQuality(value: MealQuality?): String? = value?.name
 
     @TypeConverter
-    fun toTransformationPhotoAngle(value: String?): TransformationPhotoAngle? =
-        value?.let(TransformationPhotoAngle::valueOf)
+    fun toMealQuality(value: String?): MealQuality? = value?.let(MealQuality::valueOf)
+
 }

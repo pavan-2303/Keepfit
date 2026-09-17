@@ -1,6 +1,7 @@
 package com.keepfit.feature.nutrition.data
 
 import com.keepfit.core.database.nutrition.MealType
+import com.keepfit.core.database.nutrition.MealQuality
 import java.time.LocalDate
 
 data class Food(
@@ -65,6 +66,13 @@ data class DailyNutritionSummary(
     val totals: NutritionTotals,
     val goals: NutritionGoals?,
     val hasEntries: Boolean,
+)
+
+data class MealQualityCheckIn(
+    val id: String,
+    val date: LocalDate,
+    val mealType: MealType,
+    val quality: MealQuality,
 )
 
 internal fun Double.formatQuantity(): String =

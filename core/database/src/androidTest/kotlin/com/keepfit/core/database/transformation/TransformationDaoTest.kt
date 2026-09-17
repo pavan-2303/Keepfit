@@ -36,6 +36,16 @@ class TransformationDaoTest {
                 updatedAt = 1L,
             ),
         )
+        database.bodyProfileDao().upsert(
+            BodyProfileEntity(
+                id = "profile-two",
+                displayName = "Second",
+                heightCm = null,
+                birthDate = null,
+                createdAt = 2L,
+                updatedAt = 2L,
+            ),
+        )
         dao = database.transformationDao()
     }
 
@@ -45,7 +55,7 @@ class TransformationDaoTest {
     }
 
     @Test
-    fun measurementsAndWeeksWithPhotosAreObservable() = runBlocking {
+    fun measurementsAndCyclesWithPhotosAreObservable() = runBlocking {
         dao.upsertMeasurement(
             BodyMeasurementEntity(
                 id = "m-1",
@@ -83,30 +93,89 @@ class TransformationDaoTest {
 
         assertEquals("m-2", dao.observeLatestMeasurement("profile-id").first()?.id)
 
-        dao.upsertWeek(
-            TransformationWeekEntity(
-                id = "week-1",
+        dao.upsertCycle(
+            TransformationCycleEntity(
+                id = "cycle-1",
                 bodyProfileId = "profile-id",
-                weekStartDate = LocalDate.parse("2026-05-25"),
-                notes = "Week one",
+                startDate = LocalDate.parse("2026-05-25"),
+                notes = "Cycle one",
+                closedAt = null,
                 createdAt = 30L,
+                updatedAt = 30L,
             ),
         )
         dao.upsertPhoto(
             TransformationPhotoEntity(
                 id = "photo-1",
-                transformationWeekId = "week-1",
-                angle = TransformationPhotoAngle.FRONT,
-                relativePath = "media/transformation/week-1/front.jpg",
+                transformationCycleId = "cycle-1",
+                captureDate = LocalDate.parse("2026-05-25"),
+                poseKey = "front_relaxed",
+                relativePath = "media/transformation/cycle-1/front.jpg",
                 mimeType = "image/jpeg",
                 sizeBytes = 123L,
                 createdAt = 31L,
             ),
         )
 
-        val weeks = dao.observeWeeks("profile-id").first()
-        assertEquals(1, weeks.size)
-        assertEquals("Week one", weeks.single().week.notes)
-        assertEquals(listOf(TransformationPhotoAngle.FRONT), weeks.single().photos.map { it.angle })
+        val cycles = dao.observeCycles("profile-id").first()
+        assertEquals(1, cycles.size)
+        assertEquals("Cycle one", cycles.single().cycle.notes)
+        assertEquals(listOf("front_relaxed"), cycles.single().photos.map { it.poseKey })
+    }
+
+    @Test
+    fun findsSameDayPhotoByCycleAndAngle() = runBlocking {
+        dao.upsertCycle(
+            TransformationCycleEntity(
+                id = "cycle-1",
+                bodyProfileId = "profile-id",
+                startDate = LocalDate.parse("2026-05-25"),
+                notes = null,
+                closedAt = null,
+                createdAt = 30L,
+                updatedAt = 30L,
+            ),
+        )
+        dao.upsertPhoto(
+            TransformationPhotoEntity(
+                id = "photo-1",
+                transformationCycleId = "cycle-1",
+                captureDate = LocalDate.parse("2026-05-25"),
+                poseKey = "front_relaxed",
+                relativePath = "media/transformation/cycle-1/front.jpg",
+                mimeType = "image/jpeg",
+                sizeBytes = 123L,
+                createdAt = 31L,
+            ),
+        )
+
+        val photo = dao.findPhoto("cycle-1", LocalDate.parse("2026-05-25"), "front_relaxed")
+        assertEquals("photo-1", photo?.id)
+    }
+
+    @Test
+    fun optionalPosePreferencesAreIsolatedByProfile() = runBlocking {
+        dao.upsertPosePreference(
+            TransformationPosePreferenceEntity(
+                bodyProfileId = "profile-id",
+                poseKey = "front_double_biceps",
+                updatedAt = 10L,
+            ),
+        )
+        dao.upsertPosePreference(
+            TransformationPosePreferenceEntity(
+                bodyProfileId = "profile-two",
+                poseKey = "back_lat_spread",
+                updatedAt = 11L,
+            ),
+        )
+
+        assertEquals(listOf("front_double_biceps"), dao.observeOptionalPoseKeys("profile-id").first())
+        assertEquals(listOf("back_lat_spread"), dao.observeOptionalPoseKeys("profile-two").first())
+
+        dao.deletePosePreference("profile-id", "front_double_biceps")
+
+        assertEquals(emptyList<String>(), dao.observeOptionalPoseKeys("profile-id").first())
+        assertEquals(listOf("back_lat_spread"), dao.observeOptionalPoseKeys("profile-two").first())
     }
 }

@@ -48,6 +48,18 @@ class HealthConnectStepsRepository @Inject constructor(
         }
     }
 
+    override suspend fun loadTotal(startDate: LocalDate, endDate: LocalDate): Long? {
+        if (endDate.isBefore(startDate)) return null
+        if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) return null
+        val client = HealthConnectClient.getOrCreate(context)
+        if (!client.permissionController.getGrantedPermissions().containsAll(requiredPermissions)) return null
+        return aggregateSteps(
+            client = client,
+            startTime = startDate.atStartOfDay(zoneId).toInstant(),
+            endTime = endDate.plusDays(1).atStartOfDay(zoneId).toInstant(),
+        )
+    }
+
     private suspend fun aggregateSteps(
         client: HealthConnectClient,
         startTime: Instant,

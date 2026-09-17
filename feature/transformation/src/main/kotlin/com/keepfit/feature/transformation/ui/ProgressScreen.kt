@@ -3,6 +3,7 @@ package com.keepfit.feature.transformation.ui
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,19 +15,21 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Insights
-import androidx.compose.material.icons.outlined.MonitorWeight
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,12 +40,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,20 +56,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.keepfit.core.database.transformation.TransformationPhotoAngle
+import com.keepfit.core.model.TransformationPose
+import com.keepfit.core.model.TransformationPoseGroup
 import com.keepfit.feature.transformation.TransformationViewModel
 import com.keepfit.feature.transformation.data.BodyMeasurement
 import com.keepfit.feature.transformation.data.CurrentProgressOverview
+import com.keepfit.feature.transformation.data.TransformationCycle
+import com.keepfit.feature.transformation.data.TransformationCycleDay
 import com.keepfit.feature.transformation.data.TransformationPhoto
-import com.keepfit.feature.transformation.data.TransformationWeek
+import com.keepfit.feature.transformation.data.TransformationTimeline
+import com.keepfit.feature.transformation.data.calculatePoseCaptureProgress
 import com.keepfit.feature.transformation.data.formatMetric
-import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 @Composable
 fun ProgressScreen(
@@ -76,22 +85,27 @@ fun ProgressScreen(
 ) {
     val currentOverview by viewModel.currentOverview.collectAsStateWithLifecycle()
     val measurements by viewModel.measurements.collectAsStateWithLifecycle()
-    val weeks by viewModel.weeks.collectAsStateWithLifecycle()
+    val timeline by viewModel.timeline.collectAsStateWithLifecycle()
+    val enabledPoses by viewModel.enabledPoses.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showMeasurementEditor by remember { mutableStateOf(false) }
-    var selectedWeekStart by rememberSaveable { mutableStateOf(LocalDate.now().with(DayOfWeek.MONDAY)) }
-    var compareAngle by rememberSaveable { mutableStateOf(TransformationPhotoAngle.FRONT) }
-    var leftWeekId by rememberSaveable { mutableStateOf<String?>(null) }
-    var rightWeekId by rememberSaveable { mutableStateOf<String?>(null) }
-    var pendingImportAngle by remember { mutableStateOf<TransformationPhotoAngle?>(null) }
-    val currentWeek = weeks.firstOrNull { it.weekStartDate == selectedWeekStart }
+    var showPoseSelector by remember { mutableStateOf(false) }
+    var showAlignmentGuide by rememberSaveable { mutableStateOf(true) }
+    var selectedCaptureDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    var comparePose by rememberSaveable { mutableStateOf(TransformationPose.FRONT_RELAXED) }
+    var leftCaptureDate by rememberSaveable { mutableStateOf<String?>(null) }
+    var rightCaptureDate by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingImportPose by remember { mutableStateOf<TransformationPose?>(null) }
+    val activeCycle = timeline.activeCycle
+    val comparisonCycle = activeCycle ?: timeline.history.firstOrNull()
+    val currentDay = activeCycle?.days?.firstOrNull { it.captureDate == selectedCaptureDate }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        val angle = pendingImportAngle
-        if (uri != null && angle != null) {
-            viewModel.importPhoto(selectedWeekStart, angle, uri)
+        val pose = pendingImportPose
+        if (uri != null && pose != null) {
+            viewModel.importPhoto(selectedCaptureDate, pose, uri)
         }
-        pendingImportAngle = null
+        pendingImportPose = null
     }
 
     LaunchedEffect(message) {
@@ -100,18 +114,25 @@ fun ProgressScreen(
             viewModel.dismissMessage()
         }
     }
-    LaunchedEffect(weeks) {
-        if (leftWeekId == null) {
-            leftWeekId = weeks.firstOrNull()?.id
-        }
-        if (rightWeekId == null) {
-            rightWeekId = weeks.drop(1).firstOrNull()?.id ?: weeks.firstOrNull()?.id
+    LaunchedEffect(activeCycle?.id, activeCycle?.latestCaptureDate) {
+        activeCycle?.latestCaptureDate?.let { selectedCaptureDate = it }
+    }
+    LaunchedEffect(comparisonCycle?.id) {
+        val comparison = comparisonCycle?.defaultComparison
+        leftCaptureDate = comparison?.leftDay?.captureDate?.toString()
+        rightCaptureDate = comparison?.rightDay?.captureDate?.toString()
+    }
+    LaunchedEffect(enabledPoses, comparisonCycle?.id) {
+        val comparisonPoses = comparisonCycle.availableComparisonPoses(enabledPoses)
+        if (comparePose !in comparisonPoses) {
+            comparePose = comparisonPoses.firstOrNull() ?: TransformationPose.FRONT_RELAXED
         }
     }
 
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
@@ -119,15 +140,8 @@ fun ProgressScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text(
-                text = "PROGRESS",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = "Transformation", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(18.dp))
             CurrentMetricsCard(currentOverview)
             Spacer(modifier = Modifier.height(18.dp))
             SectionHeader(
@@ -139,24 +153,33 @@ fun ProgressScreen(
             MeasurementHistory(measurements)
             Spacer(modifier = Modifier.height(18.dp))
             Text(
-                text = "WEEKLY PHOTOS",
+                text = "TRANSFORMATION CYCLE",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(10.dp))
-            WeekEditorCard(
-                selectedWeekStart = selectedWeekStart,
-                currentWeek = currentWeek,
-                onPreviousWeek = { selectedWeekStart = selectedWeekStart.minusWeeks(1) },
-                onNextWeek = { selectedWeekStart = selectedWeekStart.plusWeeks(1) },
-                onSaveNotes = viewModel::saveWeekNotes,
-                onImportAngle = { angle ->
-                    pendingImportAngle = angle
+            CycleEditorCard(
+                selectedCaptureDate = selectedCaptureDate,
+                activeCycle = activeCycle,
+                currentDay = currentDay,
+                enabledPoses = enabledPoses,
+                showAlignmentGuide = showAlignmentGuide,
+                onPreviousDay = { selectedCaptureDate = selectedCaptureDate.minusDays(1) },
+                onNextDay = { selectedCaptureDate = selectedCaptureDate.plusDays(1) },
+                onSaveNotes = viewModel::saveCycleNotes,
+                onCloseCycle = viewModel::closeActiveCycle,
+                onManagePoses = { showPoseSelector = true },
+                onShowAlignmentGuide = { showAlignmentGuide = it },
+                onImportPose = { pose ->
+                    pendingImportPose = pose
                     launcher.launch(arrayOf("image/jpeg", "image/png", "image/webp"))
                 },
             )
             Spacer(modifier = Modifier.height(12.dp))
-            WeekList(weeks)
+            CycleHistoryList(
+                timeline = timeline,
+                onReopen = viewModel::reopenCycle,
+            )
             Spacer(modifier = Modifier.height(18.dp))
             Text(
                 text = "COMPARE",
@@ -165,15 +188,24 @@ fun ProgressScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             ComparisonCard(
-                weeks = weeks,
-                leftWeekId = leftWeekId,
-                rightWeekId = rightWeekId,
-                angle = compareAngle,
-                onPreviousLeft = { leftWeekId = cycleWeekId(weeks, leftWeekId, -1) },
-                onNextLeft = { leftWeekId = cycleWeekId(weeks, leftWeekId, 1) },
-                onPreviousRight = { rightWeekId = cycleWeekId(weeks, rightWeekId, -1) },
-                onNextRight = { rightWeekId = cycleWeekId(weeks, rightWeekId, 1) },
-                onSelectAngle = { compareAngle = it },
+                cycle = comparisonCycle,
+                leftCaptureDate = leftCaptureDate,
+                rightCaptureDate = rightCaptureDate,
+                pose = comparePose,
+                availablePoses = comparisonCycle.availableComparisonPoses(enabledPoses),
+                onPreviousLeft = {
+                    leftCaptureDate = cycleDayDate(comparisonCycle?.days.orEmpty(), leftCaptureDate, -1)?.toString()
+                },
+                onNextLeft = {
+                    leftCaptureDate = cycleDayDate(comparisonCycle?.days.orEmpty(), leftCaptureDate, 1)?.toString()
+                },
+                onPreviousRight = {
+                    rightCaptureDate = cycleDayDate(comparisonCycle?.days.orEmpty(), rightCaptureDate, -1)?.toString()
+                },
+                onNextRight = {
+                    rightCaptureDate = cycleDayDate(comparisonCycle?.days.orEmpty(), rightCaptureDate, 1)?.toString()
+                },
+                onSelectPose = { comparePose = it },
             )
         }
     }
@@ -187,47 +219,44 @@ fun ProgressScreen(
             },
         )
     }
+    if (showPoseSelector) {
+        PoseSelectorDialog(
+            enabledPoses = enabledPoses,
+            onToggle = viewModel::setOptionalPoseEnabled,
+            onDismiss = { showPoseSelector = false },
+        )
+    }
 }
 
 @Composable
 fun TodayProgressSection(
     modifier: Modifier = Modifier,
+    onOpenProgress: () -> Unit = {},
     viewModel: TransformationViewModel = hiltViewModel(),
 ) {
     val overview by viewModel.currentOverview.collectAsStateWithLifecycle()
     Card(
+        onClick = onOpenProgress,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Insights, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "PROGRESS",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.Insights, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(12.dp))
             val latest = overview.latestMeasurement
-            if (latest?.weightKg == null) {
-                Text("No measurements yet", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(4.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Progress", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Weekly progress summaries will appear here.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Text("${latest.weightKg.formatMetric()} kg", style = MaterialTheme.typography.titleLarge)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "BMI ${overview.bmi?.formatMetric() ?: "--"}  •  ${latest.measurementDate}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    if (latest?.weightKg == null) "No measurements yet"
+                    else "${latest.weightKg.formatMetric()} kg · BMI ${overview.bmi?.formatMetric() ?: "--"}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Text("Open", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -277,7 +306,12 @@ private fun MetricPill(label: String, value: String) {
 @Composable
 private fun SectionHeader(title: String, actionLabel: String, onAction: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
         FilledTonalButton(onClick = onAction, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
             Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
@@ -329,16 +363,22 @@ private fun MeasurementHistory(measurements: List<BodyMeasurement>) {
 }
 
 @Composable
-private fun WeekEditorCard(
-    selectedWeekStart: LocalDate,
-    currentWeek: TransformationWeek?,
-    onPreviousWeek: () -> Unit,
-    onNextWeek: () -> Unit,
-    onSaveNotes: (LocalDate, String) -> Unit,
-    onImportAngle: (TransformationPhotoAngle) -> Unit,
+private fun CycleEditorCard(
+    selectedCaptureDate: LocalDate,
+    activeCycle: TransformationCycle?,
+    currentDay: TransformationCycleDay?,
+    enabledPoses: List<TransformationPose>,
+    showAlignmentGuide: Boolean,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
+    onSaveNotes: (String) -> Unit,
+    onCloseCycle: () -> Unit,
+    onManagePoses: () -> Unit,
+    onShowAlignmentGuide: (Boolean) -> Unit,
+    onImportPose: (TransformationPose) -> Unit,
 ) {
-    var notes by remember(selectedWeekStart, currentWeek?.notes) {
-        mutableStateOf(currentWeek?.notes.orEmpty())
+    var notes by remember(activeCycle?.id, activeCycle?.notes) {
+        mutableStateOf(activeCycle?.notes.orEmpty())
     }
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -346,43 +386,94 @@ private fun WeekEditorCard(
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPreviousWeek) {
-                    Icon(Icons.Outlined.ArrowBack, contentDescription = "Previous week")
+                IconButton(onClick = onPreviousDay) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Previous cycle day")
                 }
                 Text(
-                    selectedWeekStart.format(DateTimeFormatter.ofPattern("MMM d")),
+                    selectedCaptureDate.toString(),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = onNextWeek) {
-                    Icon(Icons.Outlined.ArrowForward, contentDescription = "Next week")
+                IconButton(onClick = onNextDay) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = "Next cycle day")
                 }
             }
-            Text(
-                "Week of ${selectedWeekStart}",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Week notes") },
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            FilledTonalButton(onClick = { onSaveNotes(selectedWeekStart, notes) }) {
-                Text("Save week")
+            if (activeCycle == null) {
+                Text(
+                    "No active transformation cycle. Import a photo on the selected date to start one.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                val selectedDayNumber = currentDay?.dayNumber
+                    ?: ChronoUnit.DAYS.between(activeCycle.startDate, selectedCaptureDate).toInt().coerceAtLeast(0)
+                Text(
+                    "Cycle start ${activeCycle.startDate} • Day $selectedDayNumber • Latest update ${activeCycle.latestCaptureDate}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Cycle notes") },
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = { onSaveNotes(notes) }) {
+                        Text("Save cycle")
+                    }
+                    OutlinedButton(onClick = onCloseCycle) {
+                        Text("Close cycle")
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(14.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                val progress = calculatePoseCaptureProgress(currentDay, enabledPoses)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("${progress.captured} / ${progress.enabled} poses captured", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Incomplete check-ins are okay. Add only the views useful to you.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onManagePoses) {
+                    Icon(Icons.Outlined.Tune, contentDescription = "Choose transformation poses")
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Alignment guide", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = showAlignmentGuide,
+                    onCheckedChange = onShowAlignmentGuide,
+                    modifier = Modifier.semantics { contentDescription = "Show camera alignment guide" },
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                TransformationPhotoAngle.entries.forEach { angle ->
-                    val photo = currentWeek?.photos?.firstOrNull { it.angle == angle }
+                enabledPoses.forEach { pose ->
+                    val photo = currentDay?.photos?.firstOrNull { it.pose == pose }
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = MaterialTheme.shapes.medium,
                     ) {
                         Column(modifier = Modifier.width(156.dp).padding(12.dp)) {
-                            Text(angle.label, style = MaterialTheme.typography.titleSmall)
+                            PoseGuideIllustration(pose = pose, showAlignment = showAlignmentGuide)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(pose.label, style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                pose.group.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                pose.guidance,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             if (photo == null) {
                                 Text("No photo", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -390,7 +481,7 @@ private fun WeekEditorCard(
                                 Text("Imported", color = MaterialTheme.colorScheme.primary)
                             }
                             Spacer(modifier = Modifier.height(10.dp))
-                            OutlinedButton(onClick = { onImportAngle(angle) }) {
+                            OutlinedButton(onClick = { onImportPose(pose) }) {
                                 Icon(Icons.Outlined.CameraAlt, contentDescription = null)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(if (photo == null) "Import" else "Replace")
@@ -404,12 +495,16 @@ private fun WeekEditorCard(
 }
 
 @Composable
-private fun WeekList(weeks: List<TransformationWeek>) {
-    if (weeks.isEmpty()) {
-        Text("No saved weeks yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun CycleHistoryList(
+    timeline: TransformationTimeline,
+    onReopen: (String) -> Unit,
+) {
+    val history = timeline.history
+    if (history.isEmpty()) {
+        Text("No closed transformation cycles yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
-    weeks.forEach { week ->
+    history.forEach { cycle ->
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -418,18 +513,32 @@ private fun WeekList(weeks: List<TransformationWeek>) {
             shape = MaterialTheme.shapes.medium,
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text("Week of ${week.weekStartDate}", style = MaterialTheme.typography.titleMedium)
-                week.notes?.let {
-                    Spacer(modifier = Modifier.height(4.dp))
+                Text("Cycle from ${cycle.startDate}", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Last update ${cycle.latestCaptureDate} • ${cycle.days.size} logged day(s)",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                cycle.notes?.let {
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MetricPill("Photos", week.photos.size.toString())
-                    MetricPill("Workouts", week.summary.workoutsCompleted.toString())
-                    MetricPill("Avg kcal", week.summary.averageCalories?.formatMetric() ?: "--")
-                    MetricPill("Avg protein", week.summary.averageProteinGrams?.formatMetric()?.plus(" g") ?: "--")
-                    MetricPill("Weight delta", week.summary.weightChangeKg?.let { "${if (it > 0) "+" else ""}${it.formatMetric()} kg" } ?: "--")
+                    MetricPill("Days", cycle.days.size.toString())
+                    MetricPill("Photos", cycle.days.sumOf { it.photos.size }.toString())
+                    MetricPill("Workouts", cycle.summary.workoutsCompleted.toString())
+                    MetricPill("Avg kcal", cycle.summary.averageCalories?.formatMetric() ?: "--")
+                    MetricPill(
+                        "Weight delta",
+                        cycle.summary.weightChangeKg?.let { "${if (it > 0) "+" else ""}${it.formatMetric()} kg" } ?: "--",
+                    )
+                }
+                if (cycle.canReopen) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(onClick = { onReopen(cycle.id) }) {
+                        Text("Reopen cycle")
+                    }
                 }
             }
         }
@@ -438,35 +547,50 @@ private fun WeekList(weeks: List<TransformationWeek>) {
 
 @Composable
 private fun ComparisonCard(
-    weeks: List<TransformationWeek>,
-    leftWeekId: String?,
-    rightWeekId: String?,
-    angle: TransformationPhotoAngle,
+    cycle: TransformationCycle?,
+    leftCaptureDate: String?,
+    rightCaptureDate: String?,
+    pose: TransformationPose,
+    availablePoses: List<TransformationPose>,
     onPreviousLeft: () -> Unit,
     onNextLeft: () -> Unit,
     onPreviousRight: () -> Unit,
     onNextRight: () -> Unit,
-    onSelectAngle: (TransformationPhotoAngle) -> Unit,
+    onSelectPose: (TransformationPose) -> Unit,
 ) {
-    val leftWeek = weeks.firstOrNull { it.id == leftWeekId }
-    val rightWeek = weeks.firstOrNull { it.id == rightWeekId }
+    if (cycle == null) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = MaterialTheme.shapes.medium,
+        ) {
+            Text(
+                "No transformation cycle to compare yet.",
+                modifier = Modifier.padding(16.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+    val leftDay = cycle.days.firstOrNull { it.captureDate.toString() == leftCaptureDate } ?: cycle.defaultComparison.leftDay
+    val rightDay = cycle.days.firstOrNull { it.captureDate.toString() == rightCaptureDate } ?: cycle.defaultComparison.rightDay
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TransformationPhotoAngle.entries.forEach { candidate ->
+                availablePoses.forEach { candidate ->
                     FilledTonalButton(
-                        onClick = { onSelectAngle(candidate) },
-                        enabled = candidate != angle,
+                        onClick = { onSelectPose(candidate) },
+                        enabled = candidate != pose,
                     ) { Text(candidate.label) }
                 }
             }
             Spacer(modifier = Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ComparisonPane(leftWeek, angle, onPreviousLeft, onNextLeft, Modifier.weight(1f))
-                ComparisonPane(rightWeek, angle, onPreviousRight, onNextRight, Modifier.weight(1f))
+                ComparisonPane(leftDay, pose, onPreviousLeft, onNextLeft, Modifier.weight(1f))
+                ComparisonPane(rightDay, pose, onPreviousRight, onNextRight, Modifier.weight(1f))
             }
         }
     }
@@ -474,30 +598,33 @@ private fun ComparisonCard(
 
 @Composable
 private fun ComparisonPane(
-    week: TransformationWeek?,
-    angle: TransformationPhotoAngle,
+    day: TransformationCycleDay,
+    pose: TransformationPose,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val photo = week?.photos?.firstOrNull { it.angle == angle }
+    val photo = day.photos.firstOrNull { it.pose == pose }
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onPrevious) {
-                Icon(Icons.Outlined.ArrowBack, contentDescription = "Previous comparison week")
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Previous comparison day")
             }
             Text(
-                week?.weekStartDate?.toString() ?: "No week",
+                "Day ${day.dayNumber} • ${day.captureDate}",
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             IconButton(onClick = onNext) {
-                Icon(Icons.Outlined.ArrowForward, contentDescription = "Next comparison week")
+                Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = "Next comparison day")
             }
         }
-        PhotoPreview(photo = photo, emptyLabel = "No ${angle.label.lowercase()} photo")
+        PhotoPreview(
+            photo = photo,
+            emptyLabel = "${pose.label} is missing for ${day.captureDate}.",
+        )
     }
 }
 
@@ -514,6 +641,11 @@ private fun PhotoPreview(photo: TransformationPhoto?, emptyLabel: String) {
             photo?.absolutePath?.let(BitmapFactory::decodeFile)
         }
         if (bitmap == null) {
+            val unavailableLabel = if (photo == null) {
+                emptyLabel
+            } else {
+                "Photo unavailable on this device. Restore an encrypted Keepfit backup to recover it."
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -523,7 +655,7 @@ private fun PhotoPreview(photo: TransformationPhoto?, emptyLabel: String) {
             ) {
                 Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(emptyLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(unavailableLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             Image(
@@ -533,6 +665,153 @@ private fun PhotoPreview(photo: TransformationPhoto?, emptyLabel: String) {
             )
         }
     }
+}
+
+@Composable
+internal fun PoseGuideIllustration(
+    pose: TransformationPose,
+    showAlignment: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val figureColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val guideColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+    val isSide = pose in sidePoses
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(0.9f)
+            .semantics { contentDescription = "Neutral reference for ${pose.label}" },
+    ) {
+        if (showAlignment) {
+            drawLine(guideColor, Offset(size.width / 2f, 0f), Offset(size.width / 2f, size.height), 1.dp.toPx())
+            drawLine(guideColor, Offset(0f, size.height * 0.32f), Offset(size.width, size.height * 0.32f), 1.dp.toPx())
+            drawLine(guideColor, Offset(0f, size.height * 0.72f), Offset(size.width, size.height * 0.72f), 1.dp.toPx())
+        }
+
+        val centerX = size.width / 2f
+        val headY = size.height * 0.16f
+        val shoulderY = size.height * 0.32f
+        val hipY = size.height * 0.67f
+        val shoulderHalf = size.width * if (isSide) 0.08f else 0.18f
+        val hipHalf = size.width * if (isSide) 0.055f else 0.11f
+        val stroke = 6.dp.toPx()
+        fun limb(startX: Float, startY: Float, endX: Float, endY: Float) {
+            drawLine(
+                color = figureColor,
+                start = Offset(startX, startY),
+                end = Offset(endX, endY),
+                strokeWidth = stroke,
+                cap = StrokeCap.Round,
+            )
+        }
+
+        drawCircle(figureColor, radius = size.minDimension * 0.075f, center = Offset(centerX, headY))
+        limb(centerX, headY + size.height * 0.08f, centerX, hipY)
+        limb(centerX - shoulderHalf, shoulderY, centerX + shoulderHalf, shoulderY)
+        limb(centerX - hipHalf, hipY, centerX + hipHalf, hipY)
+        limb(centerX - hipHalf, hipY, centerX - size.width * 0.12f, size.height * 0.94f)
+        limb(centerX + hipHalf, hipY, centerX + size.width * 0.12f, size.height * 0.94f)
+
+        when (pose) {
+            TransformationPose.FRONT_DOUBLE_BICEPS,
+            TransformationPose.BACK_DOUBLE_BICEPS,
+            -> {
+                limb(centerX - shoulderHalf, shoulderY, centerX - size.width * 0.34f, size.height * 0.24f)
+                limb(centerX - size.width * 0.34f, size.height * 0.24f, centerX - size.width * 0.25f, size.height * 0.10f)
+                limb(centerX + shoulderHalf, shoulderY, centerX + size.width * 0.34f, size.height * 0.24f)
+                limb(centerX + size.width * 0.34f, size.height * 0.24f, centerX + size.width * 0.25f, size.height * 0.10f)
+            }
+            TransformationPose.ABS_AND_CORE -> {
+                limb(centerX - shoulderHalf, shoulderY, centerX - size.width * 0.24f, size.height * 0.12f)
+                limb(centerX - size.width * 0.24f, size.height * 0.12f, centerX - size.width * 0.09f, size.height * 0.05f)
+                limb(centerX + shoulderHalf, shoulderY, centerX + size.width * 0.24f, size.height * 0.12f)
+                limb(centerX + size.width * 0.24f, size.height * 0.12f, centerX + size.width * 0.09f, size.height * 0.05f)
+            }
+            TransformationPose.FRONT_HANDS_ON_HIPS,
+            TransformationPose.BACK_LAT_SPREAD,
+            -> {
+                val elbowOffset = if (pose == TransformationPose.BACK_LAT_SPREAD) 0.34f else 0.28f
+                limb(centerX - shoulderHalf, shoulderY, centerX - size.width * elbowOffset, size.height * 0.49f)
+                limb(centerX - size.width * elbowOffset, size.height * 0.49f, centerX - hipHalf, hipY)
+                limb(centerX + shoulderHalf, shoulderY, centerX + size.width * elbowOffset, size.height * 0.49f)
+                limb(centerX + size.width * elbowOffset, size.height * 0.49f, centerX + hipHalf, hipY)
+            }
+            TransformationPose.CHEST_FOCUSED,
+            TransformationPose.RIGHT_SIDE_FLEXED,
+            TransformationPose.LEFT_SIDE_FLEXED,
+            TransformationPose.SIDE_CHEST_RIGHT,
+            TransformationPose.SIDE_CHEST_LEFT,
+            -> {
+                limb(centerX - shoulderHalf, shoulderY, centerX - size.width * 0.22f, size.height * 0.50f)
+                limb(centerX - size.width * 0.22f, size.height * 0.50f, centerX, size.height * 0.58f)
+                limb(centerX + shoulderHalf, shoulderY, centerX + size.width * 0.22f, size.height * 0.50f)
+                limb(centerX + size.width * 0.22f, size.height * 0.50f, centerX, size.height * 0.58f)
+            }
+            else -> {
+                limb(centerX - shoulderHalf, shoulderY, centerX - size.width * 0.23f, size.height * 0.63f)
+                limb(centerX + shoulderHalf, shoulderY, centerX + size.width * 0.23f, size.height * 0.63f)
+            }
+        }
+    }
+}
+
+@Composable
+internal fun PoseSelectorDialog(
+    enabledPoses: List<TransformationPose>,
+    onToggle: (TransformationPose, Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose transformation poses") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Text(
+                    "Four relaxed views stay enabled for consistent basic check-ins.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                TransformationPose.defaultPoses.forEach { pose ->
+                    Text("• ${pose.label}", style = MaterialTheme.typography.bodyMedium)
+                }
+                TransformationPoseGroup.entries.filterNot { it == TransformationPoseGroup.BASIC }.forEach { group ->
+                    Spacer(modifier = Modifier.height(18.dp))
+                    Text(group.label.uppercase(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    TransformationPose.entries.filter { it.group == group }.forEach { pose ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(pose.label, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    pose.guidance,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = pose in enabledPoses,
+                                onCheckedChange = { onToggle(pose, it) },
+                                modifier = Modifier.semantics {
+                                    contentDescription = "Enable ${pose.label}"
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) { Text("Done") }
+        },
+    )
 }
 
 @Composable
@@ -600,20 +879,27 @@ private fun MeasurementEditorDialog(
     )
 }
 
-private fun cycleWeekId(weeks: List<TransformationWeek>, currentWeekId: String?, delta: Int): String? {
-    if (weeks.isEmpty()) {
+private fun cycleDayDate(days: List<TransformationCycleDay>, currentCaptureDate: String?, delta: Int): LocalDate? {
+    if (days.isEmpty()) {
         return null
     }
-    val currentIndex = weeks.indexOfFirst { it.id == currentWeekId }.takeIf { it >= 0 } ?: 0
-    val nextIndex = (currentIndex + delta).mod(weeks.size)
-    return weeks[nextIndex].id
+    val currentIndex = days.indexOfFirst { it.captureDate.toString() == currentCaptureDate }.takeIf { it >= 0 } ?: 0
+    val nextIndex = (currentIndex + delta).mod(days.size)
+    return days[nextIndex].captureDate
 }
 
-private val TransformationPhotoAngle.label: String
-    get() = when (this) {
-        TransformationPhotoAngle.FRONT -> "Front"
-        TransformationPhotoAngle.LEFT -> "Left"
-        TransformationPhotoAngle.RIGHT -> "Right"
-        TransformationPhotoAngle.BACK -> "Back"
-        TransformationPhotoAngle.LEGS -> "Legs"
-    }
+private fun TransformationCycle?.availableComparisonPoses(
+    enabledPoses: List<TransformationPose>,
+): List<TransformationPose> {
+    val captured = this?.days.orEmpty().flatMap(TransformationCycleDay::photos).map(TransformationPhoto::pose).toSet()
+    return TransformationPose.entries.filter { it in enabledPoses || it in captured }
+}
+
+private val sidePoses = setOf(
+    TransformationPose.RIGHT_SIDE_RELAXED,
+    TransformationPose.LEFT_SIDE_RELAXED,
+    TransformationPose.RIGHT_SIDE_FLEXED,
+    TransformationPose.LEFT_SIDE_FLEXED,
+    TransformationPose.SIDE_CHEST_RIGHT,
+    TransformationPose.SIDE_CHEST_LEFT,
+)

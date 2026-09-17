@@ -9,14 +9,6 @@ import androidx.room.Relation
 import com.keepfit.core.database.profile.BodyProfileEntity
 import java.time.LocalDate
 
-enum class TransformationPhotoAngle {
-    FRONT,
-    LEFT,
-    RIGHT,
-    BACK,
-    LEGS,
-}
-
 @Entity(
     tableName = "body_measurements",
     foreignKeys = [
@@ -46,7 +38,7 @@ data class BodyMeasurementEntity(
 )
 
 @Entity(
-    tableName = "transformation_weeks",
+    tableName = "transformation_cycles",
     foreignKeys = [
         ForeignKey(
             entity = BodyProfileEntity::class,
@@ -55,40 +47,65 @@ data class BodyMeasurementEntity(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("bodyProfileId"), Index(value = ["bodyProfileId", "weekStartDate"], unique = true)],
+    indices = [Index("bodyProfileId"), Index("startDate"), Index("closedAt")],
 )
-data class TransformationWeekEntity(
+data class TransformationCycleEntity(
     @PrimaryKey val id: String,
     val bodyProfileId: String,
-    val weekStartDate: LocalDate,
+    val startDate: LocalDate,
     val notes: String?,
+    val closedAt: Long?,
     val createdAt: Long,
+    val updatedAt: Long,
 )
 
 @Entity(
     tableName = "transformation_photos",
     foreignKeys = [
         ForeignKey(
-            entity = TransformationWeekEntity::class,
+            entity = TransformationCycleEntity::class,
             parentColumns = ["id"],
-            childColumns = ["transformationWeekId"],
+            childColumns = ["transformationCycleId"],
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("transformationWeekId"), Index(value = ["transformationWeekId", "angle"], unique = true)],
+    indices = [
+        Index("transformationCycleId"),
+        Index("captureDate"),
+        Index(value = ["transformationCycleId", "captureDate", "poseKey"], unique = true),
+    ],
 )
 data class TransformationPhotoEntity(
     @PrimaryKey val id: String,
-    val transformationWeekId: String,
-    val angle: TransformationPhotoAngle,
+    val transformationCycleId: String,
+    val captureDate: LocalDate,
+    val poseKey: String,
     val relativePath: String,
     val mimeType: String,
     val sizeBytes: Long,
     val createdAt: Long,
 )
 
-data class TransformationWeekDetails(
-    @Embedded val week: TransformationWeekEntity,
-    @Relation(parentColumn = "id", entityColumn = "transformationWeekId")
+@Entity(
+    tableName = "transformation_pose_preferences",
+    primaryKeys = ["bodyProfileId", "poseKey"],
+    foreignKeys = [
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class TransformationPosePreferenceEntity(
+    val bodyProfileId: String,
+    val poseKey: String,
+    val updatedAt: Long,
+)
+
+data class TransformationCycleDetails(
+    @Embedded val cycle: TransformationCycleEntity,
+    @Relation(parentColumn = "id", entityColumn = "transformationCycleId")
     val photos: List<TransformationPhotoEntity>,
 )

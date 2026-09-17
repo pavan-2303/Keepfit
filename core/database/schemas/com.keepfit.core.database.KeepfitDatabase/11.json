@@ -1,0 +1,2097 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 11,
+    "identityHash": "696d2f7fae1e11b62f76fa4ac705c661",
+    "entities": [
+      {
+        "tableName": "body_profiles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `displayName` TEXT NOT NULL, `heightCm` REAL, `birthDate` TEXT, `dailyCalorieGoal` REAL, `dailyProteinGoalGrams` REAL, `dailyCarbohydrateGoalGrams` REAL, `dailyFatGoalGrams` REAL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `archivedAt` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "displayName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "heightCm",
+            "columnName": "heightCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "birthDate",
+            "columnName": "birthDate",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "dailyCalorieGoal",
+            "columnName": "dailyCalorieGoal",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "dailyProteinGoalGrams",
+            "columnName": "dailyProteinGoalGrams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "dailyCarbohydrateGoalGrams",
+            "columnName": "dailyCarbohydrateGoalGrams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "dailyFatGoalGrams",
+            "columnName": "dailyFatGoalGrams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "archivedAt",
+            "columnName": "archivedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "foods",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `servingLabel` TEXT NOT NULL, `servingAmount` REAL NOT NULL, `calories` REAL NOT NULL, `proteinGrams` REAL NOT NULL, `carbohydrateGrams` REAL NOT NULL, `fatGrams` REAL NOT NULL, `isFavorite` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `archivedAt` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "servingLabel",
+            "columnName": "servingLabel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "servingAmount",
+            "columnName": "servingAmount",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "calories",
+            "columnName": "calories",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proteinGrams",
+            "columnName": "proteinGrams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carbohydrateGrams",
+            "columnName": "carbohydrateGrams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fatGrams",
+            "columnName": "fatGrams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFavorite",
+            "columnName": "isFavorite",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "archivedAt",
+            "columnName": "archivedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "saved_meals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `bodyProfileId` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_saved_meals_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_saved_meals_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "body_profiles",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "saved_meal_items",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `savedMealId` TEXT NOT NULL, `foodId` TEXT NOT NULL, `servings` REAL NOT NULL, `position` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`savedMealId`) REFERENCES `saved_meals`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`foodId`) REFERENCES `foods`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "savedMealId",
+            "columnName": "savedMealId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "foodId",
+            "columnName": "foodId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "servings",
+            "columnName": "servings",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_saved_meal_items_savedMealId",
+            "unique": false,
+            "columnNames": [
+              "savedMealId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_saved_meal_items_savedMealId` ON `${TABLE_NAME}` (`savedMealId`)"
+          },
+          {
+            "name": "index_saved_meal_items_foodId",
+            "unique": false,
+            "columnNames": [
+              "foodId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_saved_meal_items_foodId` ON `${TABLE_NAME}` (`foodId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "saved_meals",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "savedMealId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "foods",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "foodId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "food_diary_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `diaryDate` TEXT NOT NULL, `mealType` TEXT NOT NULL, `foodId` TEXT NOT NULL, `savedMealId` TEXT, `servings` REAL NOT NULL, `loggedAt` INTEGER NOT NULL, `bodyProfileId` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`foodId`) REFERENCES `foods`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`savedMealId`) REFERENCES `saved_meals`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "diaryDate",
+            "columnName": "diaryDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mealType",
+            "columnName": "mealType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "foodId",
+            "columnName": "foodId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "savedMealId",
+            "columnName": "savedMealId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "servings",
+            "columnName": "servings",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "loggedAt",
+            "columnName": "loggedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_food_diary_entries_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_diary_entries_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          },
+          {
+            "name": "index_food_diary_entries_diaryDate",
+            "unique": false,
+            "columnNames": [
+              "diaryDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_diary_entries_diaryDate` ON `${TABLE_NAME}` (`diaryDate`)"
+          },
+          {
+            "name": "index_food_diary_entries_foodId",
+            "unique": false,
+            "columnNames": [
+              "foodId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_diary_entries_foodId` ON `${TABLE_NAME}` (`foodId`)"
+          },
+          {
+            "name": "index_food_diary_entries_savedMealId",
+            "unique": false,
+            "columnNames": [
+              "savedMealId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_diary_entries_savedMealId` ON `${TABLE_NAME}` (`savedMealId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "foods",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "foodId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "saved_meals",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "savedMealId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "body_profiles",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "meal_quality_check_ins",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `diaryDate` TEXT NOT NULL, `mealType` TEXT NOT NULL, `quality` TEXT NOT NULL, `loggedAt` INTEGER NOT NULL, `bodyProfileId` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "diaryDate",
+            "columnName": "diaryDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mealType",
+            "columnName": "mealType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quality",
+            "columnName": "quality",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "loggedAt",
+            "columnName": "loggedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_meal_quality_check_ins_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_meal_quality_check_ins_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          },
+          {
+            "name": "index_meal_quality_check_ins_bodyProfileId_diaryDate_mealType",
+            "unique": true,
+            "columnNames": [
+              "bodyProfileId",
+              "diaryDate",
+              "mealType"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_meal_quality_check_ins_bodyProfileId_diaryDate_mealType` ON `${TABLE_NAME}` (`bodyProfileId`, `diaryDate`, `mealType`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "body_profiles",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "body_measurements",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `bodyProfileId` TEXT NOT NULL, `measurementDate` TEXT NOT NULL, `weightKg` REAL, `waistCm` REAL, `chestCm` REAL, `hipsCm` REAL, `leftArmCm` REAL, `rightArmCm` REAL, `leftThighCm` REAL, `rightThighCm` REAL, `notes` TEXT, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "measurementDate",
+            "columnName": "measurementDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weightKg",
+            "columnName": "weightKg",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "waistCm",
+            "columnName": "waistCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "chestCm",
+            "columnName": "chestCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "hipsCm",
+            "columnName": "hipsCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "leftArmCm",
+            "columnName": "leftArmCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "rightArmCm",
+            "columnName": "rightArmCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "leftThighCm",
+            "columnName": "leftThighCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "rightThighCm",
+            "columnName": "rightThighCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_body_measurements_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_body_measurements_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          },
+          {
+            "name": "index_body_measurements_measurementDate",
+            "unique": false,
+            "columnNames": [
+              "measurementDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_body_measurements_measurementDate` ON `${TABLE_NAME}` (`measurementDate`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "body_profiles",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "transformation_cycles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `bodyProfileId` TEXT NOT NULL, `startDate` TEXT NOT NULL, `notes` TEXT, `closedAt` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startDate",
+            "columnName": "startDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "closedAt",
+            "columnName": "closedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_transformation_cycles_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transformation_cycles_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          },
+          {
+            "name": "index_transformation_cycles_startDate",
+            "unique": false,
+            "columnNames": [
+              "startDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transformation_cycles_startDate` ON `${TABLE_NAME}` (`startDate`)"
+          },
+          {
+            "name": "index_transformation_cycles_closedAt",
+            "unique": false,
+            "columnNames": [
+              "closedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transformation_cycles_closedAt` ON `${TABLE_NAME}` (`closedAt`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "body_profiles",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "transformation_photos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `transformationCycleId` TEXT NOT NULL, `captureDate` TEXT NOT NULL, `angle` TEXT NOT NULL, `relativePath` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `sizeBytes` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`transformationCycleId`) REFERENCES `transformation_cycles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transformationCycleId",
+            "columnName": "transformationCycleId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "captureDate",
+            "columnName": "captureDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "angle",
+            "columnName": "angle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relativePath",
+            "columnName": "relativePath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mimeType",
+            "columnName": "mimeType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "sizeBytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_transformation_photos_transformationCycleId",
+            "unique": false,
+            "columnNames": [
+              "transformationCycleId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transformation_photos_transformationCycleId` ON `${TABLE_NAME}` (`transformationCycleId`)"
+          },
+          {
+            "name": "index_transformation_photos_captureDate",
+            "unique": false,
+            "columnNames": [
+              "captureDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transformation_photos_captureDate` ON `${TABLE_NAME}` (`captureDate`)"
+          },
+          {
+            "name": "index_transformation_photos_transformationCycleId_captureDate_angle",
+            "unique": true,
+            "columnNames": [
+              "transformationCycleId",
+              "captureDate",
+              "angle"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_transformation_photos_transformationCycleId_captureDate_angle` ON `${TABLE_NAME}` (`transformationCycleId`, `captureDate`, `angle`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "transformation_cycles",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "transformationCycleId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "exercises",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `muscleGroup` TEXT NOT NULL, `instructions` TEXT, `notes` TEXT, `isBodyweight` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `archivedAt` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muscleGroup",
+            "columnName": "muscleGroup",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "instructions",
+            "columnName": "instructions",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isBodyweight",
+            "columnName": "isBodyweight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "archivedAt",
+            "columnName": "archivedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "exercise_media",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `exerciseId` TEXT NOT NULL, `mediaType` TEXT NOT NULL, `relativePath` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `sizeBytes` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`exerciseId`) REFERENCES `exercises`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exerciseId",
+            "columnName": "exerciseId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mediaType",
+            "columnName": "mediaType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relativePath",
+            "columnName": "relativePath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mimeType",
+            "columnName": "mimeType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "sizeBytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_exercise_media_exerciseId",
+            "unique": true,
+            "columnNames": [
+              "exerciseId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_exercise_media_exerciseId` ON `${TABLE_NAME}` (`exerciseId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "exercises",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "exerciseId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "workout_templates",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `notes` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `archivedAt` INTEGER, `origin` TEXT NOT NULL, `bodyProfileId` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "archivedAt",
+            "columnName": "archivedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "origin",
+            "columnName": "origin",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_workout_templates_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_templates_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "body_profiles",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "workout_template_exercises",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `workoutTemplateId` TEXT NOT NULL, `exerciseId` TEXT NOT NULL, `position` INTEGER NOT NULL, `targetSets` INTEGER NOT NULL, `targetReps` TEXT, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`workoutTemplateId`) REFERENCES `workout_templates`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`exerciseId`) REFERENCES `exercises`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workoutTemplateId",
+            "columnName": "workoutTemplateId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exerciseId",
+            "columnName": "exerciseId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetSets",
+            "columnName": "targetSets",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetReps",
+            "columnName": "targetReps",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_workout_template_exercises_workoutTemplateId",
+            "unique": false,
+            "columnNames": [
+              "workoutTemplateId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_template_exercises_workoutTemplateId` ON `${TABLE_NAME}` (`workoutTemplateId`)"
+          },
+          {
+            "name": "index_workout_template_exercises_exerciseId",
+            "unique": false,
+            "columnNames": [
+              "exerciseId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_template_exercises_exerciseId` ON `${TABLE_NAME}` (`exerciseId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "workout_templates",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workoutTemplateId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "exercises",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "exerciseId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "weekly_plans",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `startsOn` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `bodyProfileId` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startsOn",
+            "columnName": "startsOn",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_weekly_plans_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_weekly_plans_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "body_profiles",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "planned_workouts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `weeklyPlanId` TEXT NOT NULL, `workoutTemplateId` TEXT NOT NULL, `dayOfWeek` TEXT NOT NULL, `position` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`weeklyPlanId`) REFERENCES `weekly_plans`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`workoutTemplateId`) REFERENCES `workout_templates`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weeklyPlanId",
+            "columnName": "weeklyPlanId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workoutTemplateId",
+            "columnName": "workoutTemplateId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dayOfWeek",
+            "columnName": "dayOfWeek",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_planned_workouts_weeklyPlanId",
+            "unique": false,
+            "columnNames": [
+              "weeklyPlanId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_planned_workouts_weeklyPlanId` ON `${TABLE_NAME}` (`weeklyPlanId`)"
+          },
+          {
+            "name": "index_planned_workouts_workoutTemplateId",
+            "unique": false,
+            "columnNames": [
+              "workoutTemplateId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_planned_workouts_workoutTemplateId` ON `${TABLE_NAME}` (`workoutTemplateId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "weekly_plans",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "weeklyPlanId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "workout_templates",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workoutTemplateId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "workout_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `workoutTemplateId` TEXT, `plannedWorkoutId` TEXT, `workoutDate` TEXT NOT NULL, `startedAt` INTEGER NOT NULL, `completedAt` INTEGER, `notes` TEXT, `workoutOccurrenceId` TEXT, `sessionVariant` TEXT NOT NULL, `energyLevel` INTEGER, `difficulty` INTEGER, `bodyProfileId` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`workoutTemplateId`) REFERENCES `workout_templates`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`plannedWorkoutId`) REFERENCES `planned_workouts`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workoutTemplateId",
+            "columnName": "workoutTemplateId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "plannedWorkoutId",
+            "columnName": "plannedWorkoutId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "workoutDate",
+            "columnName": "workoutDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "startedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "workoutOccurrenceId",
+            "columnName": "workoutOccurrenceId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sessionVariant",
+            "columnName": "sessionVariant",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "energyLevel",
+            "columnName": "energyLevel",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "difficulty",
+            "columnName": "difficulty",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_workout_sessions_workoutTemplateId",
+            "unique": false,
+            "columnNames": [
+              "workoutTemplateId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_sessions_workoutTemplateId` ON `${TABLE_NAME}` (`workoutTemplateId`)"
+          },
+          {
+            "name": "index_workout_sessions_plannedWorkoutId",
+            "unique": false,
+            "columnNames": [
+              "plannedWorkoutId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_sessions_plannedWorkoutId` ON `${TABLE_NAME}` (`plannedWorkoutId`)"
+          },
+          {
+            "name": "index_workout_sessions_workoutOccurrenceId",
+            "unique": false,
+            "columnNames": [
+              "workoutOccurrenceId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_sessions_workoutOccurrenceId` ON `${TABLE_NAME}` (`workoutOccurrenceId`)"
+          },
+          {
+            "name": "index_workout_sessions_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_sessions_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "workout_templates",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workoutTemplateId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "planned_workouts",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "plannedWorkoutId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "body_profiles",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "exercise_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `workoutSessionId` TEXT NOT NULL, `exerciseId` TEXT NOT NULL, `position` INTEGER NOT NULL, `notes` TEXT, `targetSets` INTEGER, `targetReps` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`workoutSessionId`) REFERENCES `workout_sessions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`exerciseId`) REFERENCES `exercises`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workoutSessionId",
+            "columnName": "workoutSessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exerciseId",
+            "columnName": "exerciseId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "targetSets",
+            "columnName": "targetSets",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "targetReps",
+            "columnName": "targetReps",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_exercise_logs_workoutSessionId",
+            "unique": false,
+            "columnNames": [
+              "workoutSessionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_logs_workoutSessionId` ON `${TABLE_NAME}` (`workoutSessionId`)"
+          },
+          {
+            "name": "index_exercise_logs_exerciseId",
+            "unique": false,
+            "columnNames": [
+              "exerciseId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_logs_exerciseId` ON `${TABLE_NAME}` (`exerciseId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "workout_sessions",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workoutSessionId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "exercises",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "exerciseId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "set_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `exerciseLogId` TEXT NOT NULL, `position` INTEGER NOT NULL, `repetitions` INTEGER NOT NULL, `weightKg` REAL NOT NULL, `isCompleted` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`exerciseLogId`) REFERENCES `exercise_logs`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exerciseLogId",
+            "columnName": "exerciseLogId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "repetitions",
+            "columnName": "repetitions",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weightKg",
+            "columnName": "weightKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isCompleted",
+            "columnName": "isCompleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_set_logs_exerciseLogId",
+            "unique": false,
+            "columnNames": [
+              "exerciseLogId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_set_logs_exerciseLogId` ON `${TABLE_NAME}` (`exerciseLogId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "exercise_logs",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "exerciseLogId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "journey_profiles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `bodyProfileId` TEXT NOT NULL, `primaryGoal` TEXT NOT NULL, `experienceLevel` TEXT NOT NULL, `preferredDays` TEXT NOT NULL, `sessionMinutes` INTEGER NOT NULL, `equipment` TEXT NOT NULL, `avoidedExerciseKeys` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "primaryGoal",
+            "columnName": "primaryGoal",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "experienceLevel",
+            "columnName": "experienceLevel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "preferredDays",
+            "columnName": "preferredDays",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionMinutes",
+            "columnName": "sessionMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "equipment",
+            "columnName": "equipment",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avoidedExerciseKeys",
+            "columnName": "avoidedExerciseKeys",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_journey_profiles_bodyProfileId",
+            "unique": true,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_journey_profiles_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "body_profiles",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "workout_occurrences",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `sourcePlannedWorkoutId` TEXT, `sourceTemplateId` TEXT, `templateNameSnapshot` TEXT NOT NULL, `originalDate` TEXT NOT NULL, `scheduledDate` TEXT NOT NULL, `decisionType` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `bodyProfileId` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`sourcePlannedWorkoutId`) REFERENCES `planned_workouts`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourcePlannedWorkoutId",
+            "columnName": "sourcePlannedWorkoutId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sourceTemplateId",
+            "columnName": "sourceTemplateId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "templateNameSnapshot",
+            "columnName": "templateNameSnapshot",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalDate",
+            "columnName": "originalDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scheduledDate",
+            "columnName": "scheduledDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "decisionType",
+            "columnName": "decisionType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_workout_occurrences_sourcePlannedWorkoutId",
+            "unique": false,
+            "columnNames": [
+              "sourcePlannedWorkoutId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_occurrences_sourcePlannedWorkoutId` ON `${TABLE_NAME}` (`sourcePlannedWorkoutId`)"
+          },
+          {
+            "name": "index_workout_occurrences_originalDate",
+            "unique": false,
+            "columnNames": [
+              "originalDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_occurrences_originalDate` ON `${TABLE_NAME}` (`originalDate`)"
+          },
+          {
+            "name": "index_workout_occurrences_scheduledDate",
+            "unique": false,
+            "columnNames": [
+              "scheduledDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_occurrences_scheduledDate` ON `${TABLE_NAME}` (`scheduledDate`)"
+          },
+          {
+            "name": "index_workout_occurrences_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_occurrences_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          },
+          {
+            "name": "index_workout_occurrences_bodyProfileId_sourcePlannedWorkoutId_originalDate",
+            "unique": true,
+            "columnNames": [
+              "bodyProfileId",
+              "sourcePlannedWorkoutId",
+              "originalDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_workout_occurrences_bodyProfileId_sourcePlannedWorkoutId_originalDate` ON `${TABLE_NAME}` (`bodyProfileId`, `sourcePlannedWorkoutId`, `originalDate`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "planned_workouts",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "sourcePlannedWorkoutId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "body_profiles",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "workout_occurrence_exercises",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `workoutOccurrenceId` TEXT NOT NULL, `sourceTemplateExerciseId` TEXT, `exerciseId` TEXT NOT NULL, `exerciseNameSnapshot` TEXT NOT NULL, `position` INTEGER NOT NULL, `targetSets` INTEGER NOT NULL, `targetReps` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`workoutOccurrenceId`) REFERENCES `workout_occurrences`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`exerciseId`) REFERENCES `exercises`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workoutOccurrenceId",
+            "columnName": "workoutOccurrenceId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceTemplateExerciseId",
+            "columnName": "sourceTemplateExerciseId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "exerciseId",
+            "columnName": "exerciseId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exerciseNameSnapshot",
+            "columnName": "exerciseNameSnapshot",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetSets",
+            "columnName": "targetSets",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetReps",
+            "columnName": "targetReps",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_workout_occurrence_exercises_workoutOccurrenceId",
+            "unique": false,
+            "columnNames": [
+              "workoutOccurrenceId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_occurrence_exercises_workoutOccurrenceId` ON `${TABLE_NAME}` (`workoutOccurrenceId`)"
+          },
+          {
+            "name": "index_workout_occurrence_exercises_exerciseId",
+            "unique": false,
+            "columnNames": [
+              "exerciseId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_occurrence_exercises_exerciseId` ON `${TABLE_NAME}` (`exerciseId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "workout_occurrences",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workoutOccurrenceId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "exercises",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "exerciseId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "weekly_review_outcomes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `weekStart` TEXT NOT NULL, `status` TEXT NOT NULL, `draftType` TEXT, `sourcePlannedWorkoutId` TEXT, `sourceDate` TEXT, `targetDate` TEXT, `occurrenceId` TEXT, `decidedAt` INTEGER NOT NULL, `bodyProfileId` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`bodyProfileId`) REFERENCES `body_profiles`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weekStart",
+            "columnName": "weekStart",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "draftType",
+            "columnName": "draftType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sourcePlannedWorkoutId",
+            "columnName": "sourcePlannedWorkoutId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sourceDate",
+            "columnName": "sourceDate",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "targetDate",
+            "columnName": "targetDate",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "occurrenceId",
+            "columnName": "occurrenceId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "decidedAt",
+            "columnName": "decidedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyProfileId",
+            "columnName": "bodyProfileId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_weekly_review_outcomes_bodyProfileId",
+            "unique": false,
+            "columnNames": [
+              "bodyProfileId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_weekly_review_outcomes_bodyProfileId` ON `${TABLE_NAME}` (`bodyProfileId`)"
+          },
+          {
+            "name": "index_weekly_review_outcomes_bodyProfileId_weekStart",
+            "unique": true,
+            "columnNames": [
+              "bodyProfileId",
+              "weekStart"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_weekly_review_outcomes_bodyProfileId_weekStart` ON `${TABLE_NAME}` (`bodyProfileId`, `weekStart`)"
+          },
+          {
+            "name": "index_weekly_review_outcomes_occurrenceId",
+            "unique": false,
+            "columnNames": [
+              "occurrenceId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_weekly_review_outcomes_occurrenceId` ON `${TABLE_NAME}` (`occurrenceId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "body_profiles",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bodyProfileId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '696d2f7fae1e11b62f76fa4ac705c661')"
+    ]
+  }
+}

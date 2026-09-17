@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import com.keepfit.core.database.profile.BodyProfileEntity
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -20,6 +21,11 @@ data class ExerciseEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val archivedAt: Long?,
+    val source: String? = null,
+    val sourceId: String? = null,
+    val equipment: String? = null,
+    val targetMuscle: String? = null,
+    val secondaryMuscles: String? = null,
 )
 
 @Entity(
@@ -44,7 +50,23 @@ data class ExerciseMediaEntity(
     val createdAt: Long,
 )
 
-@Entity(tableName = "workout_templates")
+data class ExerciseDetails(
+    @Embedded val exercise: ExerciseEntity,
+    @Relation(parentColumn = "id", entityColumn = "exerciseId")
+    val media: ExerciseMediaEntity?,
+)
+
+@Entity(
+    tableName = "workout_templates",
+    foreignKeys = [
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
+    ],
+    indices = [Index("bodyProfileId")],
+)
 data class WorkoutTemplateEntity(
     @PrimaryKey val id: String,
     val name: String,
@@ -52,6 +74,8 @@ data class WorkoutTemplateEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val archivedAt: Long?,
+    val origin: String = "CUSTOM",
+    val bodyProfileId: String = "",
 )
 
 @Entity(
@@ -81,7 +105,17 @@ data class WorkoutTemplateExerciseEntity(
     val notes: String?,
 )
 
-@Entity(tableName = "weekly_plans")
+@Entity(
+    tableName = "weekly_plans",
+    foreignKeys = [
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
+    ],
+    indices = [Index("bodyProfileId")],
+)
 data class WeeklyPlanEntity(
     @PrimaryKey val id: String,
     val name: String,
@@ -89,6 +123,7 @@ data class WeeklyPlanEntity(
     val isActive: Boolean,
     val createdAt: Long,
     val updatedAt: Long,
+    val bodyProfileId: String = "",
 )
 
 @Entity(
@@ -117,6 +152,70 @@ data class PlannedWorkoutEntity(
 )
 
 @Entity(
+    tableName = "workout_occurrences",
+    foreignKeys = [
+        ForeignKey(
+            entity = PlannedWorkoutEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["sourcePlannedWorkoutId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
+    ],
+    indices = [
+        Index("sourcePlannedWorkoutId"),
+        Index("originalDate"),
+        Index("scheduledDate"),
+        Index("bodyProfileId"),
+        Index(value = ["bodyProfileId", "sourcePlannedWorkoutId", "originalDate"], unique = true),
+    ],
+)
+data class WorkoutOccurrenceEntity(
+    @PrimaryKey val id: String,
+    val sourcePlannedWorkoutId: String?,
+    val sourceTemplateId: String?,
+    val templateNameSnapshot: String,
+    val originalDate: LocalDate,
+    val scheduledDate: LocalDate,
+    val decisionType: String,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val bodyProfileId: String = "",
+)
+
+@Entity(
+    tableName = "workout_occurrence_exercises",
+    foreignKeys = [
+        ForeignKey(
+            entity = WorkoutOccurrenceEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["workoutOccurrenceId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = ExerciseEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["exerciseId"],
+        ),
+    ],
+    indices = [Index("workoutOccurrenceId"), Index("exerciseId")],
+)
+data class WorkoutOccurrenceExerciseEntity(
+    @PrimaryKey val id: String,
+    val workoutOccurrenceId: String,
+    val sourceTemplateExerciseId: String?,
+    val exerciseId: String,
+    val exerciseNameSnapshot: String,
+    val position: Int,
+    val targetSets: Int,
+    val targetReps: String?,
+)
+
+@Entity(
     tableName = "workout_sessions",
     foreignKeys = [
         ForeignKey(
@@ -129,8 +228,18 @@ data class PlannedWorkoutEntity(
             parentColumns = ["id"],
             childColumns = ["plannedWorkoutId"],
         ),
+        ForeignKey(
+            entity = BodyProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["bodyProfileId"],
+        ),
     ],
-    indices = [Index("workoutTemplateId"), Index("plannedWorkoutId")],
+    indices = [
+        Index("workoutTemplateId"),
+        Index("plannedWorkoutId"),
+        Index("workoutOccurrenceId"),
+        Index("bodyProfileId"),
+    ],
 )
 data class WorkoutSessionEntity(
     @PrimaryKey val id: String,
@@ -140,6 +249,11 @@ data class WorkoutSessionEntity(
     val startedAt: Long,
     val completedAt: Long?,
     val notes: String?,
+    val workoutOccurrenceId: String? = null,
+    val sessionVariant: String = "FULL",
+    val energyLevel: Int? = null,
+    val difficulty: Int? = null,
+    val bodyProfileId: String = "",
 )
 
 @Entity(
@@ -165,6 +279,8 @@ data class ExerciseLogEntity(
     val exerciseId: String,
     val position: Int,
     val notes: String?,
+    val targetSets: Int? = null,
+    val targetReps: String? = null,
 )
 
 @Entity(
@@ -233,6 +349,17 @@ data class PlannedWorkoutRow(
     val dayOfWeek: DayOfWeek,
     val position: Int,
     val templateName: String,
+    val planStartsOn: LocalDate,
+)
+
+data class WorkoutOccurrenceDetails(
+    @Embedded val occurrence: WorkoutOccurrenceEntity,
+    @Relation(
+        entity = WorkoutOccurrenceExerciseEntity::class,
+        parentColumn = "id",
+        entityColumn = "workoutOccurrenceId",
+    )
+    val exercises: List<WorkoutOccurrenceExerciseEntity>,
 )
 
 data class PersonalRecordRow(
@@ -250,4 +377,10 @@ data class PreviousSetRow(
 data class CompletedWorkoutDayRow(
     val workoutDate: LocalDate,
     val completedCount: Int,
+)
+
+data class ExercisePerformanceRow(
+    val exerciseId: String,
+    val highestWeightKg: Double,
+    val highestRepetitions: Int,
 )

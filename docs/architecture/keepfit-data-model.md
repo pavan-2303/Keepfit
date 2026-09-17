@@ -19,15 +19,19 @@ storage and are addressed by stable relative paths.
 Exercise 1 --- 0..1 ExerciseMedia
 Exercise 1 --- * WorkoutTemplateExercise * --- 1 WorkoutTemplate
 WorkoutTemplate 1 --- * PlannedWorkout * --- 1 WeeklyPlan
+PlannedWorkout 1 --- * WorkoutOccurrence 1 --- * WorkoutOccurrenceExercise
+WorkoutOccurrence 1 --- * WorkoutSession
 WorkoutSession 1 --- * ExerciseLog 1 --- * SetLog
 Exercise 1 --- * ExerciseLog
 
 Food 1 --- * SavedMealItem * --- 1 SavedMeal
 Food 1 --- * FoodDiaryEntry
 SavedMeal 1 --- * FoodDiaryEntry
+LocalDate + MealType 1 --- 0..1 MealQualityCheckIn
 
 BodyProfile 1 --- * BodyMeasurement
-BodyProfile 1 --- * TransformationWeek 1 --- * TransformationPhoto
+BodyProfile 1 --- 0..1 JourneyProfile
+BodyProfile 1 --- * TransformationCycle 1 --- * TransformationPhoto
 
 AssistantConversation 1 --- * AssistantMessage
 ```
@@ -47,6 +51,11 @@ AssistantConversation 1 --- * AssistantMessage
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last edit timestamp |
 | `archivedAt` | Instant? | Soft-delete marker |
+| `source` | String? | Bundled source name; null for user-created rows |
+| `sourceId` | String? | Stable identifier at the bundled source |
+| `equipment` | String? | Normalized equipment label |
+| `targetMuscle` | String? | Normalized primary target |
+| `secondaryMuscles` | String? | Canonical comma-separated secondary targets |
 
 Archive exercises instead of deleting them when history references them.
 
@@ -66,6 +75,33 @@ Replacing media creates a new file and updates this record only after the copy
 succeeds. Removing an exercise archive does not remove historical exercise
 logs.
 
+### Bundled exercise catalogue data
+
+The normalized bundled catalogue is seeded directly into `Exercise`, making
+its stable UUIDs immediately usable by templates, plans, history, and future
+validated drafts. User-created rows keep null provenance fields. Editing a
+bundled exercise preserves its provenance, and a later seed uses `INSERT OR
+IGNORE` so local edits are not overwritten.
+
+`CatalogueImport` records the installed revision:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `source` | String | Primary key, currently `hasaneyldrm/exercises-dataset` |
+| `revision` | String | Exact audited upstream Git commit |
+| `recordCount` | Int | Accepted normalized row count |
+| `importedAt` | Instant | Deterministic source-import timestamp |
+
+The bundled asset contains metadata and English instructions only. Upstream
+media identifiers, paths, URLs, images, and GIFs are excluded. Room and the
+revision ledger are part of normal encrypted and platform database backups.
+
+The owned core guidance pack is immutable application code rather than
+persisted user data. It maps 25 stable bundled exercise UUIDs to reviewed cues,
+rights metadata, equipment hints, and normalized start/finish body poses. It
+does not change the Room schema or backup contract. User-imported media remains
+the only exercise visual stored in `ExerciseMedia`.
+
 ### `WorkoutTemplate`
 
 | Field | Type | Notes |
@@ -76,6 +112,7 @@ logs.
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last edit timestamp |
 | `archivedAt` | Instant? | Soft-delete marker |
+| `origin` | Enum | `CUSTOM` or `STARTER_PLAN`; existing rows migrate to `CUSTOM` |
 
 ### `WorkoutTemplateExercise`
 
@@ -88,6 +125,13 @@ logs.
 | `targetSets` | Int | Required positive value |
 | `targetReps` | String? | Optional free-form target such as `8-10` |
 | `notes` | String? | Optional template-specific note |
+
+Renaming a template updates only its name and timestamp. Adding exercises
+appends new rows with new UUIDs and default `3 x 8-10` targets. Editing a
+prescription keeps the `WorkoutTemplateExercise` UUID and changes only its
+target fields. Removing one row normalizes the remaining positions and is
+rejected when it would leave an empty template. None of these actions rewrites
+dated occurrences or completed workout snapshots.
 
 ### `WeeklyPlan`
 
@@ -110,6 +154,40 @@ logs.
 | `dayOfWeek` | Enum | Monday through Sunday |
 | `position` | Int | Supports more than one planned workout on a day |
 
+### `WorkoutOccurrence`
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | UUID | Primary key |
+| `sourcePlannedWorkoutId` | UUID? | Nullable provenance; source deletion sets this to null |
+| `sourceTemplateId` | UUID? | Logical template provenance retained without a cascading foreign key |
+| `templateNameSnapshot` | String | Display name reviewed for this date |
+| `originalDate` | LocalDate | Date produced by the recurring plan |
+| `scheduledDate` | LocalDate | Current execution date after any reschedule |
+| `decisionType` | Enum | `FULL`, `SHORTENED`, `MINIMUM`, `SUBSTITUTED`, `RESCHEDULED`, or `SKIPPED` |
+| `createdAt` | Instant | Creation timestamp |
+| `updatedAt` | Instant | Last confirmed change timestamp |
+
+One occurrence exists per retained source planned workout and original date.
+The occurrence survives source-plan deletion and preserves its reviewed name
+and exercise snapshot.
+
+### `WorkoutOccurrenceExercise`
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | UUID | Primary key |
+| `workoutOccurrenceId` | UUID | Foreign key to `WorkoutOccurrence` |
+| `sourceTemplateExerciseId` | UUID? | Optional provenance for the template row |
+| `exerciseId` | UUID | Non-cascading foreign key to `Exercise` |
+| `exerciseNameSnapshot` | String | Name reviewed when the occurrence was confirmed |
+| `position` | Int | Reviewed execution order |
+| `targetSets` | Int | Positive target for this occurrence |
+| `targetReps` | String? | Reviewed repetition target |
+
+These rows are execution snapshots. Editing them through a dated Today action
+does not modify `WorkoutTemplateExercise`.
+
 ### `WorkoutSession`
 
 | Field | Type | Notes |
@@ -117,10 +195,14 @@ logs.
 | `id` | UUID | Primary key |
 | `workoutTemplateId` | UUID? | Nullable for an ad-hoc session |
 | `plannedWorkoutId` | UUID? | Nullable when started outside a plan |
+| `workoutOccurrenceId` | UUID? | Nullable logical link for sessions started from a dated occurrence |
 | `workoutDate` | LocalDate | Local calendar date |
 | `startedAt` | Instant | Session start |
 | `completedAt` | Instant? | Null while active |
 | `notes` | String? | Optional session note |
+| `sessionVariant` | Enum | Canonical execution form such as `FULL`, `SHORTENED`, or `MINIMUM` |
+| `energyLevel` | Int? | Optional completion feedback from 1 through 5 |
+| `difficulty` | Int? | Optional completion feedback from 1 through 5 |
 
 Only one incomplete session may be active at a time.
 
@@ -133,6 +215,13 @@ Only one incomplete session may be active at a time.
 | `exerciseId` | UUID | Foreign key to `Exercise` |
 | `position` | Int | Exercise display order |
 | `notes` | String? | Session-specific notes |
+| `targetSets` | Int? | Target snapshot retained for this session |
+| `targetReps` | String? | Repetition-target snapshot retained for this session |
+
+Active-session substitution changes only `ExerciseLog.exerciseId` and is
+allowed only before that log has sets. Minimum conversion retains the first two
+logs, caps their target sets at two, and rejects removal if any later log has
+sets. Neither command modifies the template or dated occurrence.
 
 ### `SetLog`
 
@@ -203,19 +292,33 @@ Daily calorie and macro totals are derived queries over diary entries. Recent
 foods and duplicate-yesterday behavior are queries and commands, not separate
 entities.
 
+### `MealQualityCheckIn`
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | UUID | Primary key |
+| `diaryDate` | LocalDate | Local calendar date |
+| `mealType` | Enum | `BREAKFAST`, `LUNCH`, `DINNER`, or `SNACK` |
+| `quality` | Enum | `BALANCED`, `ONE_FOCUS`, or `FLEXIBLE` |
+| `loggedAt` | Instant | Latest selection timestamp |
+
+The pair of date and meal type is unique. Choosing another quality replaces
+that meal's check-in. Check-ins remain stored when another tracking depth is
+selected and do not create or modify food diary entries.
+
 ## 5. Transformation Domain
 
 ### `BodyProfile`
 
-MVP contains exactly one profile row but models it explicitly so future profile
-changes do not affect transformation history.
+Each local person has one profile row. The active profile is selected outside
+Room, and transformation history remains owned by its recorded profile.
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `id` | UUID | Primary key |
 | `displayName` | String | Required |
 | `heightCm` | Decimal? | Optional BMI input |
-| `birthDate` | LocalDate? | Optional context for future suggestions |
+| `birthDate` | LocalDate? | Optional source for locally derived age context |
 | `dailyCalorieGoal` | Decimal? | Optional daily calorie target |
 | `dailyProteinGoalGrams` | Decimal? | Optional daily protein target |
 | `dailyCarbohydrateGoalGrams` | Decimal? | Optional daily carbohydrate target |
@@ -224,6 +327,10 @@ changes do not affect transformation history.
 | `updatedAt` | Instant | Last edit timestamp |
 
 ### `BodyMeasurement`
+
+When a starting weight is supplied during first-run onboarding, the profile
+and its first `BodyMeasurement` are written in one Room transaction. No schema
+change is needed because both records already exist in the authoritative model.
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -244,33 +351,105 @@ changes do not affect transformation history.
 BMI is derived from the most recent weight and profile height. It is displayed
 as a general reference value, not a diagnosis.
 
-### `TransformationWeek`
+### `TransformationCycle`
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `id` | UUID | Primary key |
 | `bodyProfileId` | UUID | Foreign key to `BodyProfile` |
-| `weekStartDate` | LocalDate | Monday-normalized and unique per profile |
-| `notes` | String? | Optional weekly note |
+| `startDate` | LocalDate | Derived from the first uploaded photo batch |
+| `notes` | String? | Optional cycle note |
+| `closedAt` | Instant? | Null while the cycle is active |
 | `createdAt` | Instant | Creation timestamp |
+| `updatedAt` | Instant | Last state update |
 
 ### `TransformationPhoto`
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `id` | UUID | Primary key |
-| `transformationWeekId` | UUID | Foreign key to `TransformationWeek` |
-| `angle` | Enum | `FRONT`, `LEFT`, `RIGHT`, `BACK`, or `LEGS` |
+| `transformationCycleId` | UUID | Foreign key to `TransformationCycle` |
+| `captureDate` | LocalDate | Upload day within the cycle |
+| `poseKey` | String | Stable key from the approved 15-pose catalogue |
 | `relativePath` | String | Path below `files/media/transformation/` |
 | `mimeType` | String | Validated during import |
 | `sizeBytes` | Long | Used for backup summaries |
 | `createdAt` | Instant | Import timestamp |
 
-Allow at most one photo for each week and angle. Replacement follows the same
-copy-before-update rule as exercise media. Phase 1C supports private JPEG, PNG,
-and WebP imports.
+Allow at most one photo for each cycle day and pose key. Uploading the same
+pose twice on the same day replaces the earlier file. Replacement follows the
+same copy-before-update rule as exercise media. JPEG, PNG, and WebP imports are
+oriented, bounded to a 2048-pixel maximum edge, and re-encoded without source
+EXIF metadata before entering app-private storage.
+
+Legacy `FRONT`, `RIGHT`, `BACK`, and `LEFT` values migrate to
+`front_relaxed`, `right_side_relaxed`, `back_relaxed`, and
+`left_side_relaxed` respectively.
+
+### `TransformationPosePreference`
+
+Stores only additional poses enabled by one profile. The four Basic catalogue
+poses are always derived as enabled, so a profile with no rows has the durable
+four-pose default.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `bodyProfileId` | UUID | Composite primary key and cascading profile foreign key |
+| `poseKey` | String | Composite primary key; must identify a non-Basic catalogue pose |
+| `updatedAt` | Instant | Last selection timestamp |
 
 ## 6. Settings and Goals
+
+### `WeeklyReviewOutcome`
+
+Stores the single durable decision for a reviewed ISO week. Review summaries
+and draft previews are derived and are not persisted.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | UUID | Primary key |
+| `weekStart` | LocalDate | Unique Monday for the reviewed week |
+| `status` | Enum | `APPROVED` or `DISMISSED` |
+| `draftType` | Enum? | Minimum, shortened, moved, or one-set increase when approved |
+| `sourcePlannedWorkoutId` | UUID? | Selected recurring workout at decision time |
+| `sourceDate` | LocalDate? | Original date in the coming week |
+| `targetDate` | LocalDate? | Effective date in the coming week |
+| `occurrenceId` | UUID? | Dated occurrence created by an approved decision |
+| `decidedAt` | Instant | UTC decision timestamp |
+
+Approval and its occurrence write in one Room transaction. The outcome is
+unique by `weekStart`, making repeated approve or dismiss commands idempotent.
+The outcome records why the current week differs without owning the recurring
+plan. Dismissal leaves all workout data unchanged.
+
+Weekly-review pause is a DataStore Boolean because it is a simple presentation
+preference. It does not delete outcomes, workout history, nutrition logs, or
+Health Connect data.
+
+### `JourneyProfile`
+
+Stores the latest choices used by the deterministic offline starter-week
+planner. There is at most one row for the local body profile. Survey changes
+are saved as they are made so leaving setup does not discard them; applying a
+reviewed week remains a separate explicit operation.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | UUID | Primary key |
+| `bodyProfileId` | UUID | Unique foreign key to `BodyProfile`; cascades on profile deletion |
+| `primaryGoal` | Enum | General fitness, consistency, strength, muscle gain, or fat loss |
+| `experienceLevel` | Enum | Beginner, intermediate, or experienced |
+| `preferredDays` | Enum set | Canonical comma-separated weekday names |
+| `sessionMinutes` | Int | One of 15, 30, 45, or 60 |
+| `equipment` | Enum set | Canonical comma-separated equipment choices |
+| `avoidedExerciseKeys` | String set | Stable keys from the owned starter catalogue |
+| `createdAt` | Instant | Creation timestamp |
+| `updatedAt` | Instant | Last edit timestamp |
+
+Applying a reviewed starter week is transactional. It deactivates the prior
+weekly plan and archives only active templates whose origin is `STARTER_PLAN`.
+Custom templates, exercises, completed sessions, imported media, and historical
+plans remain intact.
 
 ### `UserGoal`
 
@@ -297,21 +476,70 @@ Store simple local settings in DataStore rather than Room:
 - preferred measurement unit;
 - week start preference;
 - workout reminder settings;
-- weekly transformation reminder settings;
+- transformation-cycle reminder settings;
 - rest timer duration;
 - phase-2 optional integration toggles.
+- weekly-review pause state.
+- optional OpenRouter credential-recovery consent;
+- reduced-motion preference for nonessential Compose transitions;
+- nutrition tracking depth: detailed macros, calories/protein, meal quality,
+  or disabled;
+- nutrition target flexibility: 5%, 10%, or 15% around saved goal midpoints.
 
-Tokens and secrets do not belong in DataStore. Use Android secure credential
-storage for phase-2 Ollama credentials.
+The active body-profile identifier is stored in DataStore. Units, timers,
+nutrition depth, review pause state, and reminder schedules use keys namespaced
+by that identifier. Assistant connection and credential-recovery state remain
+device-level. Encrypted backup serializes every profile namespace and the
+active identifier; older single-profile settings snapshots remain readable.
+Reduced motion is device-level rather than profile-owned because it describes
+how the current device should present every profile.
 
-## 7. Optional Phase-2 Models
+Exercises, exercise media, foods, and their archive state are shared reference
+records. Workout templates, weekly plans, dated occurrences, sessions, saved
+meals, diary entries, meal-quality check-ins, weekly-review outcomes, goals,
+journey answers, measurements, and transformation cycles are owned by one body
+profile. Child rows inherit ownership through their personal root foreign key.
+
+The single `keepfit_settings` DataStore file is non-secret and allowlisted with
+the Room database for device-dependent Android platform backup. No other file
+or preference directory is included.
+
+Tokens and secrets do not belong in DataStore or Room. The OpenRouter
+credential and any pending PKCE verifier/state are AES/GCM encrypted with an
+Android Keystore key before being placed in dedicated app-private preferences.
+They are excluded from Keepfit backup exports and erased on disconnect.
+They are also outside the Android platform-backup allowlist.
+Keepfit does not maintain an assistant usage ledger or enforce a local request
+allowance; OpenRouter and the selected provider own account limits.
+
+When the user separately enables credential recovery, Google Block Store owns
+one keyed copy of the OpenRouter token. Only the Boolean consent belongs in
+DataStore. Keepfit requests cloud recovery only with Block Store end-to-end
+encryption, validates recovered bytes before local storage, never overwrites an
+existing local token, and deletes the entry on opt-out or disconnect.
+
+Legacy bounded-coaching draft state remains encrypted in a separate app-private
+preference file for compatibility, but the current Coach UI does not expose
+proposal or data-change actions. It is not authoritative fitness data and is
+not included in Keepfit backup exports.
+
+## 7. Coach Conversation Models
+
+Coach conversation rows are authoritative private history in Room. They are
+owned by the active profile and therefore participate in database backup and
+profile deletion. Provider credentials, authorization state, and system
+instructions are not stored in these tables.
 
 ### `AssistantConversation`
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `id` | UUID | Primary key |
+| `bodyProfileId` | UUID | Foreign key to `BodyProfile`; cascade on profile deletion |
+| `coachId` | String | Stable local identifier: `mira`, `rook`, or `atlas` |
 | `title` | String | Required |
+| `memorySummary` | String? | Deterministic capped recap of messages older than the recent window |
+| `memoryClearedAt` | Instant? | Earlier messages are excluded from future provider context |
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last activity timestamp |
 
@@ -321,9 +549,23 @@ storage for phase-2 Ollama credentials.
 | --- | --- | --- |
 | `id` | UUID | Primary key |
 | `assistantConversationId` | UUID | Foreign key to `AssistantConversation` |
-| `role` | Enum | `USER`, `ASSISTANT`, or `SYSTEM` |
+| `role` | Enum | Persisted rows are `USER` or `ASSISTANT`; system prompts are assembled per request |
 | `content` | String | Message text |
+| `includedLocalContext` | Boolean | Whether the response used a compact Keepfit activity snapshot |
 | `createdAt` | Instant | Creation timestamp |
+
+Completed user/assistant turns are appended transactionally. The visible local
+transcript is not truncated. Each provider request receives the selected
+Coach's local system instruction, a capped rolling summary when available, and
+at most the latest 12 messages after `memoryClearedAt`. Clearing memory retains
+the transcript while excluding earlier content from subsequent requests.
+
+AI workout drafts are transient ViewModel state, not authoritative Room rows.
+Each exercise carries a stable bundled-catalogue UUID plus locally resolved
+display data and bounded targets. Applying an approved draft creates ordinary
+profile-owned `WeeklyPlan`, `WorkoutTemplate`, `WorkoutTemplateExercise`, and
+`PlannedWorkout` rows in one transaction with template origin `AI_PLAN`. A
+dismissed or invalid draft creates no structured records.
 
 Daily steps should be read from Health Connect when requested. Do not duplicate
 Health Connect records in Room in the first step-tracking iteration.
@@ -332,6 +574,8 @@ Health Connect records in Room in the first step-tracking iteration.
 
 - Archive exercises, foods, and workout templates referenced by history.
 - Cascade-delete template children when deleting an unused template.
+- Validate every template in a bulk delete before deleting any row, then apply
+  the eligible batch in one transaction.
 - Cascade-delete set logs and exercise logs when deleting a workout session.
 - Cascade-delete saved meal items when deleting a saved meal.
 - Delete transformation photo files only after their Room records are removed

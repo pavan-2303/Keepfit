@@ -35,3 +35,23 @@ sealed interface StepsSnapshot {
 
     data class Connected(val summary: StepsSummary) : StepsSnapshot
 }
+
+fun stepsUiStateForSnapshot(snapshot: StepsSnapshot): StepsUiState {
+    return when (snapshot) {
+        StepsSnapshot.PermissionRequired -> StepsUiState(status = StepsStatus.PERMISSION_REQUIRED)
+        StepsSnapshot.Unavailable -> StepsUiState(status = StepsStatus.UNAVAILABLE)
+        StepsSnapshot.UpdateRequired -> StepsUiState(status = StepsStatus.UPDATE_REQUIRED)
+        is StepsSnapshot.Connected -> StepsUiState(
+            status = StepsStatus.CONNECTED,
+            summary = snapshot.summary,
+        )
+    }
+}
+
+fun stepsUiStateForError(error: Throwable): StepsUiState {
+    return StepsUiState(
+        status = StepsStatus.ERROR,
+        message = error.message?.takeUnless(String::isBlank)
+            ?: "Health Connect steps could not be loaded.",
+    )
+}

@@ -14,46 +14,60 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val KeepfitColors = lightColorScheme(
-    primary = Color(0xFF0F6E61),
+    primary = Color(0xFF196B4A),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFD1F1EA),
-    onPrimaryContainer = Color(0xFF053D35),
-    secondary = Color(0xFFE06749),
+    primaryContainer = Color(0xFFDDE9E1),
+    onPrimaryContainer = Color(0xFF123C2D),
+    secondary = Color(0xFFD9772B),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFFFE1D9),
-    onSecondaryContainer = Color(0xFF5B1B0A),
-    tertiary = Color(0xFF5B6BF8),
+    secondaryContainer = Color(0xFFFFE7D2),
+    onSecondaryContainer = Color(0xFF5E2D08),
+    tertiary = Color(0xFF496456),
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFE0E5FF),
-    onTertiaryContainer = Color(0xFF1D276E),
-    background = Color(0xFFF3F6F8),
-    onBackground = Color(0xFF172126),
+    tertiaryContainer = Color(0xFFE7ECE8),
+    onTertiaryContainer = Color(0xFF24382E),
+    background = Color(0xFFF7F8F3),
+    onBackground = Color(0xFF18201B),
     surface = Color(0xFFFFFFFF),
-    onSurface = Color(0xFF172126),
-    surfaceVariant = Color(0xFFE5ECEF),
-    onSurfaceVariant = Color(0xFF556268),
-    outline = Color(0xFFB5C2C8),
-    error = Color(0xFFB3261E),
+    onSurface = Color(0xFF18201B),
+    surfaceVariant = Color(0xFFE7ECE8),
+    onSurfaceVariant = Color(0xFF59635D),
+    outline = Color(0xFFB7C0BA),
+    outlineVariant = Color(0xFFD6DDD8),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF1F4EF),
+    surfaceContainer = Color(0xFFEBEFE9),
+    surfaceContainerHigh = Color(0xFFE4EAE4),
+    error = Color(0xFFB23A35),
 )
 
 private val KeepfitTypography = Typography(
     displaySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 36.sp,
+        fontWeight = FontWeight.Black,
+        fontSize = 38.sp,
         lineHeight = 40.sp,
+        letterSpacing = (-0.7).sp,
+    ),
+    headlineLarge = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 30.sp,
+        lineHeight = 34.sp,
+        letterSpacing = (-0.35).sp,
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
-        lineHeight = 30.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        lineHeight = 31.sp,
+        letterSpacing = (-0.2).sp,
     ),
     headlineSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 26.sp,
-        lineHeight = 30.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        lineHeight = 27.sp,
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
@@ -86,19 +100,24 @@ private val KeepfitTypography = Typography(
 )
 
 private val KeepfitShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(6.dp),
-    medium = RoundedCornerShape(8.dp),
-    large = RoundedCornerShape(8.dp),
-    extraLarge = RoundedCornerShape(8.dp),
+    extraSmall = RoundedCornerShape(6.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(18.dp),
+    extraLarge = RoundedCornerShape(24.dp),
 )
 
 @Composable
-fun KeepfitTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = KeepfitColors,
-        typography = KeepfitTypography,
-        shapes = KeepfitShapes,
-        content = content,
-    )
+fun KeepfitTheme(
+    reduceMotion: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    KeepfitMotionProvider(reduceMotion = reduceMotion) {
+        MaterialTheme(
+            colorScheme = KeepfitColors,
+            typography = KeepfitTypography,
+            shapes = KeepfitShapes,
+            content = content,
+        )
+    }
 }

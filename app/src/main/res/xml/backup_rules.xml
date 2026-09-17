@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <include
+        domain="database"
+        path="keepfit.db"
+        requireFlags="clientSideEncryption|deviceToDeviceTransfer" />
+    <include
+        domain="file"
+        path="datastore/keepfit_settings.preferences_pb"
+        requireFlags="clientSideEncryption|deviceToDeviceTransfer" />
+</full-backup-content>

@@ -5,11 +5,14 @@
     </queries>
 
     <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
-        android:allowBackup="false"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:name=".KeepfitApplication"
         android:icon="@drawable/keepfit_brand_mark"
         android:label="@string/app_name"

@@ -11,6 +11,7 @@ android {
 
     defaultConfig {
         minSdk = 31
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -41,4 +42,5 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

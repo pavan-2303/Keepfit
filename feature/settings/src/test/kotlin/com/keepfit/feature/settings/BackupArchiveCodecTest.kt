@@ -52,6 +52,7 @@ class BackupArchiveCodecTest {
             assertEquals("sqlite-payload", extracted.databaseFile.readText())
             assertEquals("gif-payload", File(extracted.mediaDirectory, "exercises/demo.gif").readText())
             assertEquals("KG", extracted.settingsSnapshot.weightUnit)
+            assertTrue(extracted.settingsSnapshot.reduceMotion)
             assertTrue(extracted.manifest.files.any { it.relativePath == "media/exercises/demo.gif" })
         } finally {
             workingDirectory.deleteRecursively()
@@ -97,10 +98,33 @@ class BackupArchiveCodecTest {
         }
     }
 
+    @Test
+    fun rejectsTruncatedArchiveWithClearMessage() {
+        val workingDirectory = createTempDirectory("keepfit-backup-test").toFile()
+        try {
+            val result = runCatching {
+                codec.extractValidatedArchive(
+                    passphrase = "long-secret",
+                    inputStream = ByteArrayInputStream(byteArrayOf()),
+                    workingDirectory = File(workingDirectory, "restore").apply { mkdirs() },
+                )
+            }
+
+            assertEquals(
+                "The backup file is incomplete or corrupted.",
+                result.exceptionOrNull()?.message,
+            )
+        } finally {
+            workingDirectory.deleteRecursively()
+        }
+    }
+
     private fun sampleSettings() = BackupSettingsSnapshot(
         weightUnit = "KG",
         measurementUnit = "CM",
         restTimerSeconds = 90,
+        weeklyReviewPaused = true,
+        reduceMotion = true,
         workoutReminderEnabled = true,
         workoutReminderHour = 18,
         workoutReminderMinute = 30,

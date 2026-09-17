@@ -5,8 +5,8 @@ enum class HomeDestination(
     val label: String,
 ) {
     TODAY("today", "Today"),
-    WORKOUTS("workouts", "Workouts"),
-    NUTRITION("nutrition", "Nutrition"),
+    PLAN("plan", "Plan"),
+    LOG("log", "Log"),
     PROGRESS("progress", "Progress"),
-    SETTINGS("settings", "Settings"),
+    COACH("coach", "Coach"),
 }

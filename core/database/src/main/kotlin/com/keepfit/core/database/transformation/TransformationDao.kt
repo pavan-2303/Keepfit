@@ -41,36 +41,80 @@ interface TransformationDao {
     suspend fun listMeasurements(profileId: String): List<BodyMeasurementEntity>
 
     @Upsert
-    suspend fun upsertWeek(week: TransformationWeekEntity)
+    suspend fun upsertCycle(cycle: TransformationCycleEntity)
 
     @Query(
         """
-        SELECT * FROM transformation_weeks
-        WHERE bodyProfileId = :profileId AND weekStartDate = :weekStartDate
+        SELECT * FROM transformation_cycles
+        WHERE bodyProfileId = :profileId AND closedAt IS NULL
         LIMIT 1
         """,
     )
-    suspend fun findWeek(profileId: String, weekStartDate: LocalDate): TransformationWeekEntity?
+    suspend fun findActiveCycle(profileId: String): TransformationCycleEntity?
+
+    @Query(
+        """
+        SELECT * FROM transformation_cycles
+        WHERE id = :cycleId
+        LIMIT 1
+        """,
+    )
+    suspend fun findCycleById(cycleId: String): TransformationCycleEntity?
 
     @Transaction
     @Query(
         """
-        SELECT * FROM transformation_weeks
+        SELECT * FROM transformation_cycles
         WHERE bodyProfileId = :profileId
-        ORDER BY weekStartDate DESC
+        ORDER BY CASE WHEN closedAt IS NULL THEN 0 ELSE 1 END, startDate DESC
         """,
     )
-    fun observeWeeks(profileId: String): Flow<List<TransformationWeekDetails>>
+    fun observeCycles(profileId: String): Flow<List<TransformationCycleDetails>>
+
+    @Query(
+        """
+        SELECT * FROM transformation_cycles
+        WHERE bodyProfileId = :profileId
+        ORDER BY startDate DESC
+        """,
+    )
+    suspend fun listCycles(profileId: String): List<TransformationCycleEntity>
 
     @Query(
         """
         SELECT * FROM transformation_photos
-        WHERE transformationWeekId = :weekId AND angle = :angle
+        WHERE transformationCycleId = :cycleId
+            AND captureDate = :captureDate
+            AND poseKey = :poseKey
         LIMIT 1
         """,
     )
-    suspend fun findPhoto(weekId: String, angle: TransformationPhotoAngle): TransformationPhotoEntity?
+    suspend fun findPhoto(
+        cycleId: String,
+        captureDate: LocalDate,
+        poseKey: String,
+    ): TransformationPhotoEntity?
 
     @Upsert
     suspend fun upsertPhoto(photo: TransformationPhotoEntity)
+
+    @Query(
+        """
+        SELECT poseKey FROM transformation_pose_preferences
+        WHERE bodyProfileId = :profileId
+        ORDER BY poseKey
+        """,
+    )
+    fun observeOptionalPoseKeys(profileId: String): Flow<List<String>>
+
+    @Upsert
+    suspend fun upsertPosePreference(preference: TransformationPosePreferenceEntity)
+
+    @Query(
+        """
+        DELETE FROM transformation_pose_preferences
+        WHERE bodyProfileId = :profileId AND poseKey = :poseKey
+        """,
+    )
+    suspend fun deletePosePreference(profileId: String, poseKey: String)
 }
