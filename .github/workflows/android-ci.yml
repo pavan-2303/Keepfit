@@ -47,6 +47,9 @@ jobs:
       - name: Install Android SDK components
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
       - name: Run unit tests, lint, and debug build
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
 
