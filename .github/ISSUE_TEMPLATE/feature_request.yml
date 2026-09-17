@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest a practical improvement that fits Keepfit's local-first direction.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the daily-use problem rather than only the proposed UI.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Product boundaries
+      options:
+        - label: The core workflow can remain usable without an account or paid service.
+          required: true
+        - label: This request does not require sharing personal fitness data publicly.
+          required: true

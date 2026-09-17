@@ -1,5 +1,9 @@
 # Keepfit
 
+[![Android CI](https://github.com/pavan-2303/Keepfit/actions/workflows/android-ci.yml/badge.svg?branch=main)](https://github.com/pavan-2303/Keepfit/actions/workflows/android-ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/pavan-2303/Keepfit)](https://github.com/pavan-2303/Keepfit/releases/latest)
+[![License](https://img.shields.io/github/license/pavan-2303/Keepfit)](LICENSE)
+
 Keepfit is a private, local-first Android fitness tracker for personal use. It
 is intended to provide a focused alternative to subscription-based fitness
 apps: useful daily tracking without accounts, social feeds, or unnecessary
@@ -21,9 +25,20 @@ complexity.
   settings, or export and restore a complete encrypted local backup.
 - Optional Health Connect step tracking and a user-authorized OpenRouter assistant.
 
+## Install
+
+Keepfit supports Android 12 and newer. Download the signed APK from the
+[latest GitHub release](https://github.com/pavan-2303/Keepfit/releases/latest),
+then allow your browser or file manager to install that APK when Android asks.
+The release notes publish the package version and SHA-256 digest for
+verification.
+
+Keepfit is not currently distributed through an app store. Back up important
+local records before replacing or uninstalling a sideloaded build.
+
 ## Project Status
 
-The active development branch contains a runnable Android application with:
+The v0.22.0 public release contains a runnable Android application with:
 
 - a progressive first-run profile intake with optional birth date, height,
   starting weight, locally derived age/BMI context, and transactional Room
@@ -325,6 +340,17 @@ End-user setup and usage documentation lives in [docs/user-manual](docs/user-man
 - [Progress](docs/user-manual/progress.md)
 - [Settings, backup, and restore](docs/user-manual/settings-backup-and-restore.md)
 - [Optional integrations](docs/user-manual/integrations.md)
+
+## Community and Security
+
+- [Contributing](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md)
+- [Privacy](PRIVACY.md)
+- [Changelog](CHANGELOG.md)
+
+New development targets the `develop` branch. The `main` branch represents the
+latest reviewed release state.
 
 ## License
 
