@@ -1,8 +1,8 @@
 # Backlog Initiative - Open-source Release and Content Stewardship
 
-> **Status:** Approved - first slice complete
+> **Status:** Complete
 > **Owner:** Product owner
-> **Last updated:** 2026-09-16
+> **Last updated:** 2026-09-17
 
 ---
 
@@ -33,15 +33,14 @@ boundaries protect both downstream users and future original media.
 - Explicit restricted-media boundaries for separately identified future assets.
 - Consolidated repository and in-app third-party notices.
 - A structured, workout-friendly exercise detail experience.
-- Future community-health, CI, release, and repository-governance setup after
-  the owner approves publication details.
+- Community health, CI, release, and repository-governance setup for public
+  distribution.
 
 ## Non-Scope
 
 - Rewording upstream instructions to conceal their source.
 - Claiming copyright over upstream catalogue metadata or instructions.
-- Publishing the repository, creating a tag, or creating a GitHub release
-  without an explicit release decision.
+- Publishing a release without an explicit release decision.
 - Adding proprietary media before ownership and model-release records exist.
 
 ## Dependencies and Constraints
@@ -64,17 +63,18 @@ boundaries protect both downstream users and future original media.
 | Planned Version | Sprint Goal | Estimated Effort | Notes |
 |---|---|---:|---|
 | [v0.20.0](../../done/versions/v0.20.0.md) | Establish licence boundaries and make exercise details practical | 5-8d | Complete |
-| Unversioned follow-up | Add community health, CI, release automation, and first public release | 5-8d | Requires explicit visibility, release, and signing decisions |
+| Public launch | Add community health, CI, repository protections, and the first public release | 5-8d | Complete in [v0.22.0](https://github.com/pavan-2303/Keepfit/releases/tag/v0.22.0) |
 
 ## Completion Criteria
 
 - [x] Apache-2.0 and restricted-media boundaries are unambiguous.
 - [x] Third-party notices remain available without appearing on every exercise.
 - [x] Exercise details are structured and accessible at phone width and large text.
-- [ ] Public repository and release setup is completed or explicitly descoped.
+- [x] Public repository and release setup is completed or explicitly descoped.
 
-## Open Questions
+## Resolved Launch Decisions
 
-- What legal person or entity should be named as the copyright holder for
-  future restricted Keepfit media?
-- Should the first public release be v0.20.0 or a later stability build?
+- The first public release is v0.22.0, published with a signed APK after the
+  protected `main` build passed CI.
+- No restricted original media is included in the public release. The owner
+  must name the rights holder and document releases before adding such media.
