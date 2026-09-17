@@ -242,9 +242,9 @@ class RoomWorkoutRepository(
                 archivedAt = null,
                 source = existing?.source,
                 sourceId = existing?.sourceId,
-                equipment = existing?.equipment,
-                targetMuscle = existing?.targetMuscle,
-                secondaryMuscles = existing?.secondaryMuscles,
+                equipment = input.equipment,
+                targetMuscle = input.targetMuscle,
+                secondaryMuscles = input.secondaryMuscles,
             ),
         )
         importedMedia?.let {
@@ -276,35 +276,19 @@ class RoomWorkoutRepository(
         dao.deleteExercise(id)
     }
 
-    override suspend fun createTemplate(name: String, exerciseIds: List<String>) {
+    override suspend fun createTemplate(name: String) {
         val profileId = requireProfileId()
         require(name.isNotBlank()) { "Enter a template name." }
-        require(exerciseIds.isNotEmpty()) { "Choose at least one exercise." }
         val templateId = idFactory()
         val now = clock()
         dao.upsertTemplate(
             WorkoutTemplateEntity(templateId, name.trim(), null, now, now, null, bodyProfileId = profileId),
-        )
-        dao.replaceTemplateExercises(
-            templateId = templateId,
-            exercises = exerciseIds.mapIndexed { index, exerciseId ->
-                WorkoutTemplateExerciseEntity(
-                    id = idFactory(),
-                    workoutTemplateId = templateId,
-                    exerciseId = exerciseId,
-                    position = index,
-                    targetSets = 3,
-                    targetReps = "8-10",
-                    notes = null,
-                )
-            },
         )
     }
 
     override suspend fun updateTemplate(id: String, name: String, exerciseIds: List<String>) {
         val profileId = requireProfileId()
         require(name.isNotBlank()) { "Enter a template name." }
-        require(exerciseIds.isNotEmpty()) { "Choose at least one exercise." }
         require(exerciseIds.distinct().size == exerciseIds.size) { "Choose each exercise once." }
         val current = requireNotNull(dao.findTemplateDetailsForProfile(id, profileId)) {
             "Workout template not found."
@@ -382,16 +366,13 @@ class RoomWorkoutRepository(
 
     override suspend fun removeTemplateExercise(templateId: String, templateExerciseId: String) {
         val current = requireTemplate(templateId)
-        require(current.exercises.size > 1) {
-            "A template needs at least one exercise. Delete the template instead."
-        }
         require(current.exercises.any { it.templateExercise.id == templateExerciseId }) {
             "Template exercise not found."
         }
         val remaining = current.exercises
             .filterNot { it.templateExercise.id == templateExerciseId }
             .mapIndexed { index, exercise -> exercise.templateExercise.copy(position = index) }
-        dao.updateTemplateAndExercises(
+        dao.updateTemplateAndExercisesAndUnscheduleIfEmpty(
             template = current.template.copy(updatedAt = clock()),
             exercises = remaining,
         )
@@ -424,7 +405,12 @@ class RoomWorkoutRepository(
         val profileId = requireProfileId()
         val now = clock()
         val planId = "default-weekly-plan-$profileId"
-        requireNotNull(dao.findTemplateForProfile(templateId, profileId)) { "Workout template not found." }
+        val template = requireNotNull(dao.findTemplateDetailsForProfile(templateId, profileId)) {
+            "Workout template not found."
+        }
+        require(template.exercises.isNotEmpty()) {
+            "Add at least one exercise before scheduling this template."
+        }
         dao.deactivateWeeklyPlansForProfile(profileId)
         dao.upsertWeeklyPlan(
             WeeklyPlanEntity(

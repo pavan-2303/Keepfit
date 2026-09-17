@@ -83,7 +83,7 @@ class WorkoutViewModelExecutionTest {
         override suspend fun saveExercise(id: String?, input: ExerciseInput, mediaUri: Uri?) = Unit
         override suspend fun archiveExercise(id: String) = Unit
         override suspend fun deleteExercise(id: String) = Unit
-        override suspend fun createTemplate(name: String, exerciseIds: List<String>) = Unit
+        override suspend fun createTemplate(name: String) = Unit
         override suspend fun updateTemplate(id: String, name: String, exerciseIds: List<String>) = Unit
         override suspend fun renameTemplate(id: String, name: String) = Unit
         override suspend fun addTemplateExercises(id: String, exerciseIds: List<String>) = Unit

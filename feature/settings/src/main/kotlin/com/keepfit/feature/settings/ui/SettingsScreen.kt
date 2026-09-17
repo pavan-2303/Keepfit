@@ -363,51 +363,6 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (selectedSection == SettingsSection.ABOUT) {
-                Spacer(modifier = Modifier.height(12.dp))
-                ExerciseCatalogueLegalNotice()
-            }
-        }
-    }
-}
-
-@Composable
-internal fun ExerciseCatalogueLegalNotice() {
-    var detailsVisible by remember { mutableStateOf(false) }
-    SettingsCard("Open-source licences") {
-        Text(
-            "Third-party catalogue and library notices.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        TextButton(onClick = { detailsVisible = !detailsVisible }) {
-            Text(if (detailsVisible) "Hide details" else "View details")
-        }
-        if (detailsVisible) {
-            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
-            Text(
-                "Exercises Dataset by Hasan Emir Yıldırım. Metadata and English instructions are included under the MIT License.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                "Pinned source revision: 7455efae41b3",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                "Copyright (c) 2026 Hasan Emir Yıldırım. Gym visual images and GIFs are not included.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                "25 original Keepfit movement figures are included as code-native artwork. They do not reuse the dataset's Gym visual media.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
         }
     }
 }

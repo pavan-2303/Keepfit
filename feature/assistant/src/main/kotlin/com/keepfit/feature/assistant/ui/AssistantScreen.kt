@@ -674,7 +674,7 @@ private fun PlanComposerDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "Coach uses your saved goal, experience, available days, equipment, and Keepfit's offline catalogue.",
+                    "Coach uses your saved goal, experience, available days, equipment, and your exercise catalogue.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedTextField(
@@ -955,7 +955,7 @@ private fun OpenRouterDisclosureDialog(onConfirm: () -> Unit, onDismiss: () -> U
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("OpenRouter and the selected model provider receive each question you choose to send.")
                 Text("For questions about your progress, Keepfit may add compact workout, nutrition, and step summaries. The conversation shows when this happened.")
-                Text("Weight, BMI, height, transformation photos, measurements, profile identifiers, private notes, paths, and raw database records are excluded. Planning sends only bounded bundled-catalogue IDs and labels so returned exercises can be validated.")
+                Text("Weight, BMI, height, transformation photos, measurements, profile identifiers, private notes, paths, and raw database records are excluded. Planning sends only bounded exercise aliases and labels so returned exercises can be validated without exposing database IDs.")
                 Text("Your OpenRouter account controls provider limits and credits. Keepfit does not impose its own daily request cap.")
             }
         },

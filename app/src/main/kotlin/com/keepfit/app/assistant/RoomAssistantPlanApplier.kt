@@ -35,12 +35,11 @@ class RoomAssistantPlanApplier(
             require(exerciseIds.isNotEmpty() && exerciseIds.none(String::isBlank)) {
                 "Every reviewed exercise must come from the local catalogue."
             }
-            exerciseIds.forEach { exerciseId ->
-                val exercise = requireNotNull(workoutDao.findActiveExercise(exerciseId)) {
+            val personalExerciseIds = workoutDao.findActiveExercises()
+                .associate { PersonalExerciseAlias.forId(it.id) to it.id }
+            exerciseIds.forEach { exerciseAlias ->
+                require(exerciseAlias in personalExerciseIds) {
                     "A reviewed exercise is no longer available. Generate the plan again."
-                }
-                require(exercise.source == BUNDLED_CATALOGUE_SOURCE) {
-                    "AI plans can use only Keepfit's bundled catalogue."
                 }
             }
 
@@ -79,7 +78,7 @@ class RoomAssistantPlanApplier(
                         WorkoutTemplateExerciseEntity(
                             id = idFactory(),
                             workoutTemplateId = templateId,
-                            exerciseId = exercise.exerciseId,
+                            exerciseId = requireNotNull(personalExerciseIds[exercise.exerciseId]),
                             position = exercisePosition,
                             targetSets = requireNotNull(exercise.targetSets) { "Target sets are required." },
                             targetReps = exercise.targetReps,
@@ -102,6 +101,5 @@ class RoomAssistantPlanApplier(
 
     companion object {
         const val AI_PLAN_ORIGIN = "AI_PLAN"
-        const val BUNDLED_CATALOGUE_SOURCE = "hasaneyldrm/exercises-dataset"
     }
 }

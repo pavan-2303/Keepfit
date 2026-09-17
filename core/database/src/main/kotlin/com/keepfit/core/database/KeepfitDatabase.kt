@@ -6,7 +6,6 @@ import androidx.room.TypeConverters
 import com.keepfit.core.database.assistant.AssistantConversationDao
 import com.keepfit.core.database.assistant.AssistantConversationEntity
 import com.keepfit.core.database.assistant.AssistantMessageEntity
-import com.keepfit.core.database.catalogue.CatalogueImportEntity
 import com.keepfit.core.database.journey.JourneyDao
 import com.keepfit.core.database.journey.JourneyProfileEntity
 import com.keepfit.core.database.nutrition.FoodDiaryEntryEntity
@@ -63,11 +62,10 @@ import com.keepfit.core.database.workout.WorkoutOccurrenceExerciseEntity
         WorkoutOccurrenceEntity::class,
         WorkoutOccurrenceExerciseEntity::class,
         WeeklyReviewOutcomeEntity::class,
-        CatalogueImportEntity::class,
         AssistantConversationEntity::class,
         AssistantMessageEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 @TypeConverters(KeepfitTypeConverters::class)
@@ -82,6 +80,6 @@ abstract class KeepfitDatabase : RoomDatabase() {
     abstract fun assistantConversationDao(): AssistantConversationDao
 
     companion object {
-        const val VERSION = 14
+        const val VERSION = 15
     }
 }

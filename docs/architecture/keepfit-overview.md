@@ -83,7 +83,6 @@ app -> feature:* -> core:model
 feature:steps     -> Health Connect SDK
 app               -> feature:review WeeklyActivityProvider -> feature:steps
 feature:assistant -> OpenRouter OAuth and chat APIs
-core:database     -> bundled normalized exercise catalogue asset
 ```
 
 Feature modules must not depend on each other directly. Shared behavior belongs
@@ -164,26 +163,20 @@ Short videos should be preferred over GIF files because they are generally
 smaller and more efficient to play. The personal exercise detail uses Android
 Media3 for private video and Coil for private GIF playback.
 
-Keepfit also includes a first owned guidance pack for 25 stable bundled
-exercise UUIDs. `core:media` holds its movement, cue, rights, and normalized
-start/finish pose data. `feature:workouts` draws the figures with Compose Canvas
-and animates them only after a user requests replay. The code-native figures
-remain legible without motion, add no bitmap or video asset, and are available
-from exercise details and the active workout without network access.
+The Exercise catalogue destination under Plan presents one Room-owned personal
+library. A fresh database starts empty. People add and edit the movements they
+actually use, including equipment, targets, multiline instructions, notes,
+bodyweight state, and optional private media.
 
-The Exercise catalogue destination under Plan presents one Room-owned library.
-On first open after install or migration, `core:database` transactionally seeds
-1,316 normalized records
-from a pinned bundled asset and records the source revision in a catalogue
-ledger. Existing rows and user edits are never overwritten. Bundled and
-user-created exercises share the same template, plan, history, archive, and
-private-media workflows.
+Schema migration 14-to-15 retires the former third-party seed. Untouched seeded
+rows are removed, while rows that were edited, referenced by a template or
+history, or given private media are converted to personal rows by clearing
+their legacy provenance. This preserves user work and historical foreign keys
+without retaining the bulk catalogue or its import ledger.
 
 Search runs only in Room across names, body areas, equipment, target muscles,
-secondary muscles, and English instructions. The upstream Gym images, GIFs,
-media identifiers, paths, and URLs are excluded. No exercise search term or
-fitness record leaves the device. Dataset provenance is shown in exercise
-details and the full copyright and MIT notice is available in Settings.
+secondary muscles, and instructions. No exercise search term or fitness record
+leaves the device.
 
 ### Transformation photos
 
@@ -263,11 +256,9 @@ stored by the app.
 ### Exercise catalogue
 
 Exercise browsing is a core offline capability, not an optional integration.
-The checked-in import inputs, deterministic transformation, audit report, and
-rights decision are maintained in the
-[exercise catalogue register](../references/exercise-catalogue-rights-register.md).
-Refreshing the catalogue requires an explicit source audit and a new migration
-or revision-aware seed; the application performs no runtime catalogue request.
+The catalogue is created and maintained by the user in Room. Keepfit packages
+no third-party exercise records, performs no runtime catalogue request, and
+stores imported demonstrations only in app-private storage.
 
 ### Health Connect steps
 
@@ -320,10 +311,10 @@ schedule, and saved-food contracts. These remain previews until an explicit
 approval invokes the focused app-level command.
 
 Remote coaching prompts contain short-lived aliases and bounded display labels
-rather than private Room identifiers. AI plan creation is the narrow exception:
-it sends at most 60 stable IDs and labels from the public bundled exercise
-catalogue so returned selections can be resolved exactly. Custom-exercise,
-profile, template, workout, nutrition, and progress identifiers are never sent.
+rather than private Room identifiers. AI plan creation sends at most 60
+deterministic exercise aliases and labels from the active personal catalogue so
+returned selections can be resolved exactly. Profile, template, workout,
+nutrition, progress, and raw exercise identifiers are never sent.
 The validated proposal shows observed evidence, current
 state, proposed state, and reason. Preview, edit, and dismiss write nothing;
 only an explicit approval invokes a focused app-level command. Schedule and
@@ -332,10 +323,10 @@ repository write.
 
 Plan creation uses the active profile's locally saved goal, experience,
 preferred days, session length, and equipment to build a bounded request. One
-strict tool contract accepts only supplied bundled exercise IDs, unique selected
+strict tool contract accepts only supplied exercise aliases, unique selected
 weekdays, and bounded targets. Keepfit resolves names locally and rejects extra
 fields, duplicates, unknown IDs, and invalid targets. Approval rechecks every
-catalogue record and replaces only the active profile's weekly plan, generated
+personal exercise and replaces only the active profile's weekly plan, generated
 templates, exact targets, and assignments in one Room transaction. A dismissed,
 invalid, or failed draft leaves the existing plan unchanged.
 
@@ -350,8 +341,8 @@ model and requires zero-data-retention routing and denial of provider data
 collection. Keepfit does not cap requests; OpenRouter and the selected provider
 own account, rate, free-tier, and credit limits. Body weight, height, BMI,
 photos, measurements, private identifiers, notes, paths, and raw records are
-not assembled into remote prompts. The planning exception is limited to public
-bundled-catalogue identifiers and labels. The typed task and latest validated
+not assembled into remote prompts. Planning is limited to bounded personal
+exercise aliases and labels. The typed task and latest validated
 proposal are encrypted with a separate Android Keystore key so they survive
 recreation; proposal drafts never populate the general chat composer. Failed
 chat payloads remain available only through a separate in-memory retry action
@@ -420,8 +411,8 @@ consistency for meal-quality mode, and no signal when nutrition is disabled.
 - Use Compose UI tests for the primary logging and comparison workflows.
 - Use fake adapters for Health Connect, OpenRouter, and Ollama compatibility so optional integrations do
   not make core tests depend on device services or a network.
-- Verify catalogue import determinism, Room seeding, migration, metadata search,
-  provenance disclosure, and lazy-list scale without a network.
+- Verify empty-database behavior, catalogue cleanup migration, metadata search,
+  template safety, and lazy-list scale without a network.
 
 ## 10. References
 
@@ -434,6 +425,5 @@ consistency for meal-quality mode, and no signal when nutrition is disabled.
 - [OpenRouter OAuth PKCE](https://openrouter.ai/docs/guides/overview/auth/oauth)
 - [OpenRouter current-key endpoint](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-key)
 - [OpenRouter provider routing](https://openrouter.ai/docs/guides/routing/provider-selection)
-- [Exercises Dataset](https://github.com/hasaneyldrm/exercises-dataset)
 - [Coil GIF support](https://coil-kt.github.io/coil/gifs/)
 - [Android Media3](https://developer.android.com/media/media3/exoplayer/hello-world)

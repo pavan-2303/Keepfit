@@ -24,7 +24,7 @@ interface WorkoutRepository {
     suspend fun saveExercise(id: String?, input: ExerciseInput, mediaUri: Uri?)
     suspend fun archiveExercise(id: String)
     suspend fun deleteExercise(id: String)
-    suspend fun createTemplate(name: String, exerciseIds: List<String>)
+    suspend fun createTemplate(name: String)
     suspend fun updateTemplate(id: String, name: String, exerciseIds: List<String>)
     suspend fun renameTemplate(id: String, name: String)
     suspend fun addTemplateExercises(id: String, exerciseIds: List<String>)

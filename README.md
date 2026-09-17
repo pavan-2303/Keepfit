@@ -18,8 +18,8 @@ AI coaching into one app without requiring a Keepfit account or backend.
 - Build a weekly schedule from reusable workout templates.
 - Start with an offline plan based on your goal, experience, available days,
   session length, equipment, and exercises to avoid.
-- Browse 1,316 bundled exercises offline or add your own exercises and private
-  demonstration media.
+- Build a personal exercise catalogue with equipment, target muscles,
+  instructions, notes, and optional private demonstration media.
 - Log sets, repetitions, weight, notes, rest periods, and completion feedback.
 - Adapt a single workout by shortening, substituting, rescheduling, or choosing
   a minimum session without changing the reusable plan.
@@ -137,7 +137,6 @@ the focused technical references when needed:
 - [Data model](docs/architecture/keepfit-data-model.md)
 - [Documentation lifecycle](docs/README.md)
 - [Roadmap](docs/ROADMAP.md)
-- [Exercise catalogue rights register](docs/references/exercise-catalogue-rights-register.md)
 
 ## Community, Security, and Licensing
 
@@ -148,5 +147,5 @@ the focused technical references when needed:
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 Keepfit source code is available under the [Apache License 2.0](LICENSE).
-Third-party catalogue content, trademarks, user-imported media, and any
-separately identified restricted media remain subject to their own terms.
+Trademarks, user-imported media, and any separately identified restricted
+media remain subject to their own terms.

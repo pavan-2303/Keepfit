@@ -1,38 +1,5 @@
 # Third-party Notices
 
-Keepfit includes third-party libraries resolved by Gradle and the following
-bundled exercise catalogue content.
-
-## Exercises Dataset
-
-Metadata and English instruction text are normalized from
-[`hasaneyldrm/exercises-dataset`](https://github.com/hasaneyldrm/exercises-dataset)
-at commit `7455efae41b330c265e7cd4b78dfa848e7ce5ebd`.
-
-```text
-MIT License
-
-Copyright (c) 2026 Hasan Emir Yıldırım
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-The upstream Gym visual images and GIFs are not included in Keepfit. The full
-audited upstream licence and media exception ship inside the APK at
-`catalogue/UPSTREAM_LICENSE.txt` and `catalogue/UPSTREAM_NOTICE.md`.
+Keepfit does not bundle third-party exercise catalogue content or exercise
+media. Runtime libraries are resolved from their declared Gradle coordinates
+and retain the licences published by their respective authors.

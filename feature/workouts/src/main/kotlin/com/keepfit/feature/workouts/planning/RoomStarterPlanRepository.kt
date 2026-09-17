@@ -70,7 +70,7 @@ class RoomStarterPlanRepository(
                     WorkoutTemplateEntity(
                         id = templateId,
                         name = day.templateName.trim().ifEmpty { "Workout ${dayPosition + 1}" },
-                        notes = "Created from the offline starter-week setup.",
+                        notes = "Created from your accepted starter-week setup.",
                         createdAt = now,
                         updatedAt = now,
                         archivedAt = null,
@@ -86,7 +86,7 @@ class RoomStarterPlanRepository(
                             name = exercise.name,
                             muscleGroup = exercise.muscleGroup,
                             instructions = exercise.instructions,
-                            notes = "Included with Keepfit's offline starter library.",
+                            notes = "Created from your accepted starter plan.",
                             isBodyweight = exercise.isBodyweight,
                             createdAt = now,
                             updatedAt = now,

@@ -4,6 +4,29 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object KeepfitMigrations {
+    val FOURTEEN_TO_FIFTEEN = object : Migration(14, 15) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                UPDATE exercises
+                SET source = NULL, sourceId = NULL
+                WHERE source = '$LEGACY_CATALOGUE_SOURCE'
+                  AND (
+                    updatedAt <> $LEGACY_CATALOGUE_TIMESTAMP
+                    OR id IN (SELECT exerciseId FROM exercise_media)
+                    OR id IN (SELECT exerciseId FROM workout_template_exercises)
+                    OR id IN (SELECT exerciseId FROM exercise_logs)
+                    OR id IN (SELECT exerciseId FROM workout_occurrence_exercises)
+                  )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "DELETE FROM exercises WHERE source = '$LEGACY_CATALOGUE_SOURCE'",
+            )
+            database.execSQL("DROP TABLE IF EXISTS catalogue_imports")
+        }
+    }
+
     val THIRTEEN_TO_FOURTEEN = object : Migration(13, 14) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL(
@@ -998,4 +1021,7 @@ object KeepfitMigrations {
         database.execSQL("INSERT INTO `weekly_review_outcomes` SELECT *, (SELECT id FROM body_profiles ORDER BY createdAt, id LIMIT 1) FROM `weekly_review_outcomes_v10`")
         database.execSQL("DROP TABLE `weekly_review_outcomes_v10`")
     }
+
+    private const val LEGACY_CATALOGUE_SOURCE = "hasaneyldrm/exercises-dataset"
+    private const val LEGACY_CATALOGUE_TIMESTAMP = 1_784_184_640_000L
 }

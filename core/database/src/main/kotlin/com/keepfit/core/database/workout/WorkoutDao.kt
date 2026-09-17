@@ -300,7 +300,9 @@ interface WorkoutDao {
         exercises: List<WorkoutTemplateExerciseEntity>,
     ) {
         deleteTemplateExercises(templateId)
-        insertTemplateExercises(exercises)
+        if (exercises.isNotEmpty()) {
+            insertTemplateExercises(exercises)
+        }
     }
 
     @Transaction
@@ -310,6 +312,17 @@ interface WorkoutDao {
     ) {
         upsertTemplate(template)
         replaceTemplateExercises(template.id, exercises)
+    }
+
+    @Transaction
+    suspend fun updateTemplateAndExercisesAndUnscheduleIfEmpty(
+        template: WorkoutTemplateEntity,
+        exercises: List<WorkoutTemplateExerciseEntity>,
+    ) {
+        updateTemplateAndExercises(template, exercises)
+        if (exercises.isEmpty()) {
+            deletePlannedWorkoutsForTemplate(template.id)
+        }
     }
 
     @Transaction
@@ -415,6 +428,9 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM exercises WHERE id = :id AND archivedAt IS NULL LIMIT 1")
     suspend fun findActiveExercise(id: String): ExerciseEntity?
+
+    @Query("SELECT * FROM exercises WHERE archivedAt IS NULL ORDER BY name COLLATE NOCASE")
+    suspend fun findActiveExercises(): List<ExerciseEntity>
 
     @Upsert
     suspend fun upsertOccurrence(occurrence: WorkoutOccurrenceEntity)

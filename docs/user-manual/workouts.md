@@ -3,14 +3,15 @@
 ## Exercise Catalogue
 
 Open `Plan`, then choose `Exercise catalogue` under `Plan tools`. It contains
-one searchable library with 1,316 bundled exercises plus exercises you create
-yourself. Everything in this library works without an internet connection and
-can be used directly in templates and plans.
+a personal library that starts empty. Add only the movements you actually use;
+everything works without an internet connection and can be reused in templates
+and plans.
 
 You can:
 
 - add a new exercise;
-- edit name, muscle group, instructions, and notes;
+- edit name, body area, equipment, primary and secondary targets, instructions,
+  and personal notes;
 - mark an exercise as bodyweight-based;
 - attach optional private demo media from the device;
 - archive exercises you no longer want to use often.
@@ -18,25 +19,13 @@ You can:
 Archiving does not remove past workout history.
 
 Search by name, body area, equipment, target muscle, secondary muscle, or words
-from the instructions. Tap an exercise to open its movement sheet. Original
-guidance or private media appears first, followed by a compact movement
-profile, numbered technique steps, personal notes, and stable actions.
-Bundled and user-created exercises have short type labels without repeating
-catalogue licence text.
-
-Twenty-five common bundled exercises also show an original Keepfit movement
-guide. The ink figure shows the start position and the lighter outline shows
-the finish position. Tap `Play movement` when you want to see the transition.
-The form and safety cues stay visible even when phone animations are disabled.
+from the instructions. Tap an exercise to open its details, including its
+movement profile, technique steps, personal notes, and private demonstration.
 
 You may attach a private MP4, WebM, or GIF demonstration to an exercise from
 your device. Keepfit does not bundle or download third-party exercise images or
-animations; its 25 built-in figures are original code-native artwork. Exercise
-guidance is general information, not medical,
+animations. Exercise guidance is general information, not medical,
 rehabilitation, or injury-specific advice.
-
-Catalogue attribution and licensing are available once under
-`Settings > About > Open-source licences` and remain packaged with the app.
 
 ## Build a Starter Week
 
@@ -69,8 +58,9 @@ applying.
 
 Open `Plan`, then choose `Templates` under `Plan tools` to create reusable
 workouts. Tap a template to inspect its exercises. The icon actions beside the
-template name let you rename it, add exercises from the offline catalogue, or
-delete it. Each exercise has its own edit action for target sets and reps plus
+template name let you rename it, add exercises from your catalogue, or delete
+it. Create a template with only a name, then add exercises from inside its
+detail page. Each exercise has its own edit action for target sets and reps plus
 a remove action, so ordinary changes do not reopen the full template editor.
 
 On the template list, choose the selection action to select one or more
@@ -86,6 +76,9 @@ Each template can include:
 - template-level notes.
 
 Templates are reused in the weekly plan and in workout history.
+An empty template remains editable but cannot be assigned to a weekday. If you
+remove its final exercise, Keepfit clears any future weekly assignment for that
+template without changing completed history.
 
 ## Weekly Plan
 
@@ -95,9 +88,14 @@ there; secondary tools no longer compete with the schedule as tabs.
 Typical flow:
 
 1. Create one or more templates.
+   Tap an exercise in template details whenever you need to inspect its full
+   instructions or notes.
 2. Open `Plan`.
 3. Assign each template to the weekdays you want.
 4. Return to `Today` to start the planned workout.
+
+For an assigned day, open the workout chevron to review its exercises and tap
+any exercise for full details.
 
 ## Use Today's Workout
 

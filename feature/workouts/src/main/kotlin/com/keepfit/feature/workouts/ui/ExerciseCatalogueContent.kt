@@ -54,11 +54,10 @@ import com.keepfit.feature.workouts.data.Exercise
 @Composable
 fun PersonalExerciseDetailDialog(
     exercise: Exercise,
-    onEdit: () -> Unit,
+    onEdit: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     val gifImageLoader = rememberGifImageLoader()
-    val isBundled = exercise.source == DATASET_SOURCE
     val guidance = remember(exercise.id) { CoreExerciseGuidanceCatalog.find(exercise.id) }
     val hasVisualGuidance = guidance != null || exercise.demo != null
     Dialog(
@@ -85,7 +84,7 @@ fun PersonalExerciseDetailDialog(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isBundled) "Bundled exercise" else "Your exercise",
+                            text = "Exercise details",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -204,7 +203,9 @@ fun PersonalExerciseDetailDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TextButton(onClick = onDismiss) { Text("Close") }
-                    Button(onClick = onEdit) { Text("Edit exercise") }
+                    onEdit?.let { edit ->
+                        Button(onClick = edit) { Text("Edit exercise") }
+                    }
                 }
             }
         }
@@ -331,5 +332,3 @@ private fun PrivateVideoDemo(uri: String, exerciseName: String) {
             .height(220.dp),
     )
 }
-
-private const val DATASET_SOURCE = "hasaneyldrm/exercises-dataset"

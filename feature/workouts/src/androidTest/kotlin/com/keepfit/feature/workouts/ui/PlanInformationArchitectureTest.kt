@@ -6,12 +6,15 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import com.keepfit.feature.workouts.data.Exercise
+import com.keepfit.feature.workouts.data.PlannedWorkout
 import com.keepfit.feature.workouts.data.TemplateExercise
 import com.keepfit.feature.workouts.data.WorkoutTemplate
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import java.time.DayOfWeek
 
 class PlanInformationArchitectureTest {
     @get:Rule
@@ -24,6 +27,7 @@ class PlanInformationArchitectureTest {
             MaterialTheme {
                 PlanOverview(
                     templates = emptyList(),
+                    exercises = emptyList(),
                     schedule = emptyList(),
                     onAssign = { _, _ -> },
                     onClear = {},
@@ -59,7 +63,7 @@ class PlanInformationArchitectureTest {
                 TemplateLibrary(
                     exercises = listOf(exercise),
                     templates = listOf(template),
-                    onCreate = { _, _ -> },
+                    onCreate = {},
                     onRename = { _, _ -> },
                     onAddExercises = { _, _ -> },
                     onUpdateExercise = { _, _, _, _ -> },
@@ -80,6 +84,95 @@ class PlanInformationArchitectureTest {
     }
 
     @Test
+    fun templateCreationAsksOnlyForAName() {
+        var createdName = ""
+        composeRule.setContent {
+            MaterialTheme {
+                TemplateLibrary(
+                    exercises = emptyList(),
+                    templates = emptyList(),
+                    onCreate = { createdName = it },
+                    onRename = { _, _ -> },
+                    onAddExercises = { _, _ -> },
+                    onUpdateExercise = { _, _, _, _ -> },
+                    onRemoveExercise = { _, _ -> },
+                    onDeleteTemplates = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Create template").performClick()
+        composeRule.onNodeWithText("Template name").performTextInput("Pull day")
+        composeRule.onNodeWithText("Find exercises").assertDoesNotExist()
+        composeRule.onNodeWithText("Create").performClick()
+        composeRule.runOnIdle { assertEquals("Pull day", createdName) }
+    }
+
+    @Test
+    fun exerciseDetailsOpenFromTemplate() {
+        val exercise = Exercise("exercise", "Goblet squat", "Legs", "Sit down and stand tall.", null, false)
+        val template = WorkoutTemplate(
+            id = "template",
+            name = "Foundation",
+            notes = null,
+            exercises = listOf(TemplateExercise("row", exercise.id, exercise.name, 3, "8-10", null)),
+        )
+        composeRule.setContent {
+            MaterialTheme {
+                TemplateLibrary(
+                    exercises = listOf(exercise),
+                    templates = listOf(template),
+                    onCreate = {},
+                    onRename = { _, _ -> },
+                    onAddExercises = { _, _ -> },
+                    onUpdateExercise = { _, _, _, _ -> },
+                    onRemoveExercise = { _, _ -> },
+                    onDeleteTemplates = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Foundation").performClick()
+        composeRule.onNodeWithContentDescription("View Goblet squat details").performClick()
+        composeRule.onNodeWithText("Exercise details").assertIsDisplayed()
+        composeRule.onNodeWithText("How to perform").assertIsDisplayed()
+    }
+
+    @Test
+    fun exerciseDetailsOpenFromWeeklyPlan() {
+        val exercise = Exercise("exercise", "Goblet squat", "Legs", "Sit down and stand tall.", null, false)
+        val template = WorkoutTemplate(
+            id = "template",
+            name = "Foundation",
+            notes = null,
+            exercises = listOf(TemplateExercise("row", exercise.id, exercise.name, 3, "8-10", null)),
+        )
+        composeRule.setContent {
+            MaterialTheme {
+                PlanOverview(
+                    templates = listOf(template),
+                    exercises = listOf(exercise),
+                    schedule = listOf(
+                        PlannedWorkout("planned", template.id, template.name, DayOfWeek.MONDAY),
+                    ),
+                    onAssign = { _, _ -> },
+                    onClear = {},
+                    onOpenStarterPlan = {},
+                    onOpenTemplates = {},
+                    onOpenExercises = {},
+                    onOpenHistory = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("View Monday workout").performClick()
+        composeRule.onNodeWithContentDescription("View Goblet squat details").performClick()
+        composeRule.onNodeWithText("Exercise details").assertIsDisplayed()
+    }
+
+    @Test
     fun templateListSupportsExplicitMultiSelectDelete() {
         val exercise = Exercise("exercise", "Goblet squat", "Legs", null, null, false)
         val templates = listOf("Foundation", "Upper body").mapIndexed { index, name ->
@@ -95,7 +188,7 @@ class PlanInformationArchitectureTest {
                 TemplateLibrary(
                     exercises = listOf(exercise),
                     templates = templates,
-                    onCreate = { _, _ -> },
+                    onCreate = {},
                     onRename = { _, _ -> },
                     onAddExercises = { _, _ -> },
                     onUpdateExercise = { _, _, _, _ -> },

@@ -51,6 +51,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -148,6 +149,7 @@ fun WorkoutsScreen(
             when (destination) {
                 WorkoutDestination.PLAN -> PlanOverview(
                     templates = templates,
+                    exercises = exercises,
                     schedule = schedule,
                     onAssign = viewModel::assignTemplate,
                     onClear = viewModel::clearPlannedWorkout,
@@ -170,7 +172,7 @@ fun WorkoutsScreen(
                 WorkoutDestination.EXERCISES -> Column(Modifier.fillMaxSize()) {
                     SubpageHeader(
                         title = "Exercise catalogue",
-                        supportingText = "Browse bundled and personal exercises.",
+                        supportingText = "Build and maintain your own exercise library.",
                         onBack = { destination = WorkoutDestination.PLAN },
                     )
                     ExerciseLibrary(
@@ -197,8 +199,19 @@ fun WorkoutsScreen(
         ExerciseEditor(
             exercise = null,
             onDismiss = { showExerciseEditor = false },
-            onSave = { id, name, muscleGroup, instructions, notes, bodyweight, media ->
-                viewModel.saveExercise(id, name, muscleGroup, instructions, notes, bodyweight, media)
+            onSave = { id, name, muscleGroup, equipment, target, secondary, instructions, notes, bodyweight, media ->
+                viewModel.saveExercise(
+                    id,
+                    name,
+                    muscleGroup,
+                    equipment,
+                    target,
+                    secondary,
+                    instructions,
+                    notes,
+                    bodyweight,
+                    media,
+                )
                 showExerciseEditor = false
             },
         )
@@ -245,7 +258,7 @@ fun TodayWorkoutSection(
 internal fun ExerciseLibrary(
     exercises: List<Exercise>,
     onSearch: (String) -> Unit,
-    onSave: (String?, String, String, String, String, Boolean, Uri?) -> Unit,
+    onSave: (String?, String, String, String, String, String, String, String, Boolean, Uri?) -> Unit,
     onArchive: (String) -> Unit,
     onDelete: (String) -> Unit,
 ) {
@@ -267,7 +280,7 @@ internal fun ExerciseLibrary(
                         onSearch(it)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Search 1,316 exercises") },
+                    label = { Text("Search your exercises") },
                     singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(10.dp))
@@ -336,8 +349,8 @@ internal fun ExerciseLibrary(
         ExerciseEditor(
             exercise = exercise,
             onDismiss = { editingExercise = null },
-            onSave = { id, name, group, instructions, notes, bodyweight, media ->
-                onSave(id, name, group, instructions, notes, bodyweight, media)
+            onSave = { id, name, group, equipment, target, secondary, instructions, notes, bodyweight, media ->
+                onSave(id, name, group, equipment, target, secondary, instructions, notes, bodyweight, media)
                 editingExercise = null
             },
         )
@@ -366,13 +379,16 @@ internal fun ExerciseLibrary(
 }
 
 @Composable
-private fun ExerciseEditor(
+internal fun ExerciseEditor(
     exercise: Exercise?,
     onDismiss: () -> Unit,
-    onSave: (String?, String, String, String, String, Boolean, Uri?) -> Unit,
+    onSave: (String?, String, String, String, String, String, String, String, Boolean, Uri?) -> Unit,
 ) {
     var name by remember { mutableStateOf(exercise?.name.orEmpty()) }
     var group by remember { mutableStateOf(exercise?.muscleGroup.orEmpty()) }
+    var equipment by remember { mutableStateOf(exercise?.equipment.orEmpty()) }
+    var targetMuscle by remember { mutableStateOf(exercise?.targetMuscle.orEmpty()) }
+    var secondaryMuscles by remember { mutableStateOf(exercise?.secondaryMuscles.orEmpty()) }
     var instructions by remember { mutableStateOf(exercise?.instructions.orEmpty()) }
     var notes by remember { mutableStateOf(exercise?.notes.orEmpty()) }
     var bodyweight by remember { mutableStateOf(exercise?.isBodyweight == true) }
@@ -385,16 +401,79 @@ private fun ExerciseEditor(
         title = { Text(if (exercise == null) "Add exercise" else "Edit exercise") },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                OutlinedTextField(name, { name = it }, label = { Text("Exercise name") }, singleLine = true)
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Exercise name") },
+                    singleLine = true,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(group, { group = it }, label = { Text("Muscle group") }, singleLine = true)
+                OutlinedTextField(
+                    value = group,
+                    onValueChange = { group = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Body area") },
+                    supportingText = { Text("For example: chest, back, legs, core, or mobility") },
+                    singleLine = true,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(instructions, { instructions = it }, label = { Text("Instructions") })
+                OutlinedTextField(
+                    value = equipment,
+                    onValueChange = { equipment = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Equipment (optional)") },
+                    singleLine = true,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(notes, { notes = it }, label = { Text("Notes") })
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = bodyweight, onCheckedChange = { bodyweight = it })
-                    Text("Bodyweight exercise")
+                OutlinedTextField(
+                    value = targetMuscle,
+                    onValueChange = { targetMuscle = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Primary target (optional)") },
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = secondaryMuscles,
+                    onValueChange = { secondaryMuscles = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Secondary targets (optional)") },
+                    supportingText = { Text("Separate multiple targets with commas") },
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = instructions,
+                    onValueChange = { instructions = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Instructions or description") },
+                    supportingText = { Text("Use one step per line for clearer exercise details") },
+                    minLines = 4,
+                    maxLines = 8,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Personal notes (optional)") },
+                    minLines = 3,
+                    maxLines = 6,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Bodyweight exercise", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Allows sets with no added weight.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = bodyweight, onCheckedChange = { bodyweight = it })
                 }
                 OutlinedButton(onClick = { launcher.launch(arrayOf("video/mp4", "video/webm", "image/gif")) }) {
                     Icon(Icons.Outlined.AttachFile, contentDescription = null)
@@ -403,7 +482,23 @@ private fun ExerciseEditor(
             }
         },
         confirmButton = {
-            Button(onClick = { onSave(exercise?.id, name, group, instructions, notes, bodyweight, mediaUri) }) {
+            Button(
+                enabled = name.isNotBlank() && group.isNotBlank(),
+                onClick = {
+                    onSave(
+                        exercise?.id,
+                        name,
+                        group,
+                        equipment,
+                        targetMuscle,
+                        secondaryMuscles,
+                        instructions,
+                        notes,
+                        bodyweight,
+                        mediaUri,
+                    )
+                },
+            ) {
                 Text("Save")
             }
         },
@@ -415,7 +510,7 @@ private fun ExerciseEditor(
 internal fun TemplateLibrary(
     exercises: List<Exercise>,
     templates: List<WorkoutTemplate>,
-    onCreate: (String, List<String>) -> Unit,
+    onCreate: (String) -> Unit,
     onRename: (String, String) -> Unit,
     onAddExercises: (String, List<String>) -> Unit,
     onUpdateExercise: (String, String, Int, String?) -> Unit,
@@ -429,6 +524,7 @@ internal fun TemplateLibrary(
     var addingToTemplate by remember { mutableStateOf<WorkoutTemplate?>(null) }
     var editingExercise by remember { mutableStateOf<TemplateExercise?>(null) }
     var removingExercise by remember { mutableStateOf<TemplateExercise?>(null) }
+    var viewingExercise by remember { mutableStateOf<Exercise?>(null) }
     var deletingTemplate by remember { mutableStateOf<WorkoutTemplate?>(null) }
     var selectionMode by remember { mutableStateOf(false) }
     val selectedTemplateIds = remember { mutableStateListOf<String>() }
@@ -498,7 +594,6 @@ internal fun TemplateLibrary(
                     }
                 } else {
                     IconButton(
-                        enabled = exercises.isNotEmpty(),
                         onClick = { showCreateEditor = true },
                     ) {
                         Icon(Icons.Outlined.Add, contentDescription = "Create template")
@@ -519,6 +614,20 @@ internal fun TemplateLibrary(
                 .padding(horizontal = 16.dp),
         ) {
             if (currentTemplate != null) {
+                if (currentTemplate.exercises.isEmpty()) {
+                    EmptyMessage(
+                        "No exercises yet",
+                        "Use the add action above to build this workout from your exercise catalogue.",
+                    )
+                    FilledTonalButton(
+                        onClick = { addingToTemplate = currentTemplate },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Outlined.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Add exercises")
+                    }
+                }
                 currentTemplate.exercises.forEachIndexed { index, exercise ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -530,7 +639,15 @@ internal fun TemplateLibrary(
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .clickable {
+                                    viewingExercise = exercises.firstOrNull { it.id == exercise.exerciseId }
+                                }
+                                .semantics { contentDescription = "View ${exercise.exerciseName} details" }
+                                .padding(vertical = 8.dp),
+                        ) {
                             Text(exercise.exerciseName, style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "${exercise.targetSets} sets · ${exercise.targetReps ?: "Open reps"}",
@@ -612,8 +729,8 @@ internal fun TemplateLibrary(
         }
     }
     if (showCreateEditor) {
-        TemplateEditor(exercises, { showCreateEditor = false }) { name, ids ->
-            onCreate(name, ids)
+        TemplateEditor({ showCreateEditor = false }) { name ->
+            onCreate(name)
             showCreateEditor = false
         }
     }
@@ -648,6 +765,12 @@ internal fun TemplateLibrary(
                 }
                 editingExercise = null
             },
+        )
+    }
+    viewingExercise?.let { exercise ->
+        PersonalExerciseDetailDialog(
+            exercise = exercise,
+            onDismiss = { viewingExercise = null },
         )
     }
     removingExercise?.let { exercise ->
@@ -688,60 +811,32 @@ internal fun TemplateLibrary(
 
 @Composable
 private fun TemplateEditor(
-    exercises: List<Exercise>,
     onDismiss: () -> Unit,
-    onSave: (String, List<String>) -> Unit,
+    onSave: (String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    var exerciseQuery by remember { mutableStateOf("") }
-    val selectedIds = remember { mutableStateListOf<String>() }
-    val filteredExercises = remember(exercises, exerciseQuery) {
-        exercises.filter { exercise ->
-            exerciseQuery.isBlank() || listOfNotNull(
-                exercise.name,
-                exercise.muscleGroup,
-                exercise.equipment,
-                exercise.targetMuscle,
-            ).any { it.contains(exerciseQuery, ignoreCase = true) }
-        }
-    }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New workout template") },
+        title = { Text("Create template") },
         text = {
-            LazyColumn(modifier = Modifier.heightIn(max = 520.dp)) {
-                item(key = "template-name") {
-                    OutlinedTextField(name, { name = it }, label = { Text("Template name") }, singleLine = true)
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = exerciseQuery,
-                        onValueChange = { exerciseQuery = it },
-                        label = { Text("Find exercises") },
-                        singleLine = true,
-                    )
-                    Text(
-                        "${selectedIds.size} selected",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                items(filteredExercises, key = Exercise::id) { exercise ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = exercise.id in selectedIds,
-                            onCheckedChange = { checked ->
-                                if (checked) selectedIds += exercise.id else selectedIds -= exercise.id
-                            },
-                        )
-                        Text(exercise.name)
-                    }
-                }
-                item(key = "template-help") {
-                    Text("Selected exercises start at 3 sets of 8-10 reps.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Template name") },
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Create the template first, then add exercises from its detail page.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
-        confirmButton = { Button(onClick = { onSave(name, selectedIds.toList()) }) { Text("Save") } },
+        confirmButton = {
+            Button(enabled = name.isNotBlank(), onClick = { onSave(name) }) { Text("Create") }
+        },
         dismissButton = { OutlinedButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
@@ -896,6 +991,7 @@ private fun EditTemplateExerciseDialog(
 @Composable
 internal fun PlanOverview(
     templates: List<WorkoutTemplate>,
+    exercises: List<Exercise>,
     schedule: List<PlannedWorkout>,
     onAssign: (DayOfWeek, String) -> Unit,
     onClear: (DayOfWeek) -> Unit,
@@ -907,6 +1003,8 @@ internal fun PlanOverview(
     val locale = LocalConfiguration.current.locales[0]
     var selectedDay by remember { mutableStateOf<DayOfWeek?>(null) }
     var clearingDay by remember { mutableStateOf<DayOfWeek?>(null) }
+    var viewingTemplate by remember { mutableStateOf<WorkoutTemplate?>(null) }
+    var viewingExercise by remember { mutableStateOf<Exercise?>(null) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -941,6 +1039,16 @@ internal fun PlanOverview(
                         Text(planned?.templateName ?: "Rest day", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (planned != null) {
+                        IconButton(
+                            onClick = {
+                                viewingTemplate = templates.firstOrNull { it.id == planned.templateId }
+                            },
+                        ) {
+                            Icon(
+                                Icons.Outlined.ChevronRight,
+                                contentDescription = "View ${day.getDisplayName(TextStyle.FULL, locale)} workout",
+                            )
+                        }
                         IconButton(onClick = { clearingDay = day }) {
                             Icon(Icons.Outlined.DeleteOutline, contentDescription = "Clear ${day.name}")
                         }
@@ -964,7 +1072,7 @@ internal fun PlanOverview(
         PlanToolRow(
             icon = Icons.AutoMirrored.Outlined.MenuBook,
             title = "Exercise catalogue",
-            detail = "Browse movement guidance and personal exercises",
+            detail = "Build exercises and review movement guidance",
             onClick = onOpenExercises,
         )
         PlanToolRow(
@@ -980,7 +1088,14 @@ internal fun PlanOverview(
             title = { Text("Assign ${day.getDisplayName(TextStyle.FULL, locale)}") },
             text = {
                 Column {
-                    templates.forEach { template ->
+                    val readyTemplates = templates.filter { it.exercises.isNotEmpty() }
+                    if (readyTemplates.isEmpty()) {
+                        Text(
+                            "Add at least one exercise to a template before assigning it.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    readyTemplates.forEach { template ->
                         FilledTonalButton(
                             onClick = {
                                 onAssign(day, template.id)
@@ -1008,6 +1123,62 @@ internal fun PlanOverview(
             },
         )
     }
+    viewingTemplate?.let { template ->
+        PlanTemplateDialog(
+            template = template,
+            onExerciseClick = { templateExercise ->
+                viewingTemplate = null
+                viewingExercise = exercises.firstOrNull { it.id == templateExercise.exerciseId }
+            },
+            onDismiss = { viewingTemplate = null },
+        )
+    }
+    viewingExercise?.let { exercise ->
+        PersonalExerciseDetailDialog(
+            exercise = exercise,
+            onDismiss = { viewingExercise = null },
+        )
+    }
+}
+
+@Composable
+private fun PlanTemplateDialog(
+    template: WorkoutTemplate,
+    onExerciseClick: (TemplateExercise) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(template.name) },
+        text = {
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 480.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(template.exercises, key = TemplateExercise::id) { exercise ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onExerciseClick(exercise) }
+                            .semantics { contentDescription = "View ${exercise.exerciseName} details" }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(exercise.exerciseName, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "${exercise.targetSets} sets · ${exercise.targetReps ?: "Open reps"}",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Icon(Icons.Outlined.ChevronRight, contentDescription = null)
+                    }
+                    HorizontalDivider()
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
 }
 
 @Composable

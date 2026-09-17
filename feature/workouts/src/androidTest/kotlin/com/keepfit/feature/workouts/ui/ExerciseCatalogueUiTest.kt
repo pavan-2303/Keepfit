@@ -35,7 +35,32 @@ class ExerciseCatalogueUiTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun unifiedLibrarySearchesBundledMetadataLocally() {
+    fun exerciseEditorShowsEverySupportedField() {
+        composeRule.setContent {
+            MaterialTheme {
+                ExerciseEditor(
+                    exercise = null,
+                    onDismiss = {},
+                    onSave = { _, _, _, _, _, _, _, _, _, _ -> },
+                )
+            }
+        }
+
+        listOf(
+            "Exercise name",
+            "Body area",
+            "Equipment (optional)",
+            "Primary target (optional)",
+            "Secondary targets (optional)",
+            "Instructions or description",
+            "Personal notes (optional)",
+            "Bodyweight exercise",
+            "Attach demo",
+        ).forEach { label -> composeRule.onNodeWithText(label).fetchSemanticsNode() }
+    }
+
+    @Test
+    fun personalLibrarySearchesExerciseMetadataLocally() {
         val dumbbellCurl = exercise(
             id = "curl",
             name = "Dumbbell curl",
@@ -53,14 +78,14 @@ class ExerciseCatalogueUiTest {
                         submittedQuery = query
                         visible = if (query.isBlank()) listOf(dumbbellCurl, squat) else listOf(dumbbellCurl)
                     },
-                    onSave = { _, _, _, _, _, _, _ -> },
+                    onSave = { _, _, _, _, _, _, _, _, _, _ -> },
                     onArchive = {},
                     onDelete = {},
                 )
             }
         }
 
-        composeRule.onNodeWithText("Search 1,316 exercises").performTextInput("dumbbell")
+        composeRule.onNodeWithText("Search your exercises").performTextInput("dumbbell")
         composeRule.onNodeWithText("1 exercise").assertIsDisplayed()
         composeRule.onNodeWithText("Dumbbell curl").assertIsDisplayed()
         composeRule.onNodeWithText("Dumbbell • Biceps").assertIsDisplayed()
@@ -68,7 +93,7 @@ class ExerciseCatalogueUiTest {
     }
 
     @Test
-    fun bundledExerciseDetailsPrioritizeStructuredMovementGuidance() {
+    fun exerciseDetailsPrioritizeStructuredMovementGuidance() {
         composeRule.setContent {
             MaterialTheme {
                 PersonalExerciseDetailDialog(
@@ -85,7 +110,7 @@ class ExerciseCatalogueUiTest {
             }
         }
 
-        composeRule.onNodeWithText("Bundled exercise").assertIsDisplayed()
+        composeRule.onNodeWithText("Exercise details").assertIsDisplayed()
         composeRule.onNodeWithText("Movement profile").assertIsDisplayed()
         composeRule.onNodeWithText("Body area").assertIsDisplayed()
         composeRule.onNodeWithText("Upper arms").assertIsDisplayed()
@@ -202,7 +227,7 @@ class ExerciseCatalogueUiTest {
     }
 
     @Test
-    fun fullCatalogueCanScrollToTheLastLazyRow() {
+    fun largePersonalCatalogueCanScrollToTheLastLazyRow() {
         val exercises = (0 until 1316).map { index ->
             exercise(id = index.toString(), name = "Exercise $index")
         }
@@ -211,7 +236,7 @@ class ExerciseCatalogueUiTest {
                 ExerciseLibrary(
                     exercises = exercises,
                     onSearch = {},
-                    onSave = { _, _, _, _, _, _, _ -> },
+                    onSave = { _, _, _, _, _, _, _, _, _, _ -> },
                     onArchive = {},
                     onDelete = {},
                 )
@@ -236,8 +261,8 @@ class ExerciseCatalogueUiTest {
         instructions = "Move with control.",
         notes = null,
         isBodyweight = equipment == "body weight",
-        source = "hasaneyldrm/exercises-dataset",
-        sourceId = id,
+        source = null,
+        sourceId = null,
         equipment = equipment,
         targetMuscle = targetMuscle,
         secondaryMuscles = secondaryMuscles,

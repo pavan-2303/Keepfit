@@ -71,7 +71,7 @@ class WorkoutDaoTest {
     }
 
     @Test
-    fun exerciseSearchMatchesBundledMetadataAndInstructions() = runBlocking {
+    fun exerciseSearchMatchesPersonalMetadataAndInstructions() = runBlocking {
         val exercise = ExerciseEntity(
             id = "catalogue-exercise",
             name = "Supported row",
@@ -82,8 +82,8 @@ class WorkoutDaoTest {
             createdAt = 1L,
             updatedAt = 1L,
             archivedAt = null,
-            source = "hasaneyldrm/exercises-dataset",
-            sourceId = "0001",
+            source = null,
+            sourceId = null,
             equipment = "dumbbell",
             targetMuscle = "biceps",
             secondaryMuscles = "forearms, shoulders",

@@ -40,8 +40,8 @@ Current capabilities:
 - ask ordinary training and nutrition questions;
 - ask about recent personal progress and receive insights from compact local
   workout, nutrition, step, and transformation summaries;
-- create a workout-plan draft from saved journey answers using only supplied
-  bundled-catalogue exercises;
+- create a workout-plan draft from saved journey answers using only exercises
+  in your personal catalogue;
 - review the current week, propose a week from existing templates, or suggest
   a meal from saved foods; and
 - retry a failed request without changing local records.
@@ -102,8 +102,8 @@ existing records unchanged.
   requests without deleting the local transcript.
 - Weight, BMI, height, transformation photos, body measurements, profile and
   personal-record identifiers, private paths, and raw database rows are
-  excluded. Plan creation sends at most 60 public bundled-catalogue IDs and
-  labels so Keepfit can reject invented exercises.
+  excluded. Plan creation sends at most 60 short-lived exercise aliases and
+  labels so Keepfit can reject invented exercises without exposing Room IDs.
 - OpenRouter records request metadata such as model, token counts, and latency.
   Its prompt logging is off by default according to its current documentation.
 - The encrypted credential and OAuth transaction are not included in Keepfit

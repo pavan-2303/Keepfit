@@ -3,6 +3,17 @@
 Notable public changes are recorded here. Detailed engineering records remain
 under `docs/done/versions/`.
 
+## 0.23.0 - 2026-09-17
+
+- Replaced the preloaded exercise dataset with an empty personal catalogue.
+- Expanded exercise creation and editing to include equipment, targets,
+  multiline instructions, notes, bodyweight state, and private demo media.
+- Changed template creation to start with a name and add exercises from the
+  template detail page; empty templates remain editable but unschedulable.
+- Added exercise-detail access from template and weekly-plan views.
+- Added a safe upgrade migration that preserves edited, referenced, and
+  media-backed legacy exercises while removing untouched seed records.
+
 ## 0.22.0 - 2026-09-17
 
 First public GitHub release.

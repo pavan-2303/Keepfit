@@ -51,11 +51,11 @@ AssistantConversation 1 --- * AssistantMessage
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last edit timestamp |
 | `archivedAt` | Instant? | Soft-delete marker |
-| `source` | String? | Bundled source name; null for user-created rows |
-| `sourceId` | String? | Stable identifier at the bundled source |
-| `equipment` | String? | Normalized equipment label |
-| `targetMuscle` | String? | Normalized primary target |
-| `secondaryMuscles` | String? | Canonical comma-separated secondary targets |
+| `source` | String? | Legacy provenance only; new and migrated personal rows use null |
+| `sourceId` | String? | Legacy source identifier only; new and migrated personal rows use null |
+| `equipment` | String? | User-entered equipment label |
+| `targetMuscle` | String? | User-entered primary target |
+| `secondaryMuscles` | String? | Comma-separated user-entered secondary targets |
 
 Archive exercises instead of deleting them when history references them.
 
@@ -75,32 +75,18 @@ Replacing media creates a new file and updates this record only after the copy
 succeeds. Removing an exercise archive does not remove historical exercise
 logs.
 
-### Bundled exercise catalogue data
+### Personal exercise catalogue data
 
-The normalized bundled catalogue is seeded directly into `Exercise`, making
-its stable UUIDs immediately usable by templates, plans, history, and future
-validated drafts. User-created rows keep null provenance fields. Editing a
-bundled exercise preserves its provenance, and a later seed uses `INSERT OR
-IGNORE` so local edits are not overwritten.
+A fresh database contains no exercise rows. Exercises are created explicitly
+by the user or as part of an accepted starter plan. Both paths write ordinary
+personal `Exercise` records with null provenance and optional private media.
 
-`CatalogueImport` records the installed revision:
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `source` | String | Primary key, currently `hasaneyldrm/exercises-dataset` |
-| `revision` | String | Exact audited upstream Git commit |
-| `recordCount` | Int | Accepted normalized row count |
-| `importedAt` | Instant | Deterministic source-import timestamp |
-
-The bundled asset contains metadata and English instructions only. Upstream
-media identifiers, paths, URLs, images, and GIFs are excluded. Room and the
-revision ledger are part of normal encrypted and platform database backups.
-
-The owned core guidance pack is immutable application code rather than
-persisted user data. It maps 25 stable bundled exercise UUIDs to reviewed cues,
-rights metadata, equipment hints, and normalized start/finish body poses. It
-does not change the Room schema or backup contract. User-imported media remains
-the only exercise visual stored in `ExerciseMedia`.
+Migration 14-to-15 removes untouched rows from the retired bundled catalogue.
+A legacy row is preserved and converted to a personal exercise when it was
+edited, has private media, or is referenced by a template, exercise log, or
+dated workout occurrence. The obsolete `CatalogueImport` table is dropped.
+This migration changes catalogue ownership without breaking historical foreign
+keys or deleting user-created records.
 
 ### `WorkoutTemplate`
 
@@ -126,12 +112,15 @@ the only exercise visual stored in `ExerciseMedia`.
 | `targetReps` | String? | Optional free-form target such as `8-10` |
 | `notes` | String? | Optional template-specific note |
 
-Renaming a template updates only its name and timestamp. Adding exercises
-appends new rows with new UUIDs and default `3 x 8-10` targets. Editing a
+Renaming a template updates only its name and timestamp. Adding exercises is a
+separate operation performed from template details and appends new rows with
+new UUIDs and default `3 x 8-10` targets. A template may have zero exercises
+while it is being built, but it cannot be assigned to a weekly plan. Editing a
 prescription keeps the `WorkoutTemplateExercise` UUID and changes only its
-target fields. Removing one row normalizes the remaining positions and is
-rejected when it would leave an empty template. None of these actions rewrites
-dated occurrences or completed workout snapshots.
+target fields. Removing a row normalizes the remaining positions. Removing the
+final exercise also clears future `PlannedWorkout` rows for that template in
+the same transaction. None of these actions rewrites dated occurrences or
+completed workout snapshots.
 
 ### `WeeklyPlan`
 
@@ -561,8 +550,9 @@ at most the latest 12 messages after `memoryClearedAt`. Clearing memory retains
 the transcript while excluding earlier content from subsequent requests.
 
 AI workout drafts are transient ViewModel state, not authoritative Room rows.
-Each exercise carries a stable bundled-catalogue UUID plus locally resolved
-display data and bounded targets. Applying an approved draft creates ordinary
+Each exercise carries a privacy-safe alias plus bounded display data and
+targets. Applying an approved draft resolves each alias against the current
+personal catalogue, then creates ordinary
 profile-owned `WeeklyPlan`, `WorkoutTemplate`, `WorkoutTemplateExercise`, and
 `PlannedWorkout` rows in one transaction with template origin `AI_PLAN`. A
 dismissed or invalid draft creates no structured records.

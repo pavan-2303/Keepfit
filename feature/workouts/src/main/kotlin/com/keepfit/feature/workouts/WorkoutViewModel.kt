@@ -90,6 +90,9 @@ class WorkoutViewModel @Inject constructor(
         id: String?,
         name: String,
         muscleGroup: String,
+        equipment: String,
+        targetMuscle: String,
+        secondaryMuscles: String,
         instructions: String,
         notes: String,
         isBodyweight: Boolean,
@@ -99,6 +102,9 @@ class WorkoutViewModel @Inject constructor(
             val result = ExerciseInputValidator.validate(
                 name,
                 muscleGroup,
+                equipment,
+                targetMuscle,
+                secondaryMuscles,
                 instructions,
                 notes,
                 isBodyweight,
@@ -119,9 +125,9 @@ class WorkoutViewModel @Inject constructor(
         repository.deleteExercise(id)
     }
 
-    fun createTemplate(name: String, exerciseIds: List<String>) =
+    fun createTemplate(name: String) =
         launchWrite("Workout template saved.") {
-            repository.createTemplate(name, exerciseIds)
+            repository.createTemplate(name)
         }
 
     fun updateTemplate(id: String, name: String, exerciseIds: List<String>) =
