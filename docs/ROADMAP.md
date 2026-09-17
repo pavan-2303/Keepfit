@@ -77,8 +77,10 @@ Open-source and content-ownership work is tracked in the
 [Open-source Release and Content Stewardship](backlog/items/open-source-release-and-content-stewardship.md)
 initiative. Its first approved increment is
 [v0.20.0 - Exercise Clarity and Licence Boundaries](done/versions/v0.20.0.md),
-which is complete. Public repository and release infrastructure remains the
-next initiative decision.
+which is complete. Community health files, CI, dependency review, repository
+protections, and the signed APK are published in the
+[v0.22.0 public release](https://github.com/pavan-2303/Keepfit/releases/tag/v0.22.0),
+closing the initiative.
 
 Release-candidate hierarchy and Coach conversation integrity are tracked in
 the [Release-candidate Navigation and Conversation Integrity](backlog/items/release-candidate-navigation-and-conversation-integrity.md)
