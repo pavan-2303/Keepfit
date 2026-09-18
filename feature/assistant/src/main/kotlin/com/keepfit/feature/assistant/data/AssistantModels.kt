@@ -76,6 +76,16 @@ data class AssistantDraftInput(
     val notes: String? = null,
 )
 
+data class AssistantDraftExerciseDefinition(
+    val name: String,
+    val muscleGroup: String,
+    val equipment: String? = null,
+    val targetMuscle: String? = null,
+    val secondaryMuscles: String? = null,
+    val instructions: String,
+    val isBodyweight: Boolean,
+)
+
 data class AssistantRequestError(
     val message: String,
 )
@@ -152,6 +162,7 @@ data class AssistantDraftWorkoutExercise(
     val targetSets: Int? = null,
     val targetReps: String? = null,
     val notes: String? = null,
+    val newExercise: AssistantDraftExerciseDefinition? = null,
 )
 
 data class AssistantDraftWorkoutDay(

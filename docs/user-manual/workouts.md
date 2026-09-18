@@ -33,26 +33,32 @@ From `Plan`, tap `Starter setup` when you want help turning your
 real schedule into a manageable routine. The planner works without internet or
 AI.
 
-1. Choose a primary goal and experience level.
-2. Pick one to four training days and a realistic session length.
-3. Select equipment and optionally mark exercises to avoid.
-4. Choose how much nutrition detail you want Keepfit to show.
-5. Choose your next step: build an offline starter week, plan manually, or let
-   Coach create a catalogue-backed draft from the saved answers.
-6. If you choose the starter week, review each workout. You can rename it, remove exercises, or add another
-   exercise from Keepfit's built-in starter library.
-7. Tap `Use this week` only when the draft looks right.
+1. Choose a primary goal, current build, typical daily activity, and experience.
+2. Add typical sleep duration and schedule, plus any routine constraints.
+3. Optionally identify pain, injuries, or movement limits and describe advice
+   or movements the plan should avoid.
+4. Pick one to four realistic training days, a repeatable session length, and
+   equipment you can use most weeks.
+5. Review the assessment or skip directly to the route chooser.
+6. Choose your next step: build an offline starter week, plan manually, or
+   connect OpenRouter and let Coach create a reviewable draft.
+7. If you choose the starter week, review each workout. You can rename it,
+   remove exercises, or add another exercise from Keepfit's small local starter
+   set.
+8. Tap `Use this week` only when the draft looks right.
 
 Your answers are saved locally for next time. Rebuilding the starter week
 replaces only the previous generated starter plan; personal templates and
 workout history are preserved.
 
-If you choose Coach, connect your own OpenRouter account if needed, add any
-optional emphasis, and create the draft. Review every weekday, exercise, set,
-and repetition target. `Dismiss` changes nothing; `Apply plan` replaces only
-the active profile's recurring week in one operation. A provider response that
-uses an unknown exercise or invalid target is rejected instead of partially
-applying.
+If you choose Coach, connect your own OpenRouter account first, choose a Coach,
+add any optional emphasis, and create the draft. Coach may reuse exercises from
+your catalogue or propose complete definitions when the catalogue is empty.
+Review every new exercise, weekday, set, and repetition target. `Dismiss`
+changes nothing; `Apply plan` creates or reuses the reviewed exercises and
+replaces only the active profile's recurring week in one transaction. Unknown
+aliases, incomplete exercise definitions, and invalid targets are rejected
+instead of partially applying.
 
 ## Templates
 

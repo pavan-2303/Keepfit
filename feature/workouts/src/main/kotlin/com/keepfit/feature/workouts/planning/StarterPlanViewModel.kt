@@ -64,6 +64,22 @@ class StarterPlanViewModel @Inject constructor(
     fun selectGoal(goal: JourneyGoal) = updateInput { copy(goal = goal) }
     fun selectExperience(level: ExperienceLevel) = updateInput { copy(experienceLevel = level) }
     fun selectDuration(minutes: Int) = updateInput { copy(sessionMinutes = minutes) }
+    fun selectActivity(level: ActivityLevel) = updateInput { copy(activityLevel = level) }
+    fun selectSleepDuration(duration: SleepDuration) = updateInput { copy(sleepDuration = duration) }
+    fun selectSleepSchedule(schedule: SleepSchedule) = updateInput { copy(sleepSchedule = schedule) }
+    fun selectCurrentBuild(build: CurrentBuild) = updateInput { copy(currentBuild = build) }
+
+    fun toggleRoutineChallenge(challenge: RoutineChallenge) = updateInput {
+        copy(routineChallenges = routineChallenges.toggle(challenge))
+    }
+
+    fun toggleLimitationArea(area: LimitationArea) = updateInput {
+        copy(limitationAreas = limitationAreas.toggle(area))
+    }
+
+    fun updateLimitationNotes(notes: String) = updateInput {
+        copy(limitationNotes = notes.take(500).trimStart().ifBlank { null })
+    }
 
     fun toggleDay(day: DayOfWeek) = updateInput {
         val updated = preferredDays.toggle(day)

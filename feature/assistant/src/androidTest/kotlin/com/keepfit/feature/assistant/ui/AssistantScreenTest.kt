@@ -146,7 +146,10 @@ class AssistantScreenTest {
     fun coachPickerExplainsAllPersonalitiesAndReturnsSelection() {
         var selected: CoachPersona? = null
         show(
-            state = AssistantUiState(showCoachPicker = true),
+            state = AssistantUiState(
+                accessState = connectedAccess(),
+                showCoachPicker = true,
+            ),
             onChooseCoach = { selected = it },
         )
 
@@ -157,6 +160,21 @@ class AssistantScreenTest {
         composeRule.onNodeWithText("Choose Rook").performScrollTo().performClick()
 
         assertEquals(CoachPersona.ROOK, selected)
+    }
+
+    @Test
+    fun disconnectedCoachHidesPersonaChoicesUntilOpenRouterIsConnected() {
+        show(
+            state = AssistantUiState(
+                accessState = AssistantAccessState(),
+                showCoachPicker = true,
+            ),
+        )
+
+        composeRule.onNodeWithText("Connect OpenRouter").assertIsDisplayed()
+        composeRule.onNodeWithText("Choose your Coach").assertDoesNotExist()
+        composeRule.onNodeWithText("Mira").assertDoesNotExist()
+        composeRule.onNodeWithText("Choose Rook").assertDoesNotExist()
     }
 
     @Test

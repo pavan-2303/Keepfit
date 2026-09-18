@@ -63,13 +63,13 @@ isolated from the offline core.
 | `core:media` | Import, validate, store, retrieve, export, and restore private media; own rights-recorded exercise-guidance data |
 | `core:preferences` | DataStore-backed app settings and reminder scheduling |
 | `core:designsystem` | Field-guide theme, reusable Compose components, application icons, and reduced-motion policy |
-| `feature:workouts` | Guided starter-week setup, unified offline exercise library, templates, plans, workout sessions, history, records, timer |
+| `feature:workouts` | Guided personal assessment, offline starter-week setup, personal exercise catalogue, templates, plans, workout sessions, history, records, timer |
 | `feature:nutrition` | Selectable nutrition depth, personal foods, saved meals, diary entries, meal-quality check-ins, ranges, and daily totals |
 | `feature:review` | Offline weekly evidence, motivation rules, bounded coming-week drafts, review decisions, and focused Compose flow |
 | `feature:transformation` | Measurements, transformation cycle photo capture/import, and comparison |
 | `feature:settings` | User goals, reminder preferences, backup export, and restore |
 | `feature:steps` | Phase-2 Health Connect availability, permission, and daily plus seven-day step summaries |
-| `feature:assistant` | Optional OpenRouter authorization, profile-owned named Coach conversations, bounded memory, selective local-summary context, strict catalogue-backed plan contracts, and local safety/privacy controls |
+| `feature:assistant` | Optional OpenRouter authorization, connection-gated named Coaches, bounded memory, selective local-summary context, strict review-first plan contracts, and local safety/privacy controls |
 
 For the first implementation increment, modules may be introduced as features
 are built. The dependency direction remains fixed:
@@ -295,8 +295,8 @@ local-first clients without adding a Keepfit backend. The one-time callback is
 accepted only while the matching encrypted transaction is current. Public
 distribution requires an owned HTTPS domain and verified Android App Link.
 
-Each profile-owned conversation selects Mira (warm), Rook (direct), or Atlas
-(analytical). Coach selection remains transient until the first question is
+After OpenRouter is connected, each profile-owned conversation selects Mira
+(warm), Rook (direct), or Atlas (analytical). Coach selection remains transient until the first question is
 submitted, so an empty selection never appears in conversation history. Room
 retains the visible transcript, while each provider request is bounded to the selected local Coach
 instruction, a deterministic capped recap, and the latest 12 messages after
@@ -312,23 +312,27 @@ approval invokes the focused app-level command.
 
 Remote coaching prompts contain short-lived aliases and bounded display labels
 rather than private Room identifiers. AI plan creation sends at most 60
-deterministic exercise aliases and labels from the active personal catalogue so
-returned selections can be resolved exactly. Profile, template, workout,
-nutrition, progress, and raw exercise identifiers are never sent.
+deterministic exercise aliases and labels from the active personal catalogue.
+The strict response may reuse one of those aliases or provide a complete new
+exercise definition. Profile, template, workout, nutrition, progress, and raw
+exercise identifiers are never sent.
 The validated proposal shows observed evidence, current
 state, proposed state, and reason. Preview, edit, and dismiss write nothing;
 only an explicit approval invokes a focused app-level command. Schedule and
 multi-food changes validate all referenced local records before their atomic
 repository write.
 
-Plan creation uses the active profile's locally saved goal, experience,
-preferred days, session length, and equipment to build a bounded request. One
-strict tool contract accepts only supplied exercise aliases, unique selected
-weekdays, and bounded targets. Keepfit resolves names locally and rejects extra
-fields, duplicates, unknown IDs, and invalid targets. Approval rechecks every
-personal exercise and replaces only the active profile's weekly plan, generated
-templates, exact targets, and assignments in one Room transaction. A dismissed,
-invalid, or failed draft leaves the existing plan unchanged.
+Plan creation uses the active profile's locally saved age, height, latest
+weight, goal, current build, daily activity, experience, sleep, routine
+constraints, limitations, preferred days, session length, and equipment to
+build a bounded request. One strict tool contract accepts supplied exercise
+aliases or complete new definitions, unique selected weekdays, and bounded
+targets. Keepfit resolves existing names locally and rejects extra fields,
+duplicates, unknown IDs, incomplete definitions, and invalid targets. Approval
+rechecks every personal exercise, creates or reuses reviewed missing exercises,
+and replaces only the active profile's weekly plan, generated templates, exact
+targets, and assignments in one Room transaction. A dismissed, invalid, or
+failed draft leaves the existing catalogue and plan unchanged.
 
 A local safety gate refuses diagnosis, rehabilitation, medication, extreme
 dieting, and unsafe progression before quota reservation or network dispatch.
@@ -339,10 +343,11 @@ No AI dependency is permitted in core tracking flows. The user must initiate
 every remote request. The OpenRouter adapter uses the named free evaluation
 model and requires zero-data-retention routing and denial of provider data
 collection. Keepfit does not cap requests; OpenRouter and the selected provider
-own account, rate, free-tier, and credit limits. Body weight, height, BMI,
-photos, measurements, private identifiers, notes, paths, and raw records are
-not assembled into remote prompts. Planning is limited to bounded personal
-exercise aliases and labels. The typed task and latest validated
+own account, rate, free-tier, and credit limits. General chat excludes body
+weight, height, and assessment answers. An explicit plan request includes only
+the disclosed bounded assessment fields above; photos, BMI, detailed body
+measurements, private identifiers, private media, paths, and raw records are
+not assembled into remote prompts. The typed task and latest validated
 proposal are encrypted with a separate Android Keystore key so they survive
 recreation; proposal drafts never populate the general chat composer. Failed
 chat payloads remain available only through a separate in-memory retry action

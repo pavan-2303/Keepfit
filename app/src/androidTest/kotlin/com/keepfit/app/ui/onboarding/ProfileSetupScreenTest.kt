@@ -45,7 +45,7 @@ class ProfileSetupScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Your profile").assertIsDisplayed()
+        composeRule.onNodeWithText("Let’s start with you").assertIsDisplayed()
         composeRule.onNodeWithText("Name").performTextInput("Pavan")
         composeRule.onNodeWithText("Continue").performClick()
         composeRule.onNodeWithText("Your baseline").assertIsDisplayed()
@@ -89,6 +89,6 @@ class ProfileSetupScreenTest {
         composeRule.onNodeWithText("Name").performTextInput("Pavan")
         composeRule.onNodeWithText("Continue").performScrollTo().performClick()
         composeRule.onNodeWithText("Your baseline").assertIsDisplayed()
-        composeRule.onNodeWithText("Save and continue").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Continue to assessment").performScrollTo().assertIsDisplayed()
     }
 }

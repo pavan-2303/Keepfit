@@ -271,11 +271,6 @@ fun AssistantScreen(
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
                 when {
-                    uiState.showCoachPicker -> CoachPicker(
-                        canDismiss = uiState.conversations.isNotEmpty(),
-                        onDismiss = onDismissCoachPicker,
-                        onChoose = onChooseCoach,
-                    )
                     !isEnabled || validationMessage != null -> CoachUnavailable(
                         title = "Coach needs attention",
                         detail = validationMessage ?: "Open Profile and settings to enable Coach.",
@@ -285,6 +280,11 @@ fun AssistantScreen(
                         detail = "Connect once in the browser. Keepfit never asks you to paste a key or pays for requests on your behalf.",
                         action = if (uiState.accessState.status == AssistantAccessStatus.CONNECTING) null else "Connect OpenRouter",
                         onAction = onConnect,
+                    )
+                    uiState.showCoachPicker -> CoachPicker(
+                        canDismiss = uiState.conversations.isNotEmpty(),
+                        onDismiss = onDismissCoachPicker,
+                        onChoose = onChooseCoach,
                     )
                     else -> ConversationContent(
                         uiState = uiState,
@@ -674,7 +674,7 @@ private fun PlanComposerDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "Coach uses your saved goal, experience, available days, equipment, and your exercise catalogue.",
+                    "Coach uses your saved body, activity, recovery, schedule, equipment, and limitation answers. It can reuse your exercises or propose complete new ones.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedTextField(
@@ -742,6 +742,13 @@ private fun PlanReviewDialog(
                                     "${exercise.name} · ${exercise.targetSets} × ${exercise.targetReps}",
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
+                                if (exercise.newExercise != null) {
+                                    Text(
+                                        "New exercise · added to your catalogue when applied",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
                             }
                         }
                     }
@@ -955,7 +962,8 @@ private fun OpenRouterDisclosureDialog(onConfirm: () -> Unit, onDismiss: () -> U
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("OpenRouter and the selected model provider receive each question you choose to send.")
                 Text("For questions about your progress, Keepfit may add compact workout, nutrition, and step summaries. The conversation shows when this happened.")
-                Text("Weight, BMI, height, transformation photos, measurements, profile identifiers, private notes, paths, and raw database records are excluded. Planning sends only bounded exercise aliases and labels so returned exercises can be validated without exposing database IDs.")
+                Text("General chat excludes weight, BMI, height, transformation photos, measurements, profile identifiers, private notes, paths, and raw database records.")
+                Text("When you explicitly create a workout plan, Coach receives the assessment answers shown in planning—including age, height, current weight, activity, sleep, equipment, and limitations—plus bounded exercise aliases. It may propose validated new exercise definitions, which are saved only after you approve the draft.")
                 Text("Your OpenRouter account controls provider limits and credits. Keepfit does not impose its own daily request cap.")
             }
         },

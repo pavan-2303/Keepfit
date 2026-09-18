@@ -418,7 +418,14 @@ object AppModule {
     fun provideAssistantPlanContextDataSource(
         starterPlanRepository: StarterPlanRepository,
         workoutRepository: WorkoutRepository,
-    ): AssistantPlanContextDataSource = KeepfitAssistantPlanContextDataSource(starterPlanRepository, workoutRepository)
+        database: KeepfitDatabase,
+        activeProfileStore: ActiveProfileStore,
+    ): AssistantPlanContextDataSource = KeepfitAssistantPlanContextDataSource(
+        starterPlanRepository,
+        workoutRepository,
+        database,
+        activeProfileStore,
+    )
 
     @Provides
     @Singleton

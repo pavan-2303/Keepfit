@@ -65,7 +65,7 @@ import com.keepfit.core.database.workout.WorkoutOccurrenceExerciseEntity
         AssistantConversationEntity::class,
         AssistantMessageEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 @TypeConverters(KeepfitTypeConverters::class)
@@ -80,6 +80,6 @@ abstract class KeepfitDatabase : RoomDatabase() {
     abstract fun assistantConversationDao(): AssistantConversationDao
 
     companion object {
-        const val VERSION = 15
+        const val VERSION = 16
     }
 }

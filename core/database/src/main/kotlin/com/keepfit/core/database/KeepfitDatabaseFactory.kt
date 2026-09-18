@@ -29,5 +29,6 @@ object KeepfitDatabaseFactory {
             .addMigrations(KeepfitMigrations.TWELVE_TO_THIRTEEN)
             .addMigrations(KeepfitMigrations.THIRTEEN_TO_FOURTEEN)
             .addMigrations(KeepfitMigrations.FOURTEEN_TO_FIFTEEN)
+            .addMigrations(KeepfitMigrations.FIFTEEN_TO_SIXTEEN)
             .build()
 }

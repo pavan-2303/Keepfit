@@ -24,9 +24,11 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.keepfit.core.designsystem.KeepfitTheme
-import com.keepfit.core.preferences.NutritionTrackingDepth
+import com.keepfit.feature.workouts.planning.ActivityLevel
 import com.keepfit.feature.workouts.planning.ExperienceLevel
 import com.keepfit.feature.workouts.planning.JourneyGoal
+import com.keepfit.feature.workouts.planning.LimitationArea
+import com.keepfit.feature.workouts.planning.SleepDuration
 import com.keepfit.feature.workouts.planning.StarterPlanStage
 import com.keepfit.feature.workouts.planning.StarterPlanUiState
 import com.keepfit.feature.workouts.planning.StarterWeekPlanner
@@ -41,7 +43,6 @@ class StarterPlanScreenTest {
     @Test
     fun setupExplainsOfflinePlanningAndShowsRouteChooser() {
         var generated = false
-        var nutritionDepth: NutritionTrackingDepth? = null
         var state by mutableStateOf(StarterPlanUiState())
         composeRule.setContent {
             KeepfitTheme {
@@ -49,26 +50,21 @@ class StarterPlanScreenTest {
                     state = state,
                     onCreateDraft = { generated = true },
                     onChoosePlanningRoute = { state = state.copy(stage = StarterPlanStage.ROUTE_CHOICE) },
-                    onNutritionDepthSelected = { nutritionDepth = it },
                     onBack = {},
                 )
             }
         }
 
-        composeRule.onNodeWithText("Training setup · 1 of 7").assertIsDisplayed()
-        composeRule.onNodeWithText("What do you want to work toward?").assertIsDisplayed()
-        repeat(5) { composeRule.onNodeWithText("Continue").performScrollTo().performClick() }
-        composeRule.onNodeWithText("Anything you prefer not to do?").assertIsDisplayed()
-        composeRule.onNodeWithText("Continue").performScrollTo().performClick()
-        composeRule.onNodeWithText("How much nutrition detail helps you?").assertIsDisplayed()
-        composeRule.onNodeWithText("Calories + protein").performClick()
+        composeRule.onNodeWithText("Personal assessment · 1 of 9").assertIsDisplayed()
+        composeRule.onNodeWithText("What result matters most right now?").assertIsDisplayed()
+        repeat(8) { composeRule.onNodeWithText("Continue").performScrollTo().performClick() }
+        composeRule.onNodeWithText("Review your starting point").assertIsDisplayed()
         composeRule.onNodeWithText("Choose how to plan").performScrollTo().performClick()
         composeRule.onNodeWithText("Choose your next step").assertIsDisplayed()
         composeRule.onNodeWithText("Build an offline starter week").performClick()
 
         composeRule.runOnIdle {
             assertTrue(generated)
-            assertTrue(nutritionDepth == NutritionTrackingDepth.CALORIES_PROTEIN)
         }
     }
 
@@ -100,17 +96,39 @@ class StarterPlanScreenTest {
     }
 
     @Test
-    fun movementConstraintsStayCompactUntilExpandedAndCanBeFiltered() {
+    fun assessmentCapturesActivitySleepAndLimitations() {
+        var state by mutableStateOf(StarterPlanUiState())
         composeRule.setContent {
-            KeepfitTheme { StarterPlanScreen(state = StarterPlanUiState(), onBack = {}) }
+            KeepfitTheme {
+                StarterPlanScreen(
+                    state = state,
+                    onBack = {},
+                    onActivitySelected = { state = state.copy(input = state.input.copy(activityLevel = it)) },
+                    onSleepDurationSelected = { state = state.copy(input = state.input.copy(sleepDuration = it)) },
+                    onLimitationAreaToggled = {
+                        state = state.copy(input = state.input.copy(limitationAreas = state.input.limitationAreas + it))
+                    },
+                    onLimitationNotesChanged = { state = state.copy(input = state.input.copy(limitationNotes = it)) },
+                )
+            }
         }
 
-        repeat(5) { composeRule.onNodeWithText("Continue").performScrollTo().performClick() }
-        composeRule.onNodeWithText("Choose exercises to avoid").assertIsDisplayed()
-        composeRule.onNodeWithText("Chair Squat").assertDoesNotExist()
-        composeRule.onNodeWithText("Choose exercises to avoid").performClick()
-        composeRule.onNodeWithText("Search exercises").performTextInput("chair")
-        composeRule.onNodeWithText("Chair Squat").assertIsDisplayed()
+        composeRule.onNodeWithText("Continue").performScrollTo().performClick()
+        composeRule.onNodeWithText("Highly active").performClick()
+        composeRule.onNodeWithText("Continue").performScrollTo().performClick()
+        composeRule.onNodeWithText("Continue").performScrollTo().performClick()
+        composeRule.onNodeWithText("Usually under 6 hours").performClick()
+        composeRule.onNodeWithText("Continue").performScrollTo().performClick()
+        composeRule.onNodeWithText("Continue").performScrollTo().performClick()
+        composeRule.onNodeWithText("Knees").performClick()
+        composeRule.onNodeWithText("Movements or advice to avoid").performTextInput("Avoid jumping")
+
+        composeRule.runOnIdle {
+            assertTrue(state.input.activityLevel == ActivityLevel.HIGHLY_ACTIVE)
+            assertTrue(state.input.sleepDuration == SleepDuration.UNDER_SIX_HOURS)
+            assertTrue(LimitationArea.KNEES in state.input.limitationAreas)
+            assertTrue(state.input.limitationNotes == "Avoid jumping")
+        }
     }
 
     @Test
@@ -159,6 +177,7 @@ class StarterPlanScreenTest {
 
         composeRule.onNodeWithText("Build consistency").assertIsSelected()
         composeRule.onNodeWithText("Continue").performClick()
+        composeRule.onNodeWithText("Continue").performClick()
         composeRule.onNodeWithText("Comfortable with the basics").assertIsSelected()
     }
 
@@ -175,8 +194,8 @@ class StarterPlanScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("What do you want to work toward?").assertIsDisplayed()
+        composeRule.onNodeWithText("What result matters most right now?").assertIsDisplayed()
         composeRule.onNodeWithText("Continue").performScrollTo().assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("How familiar is training?").assertIsDisplayed()
+        composeRule.onNodeWithText("Where are you starting from?").performScrollTo().assertIsDisplayed()
     }
 }

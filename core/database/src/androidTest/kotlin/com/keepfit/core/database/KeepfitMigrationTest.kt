@@ -785,6 +785,59 @@ class KeepfitMigrationTest {
         }
     }
 
+    @Test
+    fun migrateFifteenToSixteenAddsAssessmentDefaultsWithoutChangingJourneyPreferences() {
+        helper.createDatabase(TEST_DATABASE, 15).use { database ->
+            database.execSQL(
+                """
+                INSERT INTO body_profiles (
+                    id, displayName, heightCm, birthDate, dailyCalorieGoal,
+                    dailyProteinGoalGrams, dailyCarbohydrateGoalGrams,
+                    dailyFatGoalGrams, createdAt, updatedAt, archivedAt
+                ) VALUES ('owner', 'Owner', 175.0, NULL, NULL, NULL, NULL, NULL, 1, 1, NULL)
+                """.trimIndent(),
+            )
+            database.execSQL(
+                """
+                INSERT INTO journey_profiles (
+                    id, bodyProfileId, primaryGoal, experienceLevel,
+                    preferredDays, sessionMinutes, equipment,
+                    avoidedExerciseKeys, createdAt, updatedAt
+                ) VALUES (
+                    'journey', 'owner', 'STRENGTH', 'INTERMEDIATE',
+                    'TUESDAY,SATURDAY', 45, 'BODYWEIGHT,DUMBBELLS',
+                    '', 2, 3
+                )
+                """.trimIndent(),
+            )
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DATABASE,
+            16,
+            true,
+            KeepfitMigrations.FIFTEEN_TO_SIXTEEN,
+        ).use { database ->
+            database.query(
+                """
+                SELECT primaryGoal, activityLevel, sleepDuration, sleepSchedule,
+                       currentBuild, routineChallenges, limitationAreas, limitationNotes
+                FROM journey_profiles WHERE id = 'journey'
+                """.trimIndent(),
+            ).use { cursor ->
+                assertEquals(true, cursor.moveToFirst())
+                assertEquals("STRENGTH", cursor.getString(0))
+                assertEquals("LIGHTLY_ACTIVE", cursor.getString(1))
+                assertEquals("SEVEN_TO_EIGHT_HOURS", cursor.getString(2))
+                assertEquals("REGULAR", cursor.getString(3))
+                assertEquals("NOT_SURE", cursor.getString(4))
+                assertEquals("", cursor.getString(5))
+                assertEquals("", cursor.getString(6))
+                assertEquals(null, cursor.getString(7))
+            }
+        }
+    }
+
     private fun androidx.sqlite.db.SupportSQLiteDatabase.stringFor(query: String): String? =
         query(query).use { cursor ->
             check(cursor.moveToFirst())

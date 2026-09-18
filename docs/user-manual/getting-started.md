@@ -7,15 +7,17 @@
 3. Create a local profile. Birth date, height, and starting weight are optional;
    when supplied, Keepfit shows age and BMI context locally and stores the
    starting weight as the first Progress measurement.
-4. Complete the short training setup: goal, experience, realistic days,
-   session time, available equipment, movements to avoid, and preferred
-   nutrition detail.
-5. Choose whether to preview an offline starter week, plan manually, or ask
-   Coach to create a catalogue-backed draft from the saved answers.
+4. Complete or skip the focused training assessment: goal, current build,
+   daily activity, experience, sleep, routine constraints, pain or movement
+   limitations, realistic days, session time, and available equipment.
+5. Review the answers, then choose whether to preview an offline starter week,
+   plan manually, or connect OpenRouter and ask Coach for a reviewable draft.
 
 BMI is a general reference, not a diagnosis or complete picture of health.
-Birth date, height, and weight do not leave the device unless you explicitly
-export a backup. The deterministic starter plan does not require them.
+The deterministic starter plan does not require birth date, height, or weight.
+They remain local during ordinary use; an explicit Coach plan request shows a
+disclosure before sending bounded age, height, latest weight, and assessment
+context to OpenRouter.
 
 ## Main Navigation
 

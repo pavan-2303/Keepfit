@@ -16,8 +16,11 @@ AI coaching into one app without requiring a Keepfit account or backend.
 ### Plan and complete workouts
 
 - Build a weekly schedule from reusable workout templates.
-- Start with an offline plan based on your goal, experience, available days,
-  session length, equipment, and exercises to avoid.
+- Complete a skippable planning assessment covering your goal, starting point,
+  activity, experience, sleep, routine constraints, limitations, available
+  days, session length, and equipment.
+- Start with an offline plan, build manually, or explicitly ask a connected
+  Coach for a reviewed draft that can add missing exercises on approval.
 - Build a personal exercise catalogue with equipment, target muscles,
   instructions, notes, and optional private demonstration media.
 - Log sets, repetitions, weight, notes, rest periods, and completion feedback.
