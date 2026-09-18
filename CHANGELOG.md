@@ -3,6 +3,19 @@
 Notable public changes are recorded here. Detailed engineering records remain
 under `docs/done/versions/`.
 
+## 0.24.0 - 2026-09-18
+
+- Replaced the initial training form with a nine-step, skippable assessment for
+  goals, starting point, activity, experience, sleep, routine constraints,
+  limitations, schedule, and equipment.
+- Made Coach setup connection-first so persona choices appear only after a
+  valid OpenRouter connection exists.
+- Allowed a reviewed AI plan to define missing exercises when the personal
+  catalogue is empty; approved definitions are created or reused atomically
+  with the active profile's plan.
+- Added the Room 15-to-16 migration while preserving existing journey answers
+  and plans.
+
 ## 0.23.0 - 2026-09-17
 
 - Replaced the preloaded exercise dataset with an empty personal catalogue.

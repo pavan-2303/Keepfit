@@ -78,8 +78,11 @@ logs.
 ### Personal exercise catalogue data
 
 A fresh database contains no exercise rows. Exercises are created explicitly
-by the user or as part of an accepted starter plan. Both paths write ordinary
-personal `Exercise` records with null provenance and optional private media.
+by the user or as part of an accepted offline or AI-created plan. Every path
+writes ordinary personal `Exercise` records with null third-party provenance
+and optional private media. AI definitions are validated and remain transient
+until the user approves the complete plan; the exercises and plan then commit
+in one Room transaction.
 
 Migration 14-to-15 removes untouched rows from the retired bundled catalogue.
 A legacy row is preserved and converted to a personal exercise when it was
@@ -434,6 +437,16 @@ reviewed week remains a separate explicit operation.
 | `avoidedExerciseKeys` | String set | Stable keys from the owned starter catalogue |
 | `createdAt` | Instant | Creation timestamp |
 | `updatedAt` | Instant | Last edit timestamp |
+| `activityLevel` | Enum | Mostly seated, lightly active, active, or highly active |
+| `sleepDuration` | Enum | Typical duration band or variable |
+| `sleepSchedule` | Enum | Regular, irregular, or shift-based |
+| `currentBuild` | Enum | Optional self-described starting context |
+| `routineChallenges` | Enum set | Schedule, workday, energy, stress, travel, or consistency constraints |
+| `limitationAreas` | Enum set | Optional body areas needing conservative planning |
+| `limitationNotes` | String? | Optional user-authored movements or advice to avoid |
+
+Schema migration 15-to-16 adds the assessment fields with conservative defaults
+and retains all prior journey answers, templates, plans, and history.
 
 Applying a reviewed starter week is transactional. It deactivates the prior
 weekly plan and archives only active templates whose origin is `STARTER_PLAN`.

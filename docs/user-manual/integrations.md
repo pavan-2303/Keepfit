@@ -33,15 +33,15 @@ use your account's free-model quota or credits.
 Current capabilities:
 
 - connect, inspect, and disconnect your OpenRouter access;
-- choose Mira for a warm style, Rook for a direct style, or Atlas for an
-  analytical style;
+- after connecting, choose Mira for a warm style, Rook for a direct style, or
+  Atlas for an analytical style;
 - keep separate profile-owned conversations across app restarts;
 - switch, rename, clear future Coach memory, or delete a conversation;
 - ask ordinary training and nutrition questions;
 - ask about recent personal progress and receive insights from compact local
   workout, nutrition, step, and transformation summaries;
-- create a workout-plan draft from saved journey answers using only exercises
-  in your personal catalogue;
+- create a workout-plan draft from saved assessment answers, reusing personal
+  exercises or defining missing ones for your approval;
 - review the current week, propose a week from existing templates, or suggest
   a meal from saved foods; and
 - retry a failed request without changing local records.
@@ -63,7 +63,7 @@ reconnect through Coach instead.
 
 Inside Coach you can:
 
-1. Choose a Coach when starting a conversation. This changes communication
+1. Connect OpenRouter before choosing a Coach. The Coach choice changes communication
    style, not safety or privacy boundaries. Choosing a Coach alone does not
    create a history entry; the conversation is saved after you send the first
    question.
@@ -75,8 +75,9 @@ Inside Coach you can:
 5. Open conversation history to switch threads. Use a thread's options to
    rename it, clear future Coach memory while retaining the transcript, or
    permanently delete it.
-6. Use `Create plan` for a new catalogue-backed week. Inspect the vertical
-   weekday preview and choose `Apply plan` only when every target is correct.
+6. Use `Create plan` for a new assessment-informed week. Inspect any proposed
+   new exercises and the vertical weekday preview, then choose `Apply plan` only
+   when every definition and target is correct.
 7. Use `Review` for a weekly summary, an existing-template week, or a saved-food
    meal proposal. These remain previews until you explicitly apply them.
 
@@ -100,10 +101,12 @@ existing records unchanged.
   request sends only a capped recap of earlier content plus the latest 12
   messages. Clearing Coach memory excludes earlier messages from later
   requests without deleting the local transcript.
-- Weight, BMI, height, transformation photos, body measurements, profile and
-  personal-record identifiers, private paths, and raw database rows are
-  excluded. Plan creation sends at most 60 short-lived exercise aliases and
-  labels so Keepfit can reject invented exercises without exposing Room IDs.
+- General chat excludes weight, BMI, height, assessment answers, transformation
+  photos, and body measurements. An explicit plan request sends the disclosed
+  age, height, latest weight, goal, activity, experience, sleep, routine,
+  equipment, limitations, and at most 60 short-lived exercise aliases and
+  labels. Photos, detailed measurements, identifiers, private paths, media, and
+  raw database rows remain excluded.
 - OpenRouter records request metadata such as model, token counts, and latency.
   Its prompt logging is off by default according to its current documentation.
 - The encrypted credential and OAuth transaction are not included in Keepfit

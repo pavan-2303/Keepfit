@@ -39,6 +39,9 @@ This roadmap captures future themes and sequencing only.
     maintained instead of reopening full-template selection flows.
 15. Replace the preloaded third-party exercise dataset with a user-owned
     catalogue, progressive template building, and connected exercise details.
+16. Make first-run assessment useful for planning, permit approved AI-created
+    personal exercises, and require an OpenRouter connection before Coach
+    persona selection.
 
 Detailed discovery for these themes is tracked in the
 [Practical Fitness Journey and Optional AI Coach](backlog/items/practical-fitness-journey-and-ai-coach.md)
@@ -100,6 +103,11 @@ initiative. Its increment is
 [v0.23.0 - Personal Exercise Building](done/versions/v0.23.0.md), which is complete.
 This increment supersedes the bundled-catalogue product decision while keeping
 the earlier done records as delivery history.
+
+Assessment-driven planning is tracked in the
+[AI-Ready Personal Assessment](backlog/items/ai-ready-personal-assessment.md)
+initiative. Its increment is complete in
+[v0.24.0 - Assessment-Driven Planning](done/versions/v0.24.0.md).
 
 ## Delivery Order
 

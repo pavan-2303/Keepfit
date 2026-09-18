@@ -7,7 +7,7 @@ import com.keepfit.feature.assistant.coaching.CoachingToolContract
 object AssistantPlanToolContract {
     fun create(): CoachingToolContract = CoachingToolContract(
         name = "create_workout_plan",
-        description = "Create a safe weekly workout draft using only supplied exercise identifiers.",
+        description = "Create a safe weekly workout draft using supplied exercise identifiers or complete new exercise definitions.",
         parameters = objectSchema(
             properties = mapOf(
                 "plan_name" to stringSchema(80),
@@ -19,12 +19,23 @@ object AssistantPlanToolContract {
                         "notes" to stringSchema(240, allowEmpty = true),
                         "exercises" to arraySchema(1, 8, objectSchema(
                             properties = mapOf(
-                                "exercise_id" to stringSchema(64),
+                                "exercise_id" to stringSchema(64, allowEmpty = true),
+                                "name" to stringSchema(80, allowEmpty = true),
+                                "muscle_group" to stringSchema(60, allowEmpty = true),
+                                "equipment" to stringSchema(60, allowEmpty = true),
+                                "target_muscle" to stringSchema(60, allowEmpty = true),
+                                "secondary_muscles" to stringSchema(120, allowEmpty = true),
+                                "instructions" to stringSchema(500, allowEmpty = true),
+                                "is_bodyweight" to booleanSchema(),
                                 "target_sets" to integerSchema(1, 6),
                                 "target_reps" to stringSchema(20),
                                 "notes" to stringSchema(160, allowEmpty = true),
                             ),
-                            required = listOf("exercise_id", "target_sets", "target_reps", "notes"),
+                            required = listOf(
+                                "exercise_id", "name", "muscle_group", "equipment",
+                                "target_muscle", "secondary_muscles", "instructions",
+                                "is_bodyweight", "target_sets", "target_reps", "notes",
+                            ),
                         )),
                     ),
                     required = listOf("day_of_week", "template_name", "notes", "exercises"),
@@ -49,6 +60,8 @@ object AssistantPlanToolContract {
         addProperty("minimum", minimum)
         addProperty("maximum", maximum)
     }
+
+    private fun booleanSchema() = JsonObject().apply { addProperty("type", "boolean") }
 
     private fun arraySchema(min: Int, max: Int, items: JsonObject) = JsonObject().apply {
         addProperty("type", "array")

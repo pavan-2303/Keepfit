@@ -15,8 +15,11 @@ a Keepfit account service.
 
 - **OpenRouter:** Used only after the user connects their own account and sends
   a Coach request. Requests may include the typed question and bounded context
-  described in the app. Credentials use Android secure storage and are not
-  included in Keepfit backups.
+  described in the app. An explicit plan request may include the active
+  profile's age, height, latest weight, activity, sleep, routine, equipment,
+  goals, limitations, and short-lived exercise aliases. Photos, private media,
+  raw records, and local identifiers are not sent. Credentials use Android
+  secure storage and are not included in Keepfit backups.
 - **Health Connect:** Read-only step access is requested only when the user
   enables it. Keepfit does not duplicate Health Connect records into Room.
 - **Android backup and transfer:** Supported devices may recover allowlisted

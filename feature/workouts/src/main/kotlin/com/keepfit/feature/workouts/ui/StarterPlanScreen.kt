@@ -24,7 +24,6 @@ import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.QuestionAnswer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -39,6 +38,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,10 +55,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.keepfit.core.preferences.NutritionTrackingDepth
+import com.keepfit.feature.workouts.planning.ActivityLevel
+import com.keepfit.feature.workouts.planning.CurrentBuild
 import com.keepfit.feature.workouts.planning.EquipmentOption
 import com.keepfit.feature.workouts.planning.ExperienceLevel
 import com.keepfit.feature.workouts.planning.JourneyGoal
+import com.keepfit.feature.workouts.planning.LimitationArea
+import com.keepfit.feature.workouts.planning.RoutineChallenge
+import com.keepfit.feature.workouts.planning.SleepDuration
+import com.keepfit.feature.workouts.planning.SleepSchedule
 import com.keepfit.feature.workouts.planning.StarterExerciseCatalog
 import com.keepfit.feature.workouts.planning.StarterExerciseDefinition
 import com.keepfit.feature.workouts.planning.StarterPlanStage
@@ -82,11 +87,16 @@ fun StarterPlanRoute(
         state = state,
         onGoalSelected = viewModel::selectGoal,
         onExperienceSelected = viewModel::selectExperience,
+        onActivitySelected = viewModel::selectActivity,
+        onSleepDurationSelected = viewModel::selectSleepDuration,
+        onSleepScheduleSelected = viewModel::selectSleepSchedule,
+        onCurrentBuildSelected = viewModel::selectCurrentBuild,
+        onRoutineChallengeToggled = viewModel::toggleRoutineChallenge,
+        onLimitationAreaToggled = viewModel::toggleLimitationArea,
+        onLimitationNotesChanged = viewModel::updateLimitationNotes,
         onDayToggled = viewModel::toggleDay,
         onDurationSelected = viewModel::selectDuration,
         onEquipmentToggled = viewModel::toggleEquipment,
-        onAvoidToggled = viewModel::toggleAvoidedExercise,
-        onNutritionDepthSelected = viewModel::selectNutritionDepth,
         onChoosePlanningRoute = viewModel::showRouteChoice,
         onCreateDraft = viewModel::createDraft,
         onPlanManually = onPlanManually,
@@ -110,11 +120,16 @@ fun StarterPlanScreen(
     modifier: Modifier = Modifier,
     onGoalSelected: (JourneyGoal) -> Unit = {},
     onExperienceSelected: (ExperienceLevel) -> Unit = {},
+    onActivitySelected: (ActivityLevel) -> Unit = {},
+    onSleepDurationSelected: (SleepDuration) -> Unit = {},
+    onSleepScheduleSelected: (SleepSchedule) -> Unit = {},
+    onCurrentBuildSelected: (CurrentBuild) -> Unit = {},
+    onRoutineChallengeToggled: (RoutineChallenge) -> Unit = {},
+    onLimitationAreaToggled: (LimitationArea) -> Unit = {},
+    onLimitationNotesChanged: (String) -> Unit = {},
     onDayToggled: (DayOfWeek) -> Unit = {},
     onDurationSelected: (Int) -> Unit = {},
     onEquipmentToggled: (EquipmentOption) -> Unit = {},
-    onAvoidToggled: (String) -> Unit = {},
-    onNutritionDepthSelected: (NutritionTrackingDepth) -> Unit = {},
     onChoosePlanningRoute: () -> Unit = {},
     onCreateDraft: () -> Unit = {},
     onPlanManually: () -> Unit = {},
@@ -164,11 +179,16 @@ fun StarterPlanScreen(
                 state = state,
                 onGoalSelected = onGoalSelected,
                 onExperienceSelected = onExperienceSelected,
+                onActivitySelected = onActivitySelected,
+                onSleepDurationSelected = onSleepDurationSelected,
+                onSleepScheduleSelected = onSleepScheduleSelected,
+                onCurrentBuildSelected = onCurrentBuildSelected,
+                onRoutineChallengeToggled = onRoutineChallengeToggled,
+                onLimitationAreaToggled = onLimitationAreaToggled,
+                onLimitationNotesChanged = onLimitationNotesChanged,
                 onDayToggled = onDayToggled,
                 onDurationSelected = onDurationSelected,
                 onEquipmentToggled = onEquipmentToggled,
-                onAvoidToggled = onAvoidToggled,
-                onNutritionDepthSelected = onNutritionDepthSelected,
                 onChoosePlanningRoute = onChoosePlanningRoute,
                 modifier = Modifier.padding(padding),
             )
@@ -197,38 +217,86 @@ private fun SetupContent(
     state: StarterPlanUiState,
     onGoalSelected: (JourneyGoal) -> Unit,
     onExperienceSelected: (ExperienceLevel) -> Unit,
+    onActivitySelected: (ActivityLevel) -> Unit,
+    onSleepDurationSelected: (SleepDuration) -> Unit,
+    onSleepScheduleSelected: (SleepSchedule) -> Unit,
+    onCurrentBuildSelected: (CurrentBuild) -> Unit,
+    onRoutineChallengeToggled: (RoutineChallenge) -> Unit,
+    onLimitationAreaToggled: (LimitationArea) -> Unit,
+    onLimitationNotesChanged: (String) -> Unit,
     onDayToggled: (DayOfWeek) -> Unit,
     onDurationSelected: (Int) -> Unit,
     onEquipmentToggled: (EquipmentOption) -> Unit,
-    onAvoidToggled: (String) -> Unit,
-    onNutritionDepthSelected: (NutritionTrackingDepth) -> Unit,
     onChoosePlanningRoute: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     var step by rememberSaveable { mutableIntStateOf(0) }
-    val stepCount = 7
+    val stepCount = 9
     Column(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Text(
-            "Training setup · ${step + 1} of $stepCount",
+            "Personal assessment · ${step + 1} of $stepCount",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
         LinearProgressIndicator(progress = { (step + 1f) / stepCount }, modifier = Modifier.fillMaxWidth())
         when (step) {
             0 -> {
-                SectionLabel("What do you want to work toward?", "This changes the balance of your starter week.")
-                ChoiceSection("Choose one goal", JourneyGoal.entries, state.input.goal, { it.label }, onGoalSelected)
+                SectionLabel("What result matters most right now?", "Choose the outcome that should lead your first plan.")
+                ChoiceSection("Primary goal", JourneyGoal.entries, state.input.goal, { it.label }, onGoalSelected)
             }
             1 -> {
-                SectionLabel("How familiar is training?", "We use this to keep the starting volume realistic.")
-                ChoiceSection("Experience", ExperienceLevel.entries, state.input.experienceLevel, { it.label }, onExperienceSelected)
+                SectionLabel(
+                    "Where are you starting from?",
+                    "Build is optional context, not a diagnosis or a fixed body type.",
+                )
+                ChoiceSection("Current build", CurrentBuild.entries, state.input.currentBuild, { it.label }, onCurrentBuildSelected)
+                ChoiceSection("Typical daily activity", ActivityLevel.entries, state.input.activityLevel, { it.label }, onActivitySelected)
             }
             2 -> {
-                SectionLabel("Which days can you usually protect?", "Choose 1–4 realistic days. You can move a session later.")
+                SectionLabel("How familiar is structured training?", "This keeps exercise complexity and starting volume realistic.")
+                ChoiceSection("Experience", ExperienceLevel.entries, state.input.experienceLevel, { it.label }, onExperienceSelected)
+            }
+            3 -> {
+                SectionLabel("How does recovery usually look?", "Sleep is planning context, not a score. Choose the closest normal week.")
+                ChoiceSection("Sleep duration", SleepDuration.entries, state.input.sleepDuration, { it.label }, onSleepDurationSelected)
+                ChoiceSection("Sleep schedule", SleepSchedule.entries, state.input.sleepSchedule, { it.label }, onSleepScheduleSelected)
+            }
+            4 -> {
+                SectionLabel("What regularly gets in the way?", "Optional. Select anything a realistic plan should work around.")
+                MultiChoiceSection(
+                    choices = RoutineChallenge.entries,
+                    selected = state.input.routineChallenges,
+                    label = { it.label },
+                    onToggle = onRoutineChallengeToggled,
+                )
+            }
+            5 -> {
+                SectionLabel(
+                    "Any pain, injuries, or movement limits?",
+                    "Optional planning context only. Keepfit cannot diagnose or prescribe rehabilitation.",
+                )
+                MultiChoiceSection(
+                    choices = LimitationArea.entries,
+                    selected = state.input.limitationAreas,
+                    label = { it.label },
+                    onToggle = onLimitationAreaToggled,
+                )
+                OutlinedTextField(
+                    value = state.input.limitationNotes.orEmpty(),
+                    onValueChange = onLimitationNotesChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Movements or advice to avoid") },
+                    placeholder = { Text("For example: avoid jumping and deep knee bends") },
+                    minLines = 3,
+                    maxLines = 6,
+                )
+            }
+            6 -> {
+                SectionLabel("What can your week actually support?", "Choose 1–4 realistic days and a repeatable session length.")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DayOfWeek.entries.forEach { day ->
                         FilterChip(
@@ -238,9 +306,7 @@ private fun SetupContent(
                         )
                     }
                 }
-            }
-            3 -> {
-                SectionLabel("How much time fits on a normal day?", "A repeatable 30 minutes is better than an unrealistic hour.")
+                Text("Session length", style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(15, 30, 45, 60).forEach { minutes ->
                         FilterChip(
@@ -251,8 +317,8 @@ private fun SetupContent(
                     }
                 }
             }
-            4 -> {
-                SectionLabel("What can you train with?", "Bodyweight is always included. Select everything reliably available.")
+            7 -> {
+                SectionLabel("What can you reliably train with?", "Bodyweight is always available. Select only equipment you can use most weeks.")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     EquipmentOption.entries.forEach { option ->
                         FilterChip(
@@ -264,44 +330,26 @@ private fun SetupContent(
                     }
                 }
             }
-            5 -> {
-                SectionLabel("Anything you prefer not to do?", "Optional. This is a planning preference, not injury treatment.")
-                MovementConstraintPicker(
-                    selectedKeys = state.input.avoidedExerciseKeys,
-                    onToggle = onAvoidToggled,
-                )
-            }
             else -> {
-                SectionLabel(
-                    "How much nutrition detail helps you?",
-                    "Choose the lightest approach you can maintain. You can change this later in Settings.",
-                )
-                ChoiceSection(
-                    title = "Nutrition tracking",
-                    choices = NutritionTrackingDepth.entries,
-                    selected = state.nutritionTrackingDepth,
-                    label = {
-                        when (it) {
-                            NutritionTrackingDepth.DETAILED_MACROS -> "Detailed macros"
-                            NutritionTrackingDepth.CALORIES_PROTEIN -> "Calories + protein"
-                            NutritionTrackingDepth.MEAL_QUALITY -> "Simple meal check-ins"
-                            NutritionTrackingDepth.DISABLED -> "Not right now"
-                        }
-                    },
-                    onSelect = onNutritionDepthSelected,
-                )
+                SectionLabel("Review your starting point", "These answers guide planning. You can return and change them before creating anything.")
+                AssessmentSummary(state)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (step > 0) OutlinedButton(onClick = { step-- }, modifier = Modifier.weight(1f)) { Text("Back") }
             Button(
                 onClick = { if (step == stepCount - 1) onChoosePlanningRoute() else step++ },
-                enabled = step != 2 || state.input.preferredDays.isNotEmpty(),
+                enabled = step != 6 || state.input.preferredDays.isNotEmpty(),
                 modifier = Modifier.weight(1f),
             ) { Text(if (step == stepCount - 1) "Choose how to plan" else "Continue") }
         }
+        if (step < stepCount - 1) {
+            TextButton(onClick = onChoosePlanningRoute, modifier = Modifier.fillMaxWidth()) {
+                Text("Skip assessment for now")
+            }
+        }
         Text(
-            "Your answers stay on this device. The starter week is created offline and remains editable.",
+            "Your answers stay on this device unless you explicitly ask Coach to create a plan.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -310,56 +358,52 @@ private fun SetupContent(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MovementConstraintPicker(
-    selectedKeys: Set<String>,
-    onToggle: (String) -> Unit,
+private fun <T> MultiChoiceSection(
+    choices: List<T>,
+    selected: Set<T>,
+    label: (T) -> String,
+    onToggle: (T) -> Unit,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    var query by rememberSaveable { mutableStateOf("") }
-    val selected = StarterExerciseCatalog.exercises.filter { it.key in selectedKeys }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        choices.forEach { choice ->
+            FilterChip(
+                selected = choice in selected,
+                onClick = { onToggle(choice) },
+                label = { Text(label(choice)) },
+            )
+        }
+    }
+}
 
-    if (selected.isNotEmpty()) {
-        Text("Avoiding ${selected.size}", style = MaterialTheme.typography.labelLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            selected.forEach { exercise ->
-                FilterChip(
-                    selected = true,
-                    onClick = { onToggle(exercise.key) },
-                    label = { Text(exercise.name) },
-                )
-            }
-        }
-    }
-    OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
-        Text(if (expanded) "Hide exercise list" else "Choose exercises to avoid")
-    }
-    if (expanded) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Search exercises") },
-            singleLine = true,
-        )
-        val matches = StarterExerciseCatalog.exercises.filter { exercise ->
-            query.isBlank() || exercise.name.contains(query, ignoreCase = true) ||
-                exercise.muscleGroup.contains(query, ignoreCase = true)
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            matches.forEach { exercise ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = exercise.key in selectedKeys,
-                        onCheckedChange = { onToggle(exercise.key) },
-                    )
-                    Column {
-                        Text(exercise.name, style = MaterialTheme.typography.titleMedium)
-                        Text(exercise.muscleGroup, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+@Composable
+private fun AssessmentSummary(state: StarterPlanUiState) {
+    val locale = LocalConfiguration.current.locales[0]
+    val rows = listOf(
+        "Goal" to state.input.goal.label,
+        "Starting point" to "${state.input.currentBuild.label}; ${state.input.activityLevel.label}",
+        "Experience" to state.input.experienceLevel.label,
+        "Recovery" to "${state.input.sleepDuration.label}; ${state.input.sleepSchedule.label}",
+        "Training days" to state.input.preferredDays.sorted().joinToString { it.getDisplayName(TextStyle.SHORT, locale) },
+        "Session" to "${state.input.sessionMinutes} minutes",
+        "Equipment" to state.input.equipment.joinToString { it.label },
+        "Limitations" to when {
+            state.input.limitationAreas.isEmpty() && state.input.limitationNotes.isNullOrBlank() -> "None shared"
+            else -> state.input.limitationAreas.joinToString { it.label }
+                .ifBlank { "Details provided" }
+        },
+    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            rows.forEachIndexed { index, (label, value) ->
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(value.ifBlank { "Not selected" }, style = MaterialTheme.typography.bodyLarge)
                 }
-            }
-            if (matches.isEmpty()) {
-                Text("No matching starter exercises.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (index != rows.lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
             }
         }
     }
@@ -396,7 +440,7 @@ private fun PlanningRouteContent(
         )
         PlanningRouteButton(
             title = "Let AI personalize a draft",
-            supporting = "Open Coach to create a catalogue-backed plan from your saved answers. OpenRouter connection is required.",
+            supporting = "Connect OpenRouter, choose a Coach, and review a plan that can also add the exercises it needs to your catalogue.",
             icon = { Icon(Icons.Outlined.QuestionAnswer, contentDescription = null) },
             onClick = onAskCoach,
         )

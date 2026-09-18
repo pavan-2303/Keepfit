@@ -4,6 +4,18 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object KeepfitMigrations {
+    val FIFTEEN_TO_SIXTEEN = object : Migration(15, 16) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE `journey_profiles` ADD COLUMN `activityLevel` TEXT NOT NULL DEFAULT 'LIGHTLY_ACTIVE'")
+            database.execSQL("ALTER TABLE `journey_profiles` ADD COLUMN `sleepDuration` TEXT NOT NULL DEFAULT 'SEVEN_TO_EIGHT_HOURS'")
+            database.execSQL("ALTER TABLE `journey_profiles` ADD COLUMN `sleepSchedule` TEXT NOT NULL DEFAULT 'REGULAR'")
+            database.execSQL("ALTER TABLE `journey_profiles` ADD COLUMN `currentBuild` TEXT NOT NULL DEFAULT 'NOT_SURE'")
+            database.execSQL("ALTER TABLE `journey_profiles` ADD COLUMN `routineChallenges` TEXT NOT NULL DEFAULT ''")
+            database.execSQL("ALTER TABLE `journey_profiles` ADD COLUMN `limitationAreas` TEXT NOT NULL DEFAULT ''")
+            database.execSQL("ALTER TABLE `journey_profiles` ADD COLUMN `limitationNotes` TEXT")
+        }
+    }
+
     val FOURTEEN_TO_FIFTEEN = object : Migration(14, 15) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL(

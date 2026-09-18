@@ -23,6 +23,54 @@ enum class EquipmentOption(val label: String) {
     FULL_GYM("Full gym"),
 }
 
+enum class ActivityLevel(val label: String) {
+    MOSTLY_SEATED("Mostly seated"),
+    LIGHTLY_ACTIVE("Lightly active"),
+    ACTIVE("Active"),
+    HIGHLY_ACTIVE("Highly active"),
+}
+
+enum class SleepDuration(val label: String) {
+    UNDER_SIX_HOURS("Usually under 6 hours"),
+    SIX_TO_SEVEN_HOURS("Usually 6–7 hours"),
+    SEVEN_TO_EIGHT_HOURS("Usually 7–8 hours"),
+    OVER_EIGHT_HOURS("Usually over 8 hours"),
+    VARIABLE("It varies a lot"),
+}
+
+enum class SleepSchedule(val label: String) {
+    REGULAR("Fairly regular"),
+    IRREGULAR("Irregular"),
+    SHIFT_BASED("Shift-based"),
+}
+
+enum class CurrentBuild(val label: String) {
+    LEAN("Lean build"),
+    AVERAGE("Average build"),
+    MUSCULAR("Muscular build"),
+    LARGER_BUILD("Larger build"),
+    NOT_SURE("Not sure / skip"),
+}
+
+enum class RoutineChallenge(val label: String) {
+    INCONSISTENT_SCHEDULE("Schedule changes"),
+    LONG_WORKDAYS("Long workdays"),
+    LOW_ENERGY("Low energy"),
+    HIGH_STRESS("High stress"),
+    FREQUENT_TRAVEL("Frequent travel"),
+    STAYING_CONSISTENT("Staying consistent"),
+}
+
+enum class LimitationArea(val label: String) {
+    SHOULDERS("Shoulders"),
+    WRISTS("Wrists or hands"),
+    BACK("Back"),
+    HIPS("Hips"),
+    KNEES("Knees"),
+    ANKLES("Ankles or feet"),
+    OTHER("Other"),
+}
+
 data class StarterPlanInput(
     val goal: JourneyGoal,
     val experienceLevel: ExperienceLevel,
@@ -30,6 +78,13 @@ data class StarterPlanInput(
     val sessionMinutes: Int,
     val equipment: Set<EquipmentOption>,
     val avoidedExerciseKeys: Set<String>,
+    val activityLevel: ActivityLevel = ActivityLevel.LIGHTLY_ACTIVE,
+    val sleepDuration: SleepDuration = SleepDuration.SEVEN_TO_EIGHT_HOURS,
+    val sleepSchedule: SleepSchedule = SleepSchedule.REGULAR,
+    val currentBuild: CurrentBuild = CurrentBuild.NOT_SURE,
+    val routineChallenges: Set<RoutineChallenge> = emptySet(),
+    val limitationAreas: Set<LimitationArea> = emptySet(),
+    val limitationNotes: String? = null,
 )
 
 data class StarterPlanExercise(

@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.keepfit.feature.assistant.coaching.CoachingToolCall
 import com.keepfit.feature.assistant.data.AssistantDraftWorkoutDay
+import com.keepfit.feature.assistant.data.AssistantDraftExerciseDefinition
 import com.keepfit.feature.assistant.data.AssistantDraftWorkoutExercise
 import com.keepfit.feature.assistant.data.AssistantDraftWorkoutPlan
 import java.time.DayOfWeek
@@ -22,20 +23,37 @@ class AssistantPlanValidator @Inject constructor() {
             require(dayOfWeek in context.preferredDays) { "$dayOfWeek is not an available training day." }
             val exercises = day.requiredArray("exercises", 1, 8).mapObject { item ->
                 item.requireOnly(EXERCISE_KEYS)
-                val exerciseId = item.requiredText("exercise_id", 64)
-                val option = available[exerciseId] ?: error("Exercise $exerciseId is not available.")
+                val exerciseId = item.optionalText("exercise_id", 64).orEmpty()
+                val option = exerciseId.takeIf(String::isNotEmpty)?.let { id ->
+                    available[id] ?: error("Exercise $id is not available.")
+                }
+                val definition = if (option == null) {
+                    AssistantDraftExerciseDefinition(
+                        name = item.requiredText("name", 80),
+                        muscleGroup = item.requiredText("muscle_group", 60),
+                        equipment = item.optionalText("equipment", 60),
+                        targetMuscle = item.optionalText("target_muscle", 60),
+                        secondaryMuscles = item.optionalText("secondary_muscles", 120),
+                        instructions = item.requiredText("instructions", 500),
+                        isBodyweight = item.requiredBoolean("is_bodyweight"),
+                    )
+                } else {
+                    item.requiredBoolean("is_bodyweight")
+                    null
+                }
                 val sets = item.requiredInt("target_sets", 1, 6)
                 val reps = item.requiredText("target_reps", 20)
                 require(TARGET_REPS.matches(reps)) { "Exercise target is invalid." }
                 AssistantDraftWorkoutExercise(
-                    exerciseId = option.id,
-                    name = option.name,
+                    exerciseId = option?.id.orEmpty(),
+                    name = option?.name ?: requireNotNull(definition).name,
                     targetSets = sets,
                     targetReps = reps,
                     notes = item.optionalText("notes", 160),
+                    newExercise = definition,
                 )
             }
-            require(exercises.map { it.exerciseId }.distinct().size == exercises.size) {
+            require(exercises.map { it.identityKey() }.distinct().size == exercises.size) {
                 "An exercise can appear only once per day."
             }
             AssistantDraftWorkoutDay(
@@ -72,6 +90,12 @@ class AssistantPlanValidator @Inject constructor() {
         return value
     }
 
+    private fun JsonObject.requiredBoolean(name: String): Boolean {
+        val primitive = get(name)?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive ?: error("$name is required.")
+        require(primitive.isBoolean) { "$name is invalid." }
+        return primitive.asBoolean
+    }
+
     private fun JsonObject.requiredArray(name: String, min: Int, max: Int): JsonArray {
         val array = get(name)?.takeIf { it.isJsonArray }?.asJsonArray ?: error("$name is required.")
         require(array.size() in min..max) { "$name has an invalid number of items." }
@@ -93,7 +117,14 @@ class AssistantPlanValidator @Inject constructor() {
     private companion object {
         val ROOT_KEYS = setOf("plan_name", "overview", "days")
         val DAY_KEYS = setOf("day_of_week", "template_name", "notes", "exercises")
-        val EXERCISE_KEYS = setOf("exercise_id", "target_sets", "target_reps", "notes")
+        val EXERCISE_KEYS = setOf(
+            "exercise_id", "name", "muscle_group", "equipment", "target_muscle",
+            "secondary_muscles", "instructions", "is_bodyweight", "target_sets",
+            "target_reps", "notes",
+        )
         val TARGET_REPS = Regex("^(?:[1-9]\\d?(?:-[1-9]\\d?)?|[1-9]\\d? (?:sec|secs|seconds|min|mins|minutes))$", RegexOption.IGNORE_CASE)
     }
 }
+
+private fun AssistantDraftWorkoutExercise.identityKey(): String =
+    exerciseId.takeIf(String::isNotBlank) ?: "new:${name.lowercase().filter(Char::isLetterOrDigit)}"

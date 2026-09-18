@@ -56,6 +56,13 @@ class RoomStarterPlanRepositoryTest {
             sessionMinutes = 45,
             equipment = setOf(EquipmentOption.BODYWEIGHT, EquipmentOption.DUMBBELLS),
             avoidedExerciseKeys = setOf("push-up"),
+            activityLevel = ActivityLevel.MOSTLY_SEATED,
+            sleepDuration = SleepDuration.SIX_TO_SEVEN_HOURS,
+            sleepSchedule = SleepSchedule.SHIFT_BASED,
+            currentBuild = CurrentBuild.LARGER_BUILD,
+            routineChallenges = setOf(RoutineChallenge.LOW_ENERGY, RoutineChallenge.INCONSISTENT_SCHEDULE),
+            limitationAreas = setOf(LimitationArea.KNEES),
+            limitationNotes = "Deep knee flexion can be uncomfortable.",
         )
 
         repository.savePreferences(input)

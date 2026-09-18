@@ -201,7 +201,7 @@ class OpenRouterCoachingRepositoryTest {
 
     private fun validPlanResponse() = AssistantHttpResponse(
         200,
-        """{"choices":[{"message":{"role":"assistant","tool_calls":[{"id":"call-plan","type":"function","function":{"name":"create_workout_plan","arguments":"{\"plan_name\":\"Strong start\",\"overview\":\"A manageable week.\",\"days\":[{\"day_of_week\":\"MONDAY\",\"template_name\":\"Full body A\",\"notes\":\"Move with control.\",\"exercises\":[{\"exercise_id\":\"11111111-1111-1111-1111-111111111111\",\"target_sets\":3,\"target_reps\":\"8-12\",\"notes\":\"Leave two reps in reserve.\"}]}]}"}}]}}]}""",
+        """{"choices":[{"message":{"role":"assistant","tool_calls":[{"id":"call-plan","type":"function","function":{"name":"create_workout_plan","arguments":"{\"plan_name\":\"Strong start\",\"overview\":\"A manageable week.\",\"days\":[{\"day_of_week\":\"MONDAY\",\"template_name\":\"Full body A\",\"notes\":\"Move with control.\",\"exercises\":[{\"exercise_id\":\"11111111-1111-1111-1111-111111111111\",\"name\":\"\",\"muscle_group\":\"\",\"equipment\":\"\",\"target_muscle\":\"\",\"secondary_muscles\":\"\",\"instructions\":\"\",\"is_bodyweight\":false,\"target_sets\":3,\"target_reps\":\"8-12\",\"notes\":\"Leave two reps in reserve.\"}]}]}"}}]}}]}""",
     )
 
     private fun sampleConfig() = com.keepfit.feature.assistant.data.AssistantRuntimeConfig(

@@ -31,6 +31,13 @@ class RoomStarterPlanRepository(
             sessionMinutes = profile.sessionMinutes,
             equipment = profile.equipment.toEnumSet<EquipmentOption>(),
             avoidedExerciseKeys = profile.avoidedExerciseKeys.toStringSet(),
+            activityLevel = profile.activityLevel.toEnumOr(ActivityLevel.LIGHTLY_ACTIVE),
+            sleepDuration = profile.sleepDuration.toEnumOr(SleepDuration.SEVEN_TO_EIGHT_HOURS),
+            sleepSchedule = profile.sleepSchedule.toEnumOr(SleepSchedule.REGULAR),
+            currentBuild = profile.currentBuild.toEnumOr(CurrentBuild.NOT_SURE),
+            routineChallenges = profile.routineChallenges.toEnumSet<RoutineChallenge>(),
+            limitationAreas = profile.limitationAreas.toEnumSet<LimitationArea>(),
+            limitationNotes = profile.limitationNotes,
         )
     }
 
@@ -132,6 +139,13 @@ class RoomStarterPlanRepository(
                 sessionMinutes = input.sessionMinutes,
                 equipment = input.equipment.toCanonicalCsv { it.name },
                 avoidedExerciseKeys = input.avoidedExerciseKeys.sorted().joinToString(","),
+                activityLevel = input.activityLevel.name,
+                sleepDuration = input.sleepDuration.name,
+                sleepSchedule = input.sleepSchedule.name,
+                currentBuild = input.currentBuild.name,
+                routineChallenges = input.routineChallenges.toCanonicalCsv { it.name },
+                limitationAreas = input.limitationAreas.toCanonicalCsv { it.name },
+                limitationNotes = input.limitationNotes?.trim()?.takeIf(String::isNotEmpty),
                 createdAt = previousJourney?.createdAt ?: now,
                 updatedAt = now,
             ),
@@ -139,7 +153,12 @@ class RoomStarterPlanRepository(
     }
 
     private inline fun <reified T : Enum<T>> String.toEnumSet(): Set<T> =
-        toStringSet().mapTo(linkedSetOf()) { enumValueOf<T>(it) }
+        toStringSet().mapNotNullTo(linkedSetOf()) { value ->
+            enumValues<T>().singleOrNull { it.name == value }
+        }
+
+    private inline fun <reified T : Enum<T>> String.toEnumOr(default: T): T =
+        enumValues<T>().singleOrNull { it.name == this } ?: default
 
     private fun String.toStringSet(): Set<String> =
         split(',').map(String::trim).filter(String::isNotEmpty).toSet()

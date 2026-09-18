@@ -104,7 +104,7 @@ fun ProfileSetupScreen(
                 Button(
                     onClick = { onSave(displayName, heightCm, birthDate, startingWeightKg) },
                     modifier = Modifier.weight(1f),
-                ) { Text("Save and continue") }
+                ) { Text("Continue to assessment") }
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -142,7 +142,7 @@ fun ProfileSetupScreen(
 private fun ProfileProgress(step: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "PROFILE SETUP  ·  ${step + 1} OF 2",
+            text = "PROFILE BASICS  ·  ${step + 1} OF 2",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -156,9 +156,9 @@ private fun IdentityStep(
     onDisplayNameChanged: (String) -> Unit,
     onContinue: () -> Unit,
 ) {
-    Text("Your profile", style = MaterialTheme.typography.headlineMedium)
+    Text("Let’s start with you", style = MaterialTheme.typography.headlineMedium)
     Text(
-        "What should Keepfit call you? This profile keeps its workouts, meals, and progress separate.",
+        "What should Keepfit call you? Each profile keeps its workouts, meals, assessment, and progress separate.",
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -193,7 +193,7 @@ private fun BaselineStep(
 
     Text("Your baseline", style = MaterialTheme.typography.headlineMedium)
     Text(
-        "Optional. Add only what feels useful; you can change it later in your profile and Progress.",
+        "Optional. Age, height, and weight give planning useful context. A short activity, recovery, and limitations assessment follows.",
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

@@ -1,5 +1,8 @@
 package com.keepfit.app.assistant
 
+import com.keepfit.core.database.KeepfitDatabase
+import com.keepfit.core.model.calculateAge
+import com.keepfit.core.preferences.ActiveProfileStore
 import com.keepfit.feature.assistant.planning.AssistantPlanContext
 import com.keepfit.feature.assistant.planning.AssistantPlanContextDataSource
 import com.keepfit.feature.assistant.planning.AssistantPlanExerciseOption
@@ -8,10 +11,14 @@ import com.keepfit.feature.workouts.data.WorkoutRepository
 import com.keepfit.feature.workouts.planning.StarterExerciseCatalog
 import com.keepfit.feature.workouts.planning.StarterPlanRepository
 import kotlinx.coroutines.flow.first
+import java.time.LocalDate
 
 class KeepfitAssistantPlanContextDataSource(
     private val starterPlanRepository: StarterPlanRepository,
     private val workoutRepository: WorkoutRepository,
+    private val database: KeepfitDatabase,
+    private val activeProfileStore: ActiveProfileStore,
+    private val today: () -> LocalDate = LocalDate::now,
 ) : AssistantPlanContextDataSource {
     override suspend fun loadContext(): AssistantPlanContext {
         val preferences = requireNotNull(starterPlanRepository.loadPreferences()) {
@@ -41,9 +48,14 @@ class KeepfitAssistantPlanContextDataSource(
                 )
             }
             .toList()
-        require(exercises.isNotEmpty()) {
-            "Add at least one exercise to your catalogue before asking Coach to create a plan."
+        val profileId = requireNotNull(activeProfileStore.observeActiveProfileId().first()) {
+            "Complete your local profile before creating an AI plan."
         }
+        val profile = requireNotNull(database.bodyProfileDao().findProfile(profileId)) {
+            "Complete your local profile before creating an AI plan."
+        }
+        val latestMeasurement = database.transformationDao().listMeasurements(profileId)
+            .maxWithOrNull(compareBy({ it.measurementDate }, { it.createdAt }))
         return AssistantPlanContext(
             goal = preferences.goal.label,
             experience = preferences.experienceLevel.label,
@@ -51,6 +63,16 @@ class KeepfitAssistantPlanContextDataSource(
             preferredDays = preferences.preferredDays,
             equipment = preferences.equipment.mapTo(linkedSetOf()) { it.label },
             exercises = exercises,
+            ageYears = calculateAge(profile.birthDate, today()),
+            heightCm = profile.heightCm,
+            weightKg = latestMeasurement?.weightKg,
+            activityLevel = preferences.activityLevel.label,
+            sleepDuration = preferences.sleepDuration.label,
+            sleepSchedule = preferences.sleepSchedule.label,
+            currentBuild = preferences.currentBuild.label,
+            routineChallenges = preferences.routineChallenges.mapTo(linkedSetOf()) { it.label },
+            limitationAreas = preferences.limitationAreas.mapTo(linkedSetOf()) { it.label },
+            limitationNotes = preferences.limitationNotes,
         )
     }
 

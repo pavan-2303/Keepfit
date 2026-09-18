@@ -13,6 +13,7 @@ import com.keepfit.core.database.workout.WorkoutTemplateEntity
 import com.keepfit.core.preferences.ActiveProfileStore
 import com.keepfit.feature.assistant.data.AssistantDraftWorkoutDay
 import com.keepfit.feature.assistant.data.AssistantDraftWorkoutExercise
+import com.keepfit.feature.assistant.data.AssistantDraftExerciseDefinition
 import com.keepfit.feature.assistant.data.AssistantDraftWorkoutPlan
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -76,6 +77,50 @@ class RoomAssistantPlanApplierTest {
         assertEquals(3, template.exercises.single().templateExercise.targetSets)
         assertEquals("8-12", template.exercises.single().templateExercise.targetReps)
         assertEquals("old-template-other", database.workoutDao().observeWeeklyScheduleForProfile("other").first().single().workoutTemplateId)
+    }
+
+    @Test
+    fun approvalCreatesMissingPersonalExerciseAndReusesItAcrossDays() = runBlocking {
+        val definition = AssistantDraftExerciseDefinition(
+            name = "Chair squat",
+            muscleGroup = "Legs",
+            equipment = "Chair",
+            targetMuscle = "Quadriceps",
+            secondaryMuscles = "Glutes",
+            instructions = "Sit back to the chair and stand with control.",
+            isBodyweight = true,
+        )
+        val plan = AssistantDraftWorkoutPlan(
+            name = "Foundation",
+            days = listOf(DayOfWeek.MONDAY, DayOfWeek.THURSDAY).map { day ->
+                AssistantDraftWorkoutDay(
+                    dayOfWeek = day,
+                    templateName = "Foundation $day",
+                    exercises = listOf(
+                        AssistantDraftWorkoutExercise(
+                            name = definition.name,
+                            targetSets = 2,
+                            targetReps = "8-10",
+                            newExercise = definition,
+                        ),
+                    ),
+                )
+            },
+        )
+
+        applier.applyDraftPlan(plan).getOrThrow()
+
+        val created = database.workoutDao().findActiveExerciseByName("Chair squat")
+        assertEquals("Chair", created?.equipment)
+        assertEquals("Quadriceps", created?.targetMuscle)
+        val templates = database.workoutDao().findTemplatesByOrigin(RoomAssistantPlanApplier.AI_PLAN_ORIGIN)
+            .filter { it.archivedAt == null }
+        val usedIds = templates.map { template ->
+            database.workoutDao().findTemplateDetailsForProfile(template.id, "profile")!!
+                .exercises.single().exercise.id
+        }
+        assertEquals(2, usedIds.size)
+        assertEquals(1, usedIds.distinct().size)
     }
 
     private suspend fun seedSchedule(profileId: String) {

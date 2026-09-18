@@ -29,4 +29,11 @@ data class JourneyProfileEntity(
     val avoidedExerciseKeys: String,
     val createdAt: Long,
     val updatedAt: Long,
+    val activityLevel: String = "LIGHTLY_ACTIVE",
+    val sleepDuration: String = "SEVEN_TO_EIGHT_HOURS",
+    val sleepSchedule: String = "REGULAR",
+    val currentBuild: String = "NOT_SURE",
+    val routineChallenges: String = "",
+    val limitationAreas: String = "",
+    val limitationNotes: String? = null,
 )
